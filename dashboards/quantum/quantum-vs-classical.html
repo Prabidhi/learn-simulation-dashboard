@@ -12,11 +12,17 @@
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --classical:#58a6ff;--classical-soft:#0c2d4f;--quantum:#bc8cff;--quantum-soft:#2a1f45;
+  --heat:#fb8f44;--cold:#39c5cf;--ok:#3fb950;--err:#f85149;--on-accent:#0d1117;}
 @media (prefers-color-scheme: dark){
-  :root{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  :root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
   --classical:#58a6ff;--classical-soft:#0c2d4f;--quantum:#bc8cff;--quantum-soft:#2a1f45;
   --heat:#fb8f44;--cold:#39c5cf;--ok:#3fb950;--err:#f85149;--on-accent:#0d1117;}
 }
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;--classical:#8fc4ff;--classical-soft:#2c3557;--quantum:#c7aaff;--quantum-soft:#3a2d58;--heat:#ff9b6e;--cold:#6fd6e0;--ok:#7ee2a8;--err:#ff8f86;--on-accent:#211b33;}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
@@ -26,7 +32,7 @@ header p{margin:0;color:var(--muted);max-width:760px}
 .thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:860px}
 .thesis b{color:var(--quantum)}
 nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
-nav div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap}
 nav a{font-size:.85rem;text-decoration:none;color:var(--fg);padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
 nav a:hover{border-color:var(--quantum)}
 main{max-width:1180px;margin:0 auto;padding:10px 20px 50px}
@@ -87,6 +93,12 @@ tr.hl td{background:var(--quantum-soft)}
 footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:.8rem}
 @media (max-width:860px){.two{grid-template-columns:1fr}.chain{grid-template-columns:1fr 1fr}.step:nth-child(2)::after{display:none}}
 @media (max-width:520px){.chain{grid-template-columns:1fr}.step::after{display:none}header,main,footer{padding-left:14px;padding-right:14px}header h1{font-size:1.3rem}.marks span{font-size:.62rem}}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer;outline:none}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+@media (max-width:560px){.themes button span{display:none}.themes button{padding:6px 8px}}
 </style>
 </head>
 <body>
@@ -100,6 +112,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--muted);fon
   <a href="#s2">2 · Does electricity flow?</a>
   <a href="#s3">3 · Why so cold?</a>
   <a href="#s4">4 · The chain</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
 </div></nav>
 
 <main>
@@ -235,6 +248,25 @@ function alpha(hex,a){ if(!hex.startsWith('#')) return hex; const n=parseInt(hex
 function txt(x,s,px,py,o={}){ x.font=`${o.w||400} ${o.size||12}px system-ui,-apple-system,Segoe UI,sans-serif`; x.fillStyle=o.color||COL.muted; x.textAlign=o.align||'center'; x.textBaseline=o.base||'middle'; x.fillText(s,px,py); }
 const rnd=(a,b)=>a+Math.random()*(b-a);
 
+
+/* ---------- shared theme switch: day / twilight / dark (same choice across all Learning Lab pages) ---------- */
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); if(window.onThemeChange) window.onThemeChange(); }
+  try{ let s=localStorage.getItem('lab-theme'); if(s==='light') s='day'; if(s&&ICONS[s]) root.dataset.theme=s; }catch(e){}
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); if(window.onThemeChange) window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); if(window.onThemeChange) window.onThemeChange(); } });
+  paint();
+})();
+window.onThemeChange=()=>readColors();
 /* ================= SCENE 1 ================= */
 const s1={bit:1,noise:.25,dots:[],reads:[],theta:Math.PI/2,coh:1,measured:false,decohered:false,qnoise:0,qreads:[],wob:0,wv:0};
 for(let i=0;i<64;i++) s1.dots.push({i,ox:0,oy:0,px:null,py:null});
