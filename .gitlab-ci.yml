@@ -4,15 +4,11 @@
 # - Your own dashboards/index.html is used if present.
 # - Otherwise a searchable home page is generated automatically.
 
-pages:
-  stage: deploy
-  image: python:3.12-alpine
-  artifacts:
-    paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      changes:
-        - dashboards/**/*
-        - scripts/build_index.py
-        - .gitlab-ci.yml
+  pages:
+    image: alpine:latest
+    script:
+      - cp -r dashboards public
+    artifacts:
+      paths: [public]
+    rules:
+      - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
