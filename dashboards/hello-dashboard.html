@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hello Dashboard</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+  button { font-size: 1rem; padding: 8px 16px; }
+  a { color: #2563eb; }
+</style>
+</head>
+<body>
+  <p><a href="index.html">← All dashboards</a></p>
+  <h1>Hello Dashboard</h1>
+  <p>A sample standalone page to confirm GitLab Pages is working. Replace it with your own.</p>
+  <button id="b">Clicked 0 times</button>
+  <script>
+    let n = 0;
+    document.getElementById('b').onclick = e => e.target.textContent = `Clicked ${++n} times`;
+  </script>
+</body>
+</html>

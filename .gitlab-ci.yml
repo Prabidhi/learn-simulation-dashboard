@@ -1,0 +1,20 @@
+# Publishes everything in dashboards/ to GitLab Pages whenever something
+# lands on the default branch (i.e. an MR is merged to main).
+#
+# - Your own dashboards/index.html is used if present.
+# - Otherwise a searchable home page is generated automatically.
+
+pages:
+  stage: deploy
+  image: python:3.12-alpine
+  script:
+    - python scripts/build_index.py
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - dashboards/**/*
+        - scripts/build_index.py
+        - .gitlab-ci.yml
