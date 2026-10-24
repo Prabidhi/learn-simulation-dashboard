@@ -1,0 +1,1215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Cheat Sheet &amp; Simulator</title>
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--accent:#0969da;
+  --ok:#1a7f37;--warn:#9a6700;--err:#cf222e;--chip:#eef1f4;--analogy:#f3efff;--analogy-line:#c9b8ff;--on-accent:#ffffff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--accent:#58a6ff;
+  --ok:#3fb950;--warn:#d29922;--err:#f85149;--chip:#21262d;--analogy:#1f1830;--analogy-line:#4c3a80;--on-accent:#0d1117;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.45}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+header h1{font-size:1.15rem;margin:0}
+header h1 span{color:var(--muted);font-weight:400}
+.tabs{display:flex;gap:4px;background:var(--chip);padding:3px;border-radius:9px}
+.tabs button{border:0;background:transparent;color:var(--fg);padding:6px 14px;border-radius:7px;font:inherit;cursor:pointer}
+.tabs button.on{background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+main{padding:16px 20px 40px;max-width:1500px;margin:0 auto}
+.hidden{display:none!important}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.panel h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+code,.mono{font-family:var(--mono)}
+button.btn{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:5px 10px;border-radius:7px;cursor:pointer}
+button.btn:hover{border-color:var(--accent)}
+button.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+/* simulator layout */
+#sim{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.term{background:#0d1117;color:#e6edf3;border-radius:10px;border:1px solid #30363d;display:flex;flex-direction:column;height:440px;overflow:hidden}
+.term-top{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid #30363d;font-size:.8rem;color:#8b949e}
+.term-top i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.term-top label{margin-left:auto;display:flex;align-items:center;gap:5px;cursor:pointer}
+#out{flex:1;overflow-y:auto;padding:10px 12px;font-family:var(--mono);font-size:12.5px}
+#out div{white-space:pre-wrap;word-break:break-word}
+#out .cmd{color:#79c0ff;margin-top:8px}
+#out .err{color:#ff7b72}
+#out .ok{color:#7ee787}
+#out .warn{color:#e3b341}
+#out .muted{color:#8b949e}
+#out .note{color:#ffa657}
+#out .explain{color:#d2a8ff;background:rgba(210,168,255,.08);border-left:2px solid #a371f7;padding:3px 8px;margin:4px 0;font-family:var(--sans);font-size:12.5px}
+#out .win{color:#0d1117;background:#7ee787;padding:3px 8px;border-radius:4px;margin:6px 0;font-family:var(--sans);font-weight:600}
+.prompt{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid #30363d;font-family:var(--mono)}
+.prompt span{color:#7ee787;white-space:nowrap;font-size:12.5px}
+#cmd{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#e6edf3;font:inherit;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font-family:var(--mono);font-size:.78rem;border:1px solid var(--line);background:var(--chip);color:var(--fg);padding:3px 8px;border-radius:6px;cursor:pointer}
+.chips button:hover{border-color:var(--accent)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+#statusbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.85rem}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-family:var(--mono);font-size:.78rem}
+.pill.accent{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.pill.err{background:var(--err);color:#fff;border-color:var(--err)}
+.pill.warn{color:var(--warn);border-color:var(--warn)}
+#graphwrap{overflow-x:auto;overflow-y:hidden;border-radius:8px;background:var(--bg);border:1px solid var(--line);min-height:120px}
+#graphwrap svg{display:block}
+#graphwrap svg text{font-family:var(--mono)}
+.node{cursor:pointer}
+#commitInfo{font-size:.8rem;color:var(--muted);margin-top:6px;min-height:1.4em;font-family:var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.75rem;color:var(--muted);margin-top:6px}
+.legend b{font-weight:600;color:var(--fg)}
+
+.areas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.area{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-height:96px}
+.area h3{margin:0 0 2px;font-size:.85rem}
+.area .sub{color:var(--muted);font-size:.72rem;margin-bottom:6px}
+.file{display:flex;align-items:center;justify-content:space-between;gap:6px;font-family:var(--mono);font-size:.78rem;padding:3px 0;border-top:1px dashed var(--line)}
+.file:first-of-type{border-top:0}
+.tag{font-size:.68rem;padding:1px 6px;border-radius:5px;background:var(--chip);border:1px solid var(--line);white-space:nowrap}
+.tag.M{color:var(--warn);border-color:var(--warn)}
+.tag.N,.tag.S{color:var(--ok);border-color:var(--ok)}
+.tag.D,.tag.C{color:var(--err);border-color:var(--err)}
+.tag.U{color:var(--muted)}
+.empty{color:var(--muted);font-size:.78rem;font-style:italic}
+.arrow-row{display:grid;grid-template-columns:repeat(3,1fr);font-size:.7rem;color:var(--muted);text-align:center;margin-top:4px}
+
+.remote-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kv{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:.78rem;padding:2px 0}
+.kv em{font-style:normal;color:var(--warn);font-family:var(--sans);font-size:.72rem}
+
+.ch{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ch:first-of-type{border-top:0}
+.ch .num{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:700;background:var(--chip);border:1px solid var(--line)}
+.ch.done .num{background:var(--ok);color:#fff;border-color:var(--ok)}
+.ch.done .t{text-decoration:line-through;color:var(--muted)}
+.ch .t{font-weight:600}
+.ch .g{font-size:.82rem;color:var(--muted)}
+.ch details{font-size:.8rem;margin-top:3px}
+.ch summary{cursor:pointer;color:var(--accent)}
+.ch details code{display:block;margin-top:4px;padding:6px 8px;background:var(--chip);border-radius:6px;white-space:pre-wrap;font-size:.76rem}
+.progress{height:6px;background:var(--chip);border-radius:3px;overflow:hidden;flex:1;max-width:160px}
+.progress div{height:100%;background:var(--ok);transition:width .3s}
+
+/* cheat sheet */
+#sheetTools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+#q{flex:1;min-width:220px;max-width:480px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);font:inherit}
+.sheet{columns:2 460px;column-gap:16px}
+.card{break-inside:avoid;margin:0 0 16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h3{margin:0 0 8px;font-size:1.02rem}
+.analogy{background:var(--analogy);border-left:3px solid var(--analogy-line);padding:8px 10px;border-radius:0 8px 8px 0;font-size:.86rem;margin-bottom:10px}
+.analogy b{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:2px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:7px 0;border-top:1px solid var(--line);align-items:start}
+.row:first-of-type{border-top:0}
+.row code{font-size:.82rem;background:var(--chip);padding:2px 6px;border-radius:5px;display:inline-block;word-break:break-all}
+.row .d{grid-column:1/2;font-size:.84rem;color:var(--muted)}
+.row button{grid-row:1/3;grid-column:2;font-size:.75rem;padding:3px 8px;border:1px solid var(--line);background:transparent;color:var(--accent);border-radius:6px;cursor:pointer}
+.row .real{grid-row:1/3;grid-column:2;font-size:.68rem;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:2px 6px;white-space:nowrap}
+table.mini{width:100%;border-collapse:collapse;font-size:.8rem;margin:8px 0 4px}
+table.mini th,table.mini td{border:1px solid var(--line);padding:4px 6px;text-align:left}
+table.mini th{background:var(--chip)}
+.warnbox{font-size:.8rem;border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:6px 10px;margin-top:8px}
+
+@media (max-width:980px){#sim{grid-template-columns:1fr}}
+@media (max-width:620px){.areas{grid-template-columns:1fr}.remote-grid{grid-template-columns:1fr}main{padding:12px}header{padding:12px}.term{height:380px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Git Cheat Sheet &amp; Simulator <span>· works offline</span></h1>
+  <div class="tabs" role="tablist">
+    <button class="on" data-tab="sim" role="tab">Simulator</button>
+    <button data-tab="sheet" role="tab">Cheat sheet</button>
+  </div>
+</header>
+
+<main>
+<!-- ================= SIMULATOR ================= -->
+<section id="sim">
+  <div class="col">
+    <div class="term">
+      <div class="term-top"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i>
+        &nbsp;sandbox repo
+        <label><input type="checkbox" id="explainToggle" checked> explain each step</label>
+      </div>
+      <div id="out" aria-live="polite"></div>
+      <div class="prompt"><span id="ps">~/learn-git (main) $</span><input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a command, e.g. git status"></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="toolbar">
+      <button class="btn" id="tmTeam">🧑‍💻 Teammate pushes (team.md)</button>
+      <button class="btn" id="tmReadme">🧑‍💻 Teammate edits README.md</button>
+      <button class="btn" id="restart">↺ Restart repo</button>
+    </div>
+    <div class="panel">
+      <h2>Challenges <span style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><span id="chCount">0/9</span><span class="progress"><div id="chBar" style="width:0"></div></span></span></h2>
+      <div id="challenges"></div>
+      <button class="btn" id="resetProgress" style="margin-top:8px;font-size:.75rem">Reset challenge progress</button>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="panel">
+      <h2>Commit graph <label style="text-transform:none;letter-spacing:0;font-weight:400;display:flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" id="ghostToggle" checked> show orphaned commits</label></h2>
+      <div id="statusbar"></div>
+      <div id="graphwrap" style="margin-top:8px"></div>
+      <div id="commitInfo">Hover or tap a commit for details. Click to paste its id into the terminal.</div>
+      <div class="legend">
+        <span><b>Circle</b> = commit (a snapshot)</span>
+        <span><b>Blue tag</b> = branch you're on (HEAD)</span>
+        <span><b>Dashed tag</b> = origin/… (last seen on server)</span>
+        <span><b>Hollow circle</b> = orphaned (no branch points to it)</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>The three areas</h2>
+      <div class="areas">
+        <div class="area"><h3>🖥 Working directory</h3><div class="sub">your desk — files as they are now</div><div id="aWork"></div></div>
+        <div class="area"><h3>📦 Staging area</h3><div class="sub">the box — what the next commit will contain</div><div id="aStage"></div></div>
+        <div class="area"><h3>🗄 Last commit (HEAD)</h3><div class="sub">the warehouse — last sealed snapshot</div><div id="aHead"></div></div>
+      </div>
+      <div class="arrow-row"><span>edit files here</span><span>← git add →</span><span>← git commit</span></div>
+    </div>
+    <div class="panel">
+      <h2>Remote &amp; stash</h2>
+      <div class="remote-grid">
+        <div><div style="font-weight:600;font-size:.85rem;margin-bottom:4px">☁️ origin (the GitLab server)</div><div id="rServer"></div></div>
+        <div><div style="font-weight:600;font-size:.85rem;margin-bottom:4px">🗃 Stash drawer</div><div id="rStash"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CHEAT SHEET ================= -->
+<section id="sheet" class="hidden">
+  <div id="sheetTools">
+    <input id="q" type="search" placeholder="Search commands or descriptions… (e.g. undo, branch, push)" aria-label="Search cheat sheet">
+    <span style="color:var(--muted);font-size:.85rem">“Try” opens the command in the simulator.</span>
+  </div>
+  <div class="sheet" id="sheetBody"></div>
+</section>
+</main>
+
+<script>
+'use strict';
+/* =========================================================
+   Tiny git engine
+   ========================================================= */
+const LANES=['#0969da','#8250df','#1a7f37','#bc4c00','#bf3989','#0a7ea4','#9a6700','#57606a'];
+const $=s=>document.querySelector(s);
+const keys=o=>Object.keys(o);
+const uniq=(...a)=>[...new Set(a.flat())];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+class GitError extends Error{}
+const fail=m=>{throw new GitError(m)};
+
+let S;
+let done={};
+try{done=JSON.parse(localStorage.getItem('gitsim-done')||'{}')||{}}catch(e){done={}}
+const saveDone=()=>{try{localStorage.setItem('gitsim-done',JSON.stringify(done))}catch(e){}};
+
+function hashId(n){
+  let x=Math.imul(n+7,2654435761)>>>0; x^=x>>>13; x=Math.imul(x,0x5bd1e995)>>>0; x^=x>>>15;
+  return (x>>>0).toString(16).padStart(8,'0').slice(0,7);
+}
+function mkCommit(parents,msg,tree,extra={}){
+  const id=hashId(S.counter++);
+  const c=Object.assign({id,parents:[...parents],msg,tree:{...tree},n:S.order.length,author:'You'},extra);
+  S.commits[id]=c; S.order.push(id); return c;
+}
+function init(){
+  S={commits:{},order:[],counter:0,branches:{},tags:{},HEAD:{type:'branch',name:'main'},
+     index:{},work:{},remote:{branches:{}},tracking:{},upstream:{main:'main'},stash:[],merge:null,
+     flags:{},ver:{'README.md':1,'app.js':1},ghosts:new Set(),prevVisible:new Set(),reflog:[],prev:null};
+  const c=mkCommit([],'Initial commit',{'README.md':'v1','app.js':'v1'});
+  S.branches.main=c.id; S.remote.branches.main=c.id; S.tracking['origin/main']=c.id;
+  S.index={...c.tree}; S.work={...c.tree};
+  S.reflog.unshift({id:c.id,action:'clone: from origin'});
+  S.prevVisible=reachable();
+}
+const tree=id=>S.commits[id].tree;
+const curBranch=()=>S.HEAD.type==='branch'?S.HEAD.name:null;
+const headId=()=>S.HEAD.type==='branch'?S.branches[S.HEAD.name]:S.HEAD.id;
+const headTree=()=>tree(headId());
+function moveHead(id,action){
+  if(S.HEAD.type==='branch') S.branches[S.HEAD.name]=id; else S.HEAD.id=id;
+  S.reflog.unshift({id,action});
+}
+function ancestors(id){
+  const seen=new Set(),st=[id];
+  while(st.length){const x=st.pop(); if(!x||seen.has(x)) continue; seen.add(x); st.push(...S.commits[x].parents);}
+  return seen;
+}
+const isAncestor=(a,b)=>ancestors(b).has(a);
+function mergeBase(a,b){
+  const A=ancestors(a); let best=null;
+  ancestors(b).forEach(x=>{ if(A.has(x)&&(!best||S.commits[x].n>S.commits[best].n)) best=x; });
+  return best;
+}
+function tips(){ return uniq(Object.values(S.branches),Object.values(S.tracking),Object.values(S.tags),[headId()]).filter(Boolean); }
+function reachable(){ const s=new Set(); tips().forEach(t=>ancestors(t).forEach(x=>s.add(x))); return s; }
+function changed(a,b){ return uniq(keys(a),keys(b)).filter(f=>a[f]!==b[f]).sort(); }
+function aheadBehind(a,b){ const A=ancestors(a),B=ancestors(b); let ah=0,bh=0; A.forEach(x=>{if(!B.has(x))ah++}); B.forEach(x=>{if(!A.has(x))bh++}); return [ah,bh]; }
+function markKnown(id){ ancestors(id).forEach(x=>{delete S.commits[x].remoteOnly}); }
+
+function resolve(ref){
+  if(!ref) return null;
+  const m=ref.match(/^(.*?)((?:[~^]\d*)*)$/); const base=m[1]; const suf=m[2];
+  let id=null;
+  if(base==='HEAD'||base==='@') id=headId();
+  else if(S.branches[base]) id=S.branches[base];
+  else if(S.tracking[base]) id=S.tracking[base];
+  else if(S.tags[base]) id=S.tags[base];
+  else if(/^[0-9a-f]{4,40}$/.test(base)){
+    const hits=S.order.filter(x=>x.startsWith(base)&&!S.commits[x].remoteOnly);
+    if(hits.length===1) id=hits[0];
+  }
+  if(!id) return null;
+  for(const op of (suf.match(/[~^]\d*/g)||[])){
+    const n=op.length>1?parseInt(op.slice(1),10):1;
+    if(op[0]==='~'){ for(let i=0;i<n;i++){ const c=S.commits[id]; if(!c.parents.length) return null; id=c.parents[0]; } }
+    else if(n>0){ const c=S.commits[id]; if(!c.parents[n-1]) return null; id=c.parents[n-1]; }
+  }
+  return id;
+}
+function mustResolve(ref){ const id=resolve(ref); if(!id) fail(`fatal: ambiguous argument '${ref}': unknown revision or branch.\nTip: run "git log --oneline --all" or "git reflog" to see commit ids.`); return id; }
+
+/* ---------- area helpers ---------- */
+function stagedList(){ const h=headTree(); return changed(h,S.index).map(f=>({f,kind:!(f in h)?'new file':!(f in S.index)?'deleted':'modified'})); }
+function unstagedList(){ return keys(S.index).filter(f=>S.work[f]!==S.index[f]).map(f=>({f,kind:!(f in S.work)?'deleted':'modified'})); }
+function untracked(){ return keys(S.work).filter(f=>!(f in S.index)).sort(); }
+function untrackedMap(){ const m={}; untracked().forEach(f=>m[f]=S.work[f]); return m; }
+const isDirty=()=>stagedList().length>0||unstagedList().length>0;
+function refsAt(id){
+  const r=[],cb=curBranch();
+  if(S.HEAD.type==='detached'&&S.HEAD.id===id) r.push({t:'HEAD',k:'head'});
+  keys(S.branches).sort().forEach(b=>{ if(S.branches[b]===id) r.push(b===cb?{t:'HEAD → '+b,k:'headbranch',name:b}:{t:b,k:'branch',name:b}); });
+  keys(S.tracking).sort().forEach(b=>{ if(S.tracking[b]===id) r.push({t:b,k:'remote',name:b}); });
+  keys(S.tags).sort().forEach(b=>{ if(S.tags[b]===id) r.push({t:'tag: '+b,k:'tag',name:b}); });
+  return r.sort((a,b)=>(a.k==='headbranch'||a.k==='head'?-1:0)-(b.k==='headbranch'||b.k==='head'?-1:0));
+}
+function deco(id){ const r=refsAt(id); return r.length?' ('+r.map(x=>x.k==='headbranch'?'HEAD -> '+x.name:x.t).join(', ')+')':''; }
+function short(id){ const c=S.commits[id]; return `${id} ${c.msg}`; }
+
+/* ---------- output ---------- */
+function print(text,cls){ const d=document.createElement('div'); if(cls) d.className=cls; d.textContent=text; $('#out').appendChild(d); }
+function explain(text){ if($('#explainToggle').checked) print('💡 '+text,'explain'); }
+
+/* =========================================================
+   Commands
+   ========================================================= */
+const G={};
+const L={};
+
+L.help=()=>{
+  print(`Simulator commands (not git):
+  edit <file>...   change a file on your desk (creates it if new)
+  rm <file>        delete a file from your desk
+  ls               list files and their state
+  cat <file>       show a file's contents
+  teammate         a teammate pushes a commit to origin/main
+  clear            clear the terminal     restart   start over
+
+Git commands you can practise:
+  status add commit log show diff branch switch checkout restore
+  merge rebase reset revert cherry-pick stash tag fetch pull push
+  remote reflog rm mv
+
+Refs work like real git: main, HEAD, HEAD~1, HEAD^2, origin/main, a1b2c3d`,'muted');
+};
+L.clear=()=>{ $('#out').innerHTML=''; };
+L.restart=()=>{ init(); $('#out').innerHTML=''; welcome(); };
+L.ls=()=>{
+  const files=uniq(keys(S.work),keys(S.index)).sort();
+  if(!files.length) return print('(empty)','muted');
+  const h=headTree();
+  files.forEach(f=>{
+    let st='';
+    if(S.work[f]==='CONFLICT') st='CONFLICT';
+    else if(!(f in S.index)) st='untracked';
+    else if(!(f in S.work)) st='deleted';
+    else if(S.work[f]!==S.index[f]) st='modified (not staged)';
+    else if(S.index[f]!==h[f]) st='staged';
+    print(`${f.padEnd(16)} ${S.work[f]?S.work[f].padEnd(9):'—'.padEnd(9)} ${st}`);
+  });
+};
+L.cat=a=>{
+  const f=a[0]; if(!f) fail('usage: cat <file>');
+  if(!(f in S.work)) fail(`cat: ${f}: No such file`);
+  if(S.work[f]==='CONFLICT'&&S.merge){
+    const o=headTree()[f],t=tree(S.merge.theirs)[f];
+    print(`<<<<<<< HEAD (ours)\n${f} ${o||'(deleted)'}\n=======\n${f} ${t||'(deleted)'}\n>>>>>>> ${S.merge.ref} (theirs)`,'warn');
+    explain(`These are conflict markers. Git couldn't decide, so it shows both versions. Run "edit ${f}" to write the resolved version, or "git checkout --ours ${f}" / "--theirs ${f}" to pick one.`);
+  } else print(`${f} — content version ${S.work[f]}`);
+};
+L.edit=a=>{
+  if(!a.length) fail('usage: edit <file> [more files]');
+  a.forEach(f=>{
+    if(!/^[\w.\-\/]+$/.test(f)) fail(`invalid file name: ${f}`);
+    const wasConflict=S.work[f]==='CONFLICT', isNew=!(f in S.work);
+    S.ver[f]=(S.ver[f]||0)+1; S.work[f]='v'+S.ver[f];
+    if(wasConflict){ print(`resolved conflict in ${f} (now ${S.work[f]})`,'ok'); explain(`Conflict fixed on your desk. Now pack it: git add ${f}`); }
+    else print(`${isNew?'created':'edited'} ${f} (now ${S.work[f]})`,'muted');
+  });
+  if(!a.some(f=>S.index[f]==='CONFLICT')) explain('You changed files on your desk (working directory). Git notices, but nothing is saved in history yet. Try "git status".');
+};
+L.touch=L.edit;
+L.rm=a=>{ if(!a[0]) fail('usage: rm <file>'); a.forEach(f=>{ if(!(f in S.work)) fail(`rm: ${f}: No such file`); delete S.work[f]; print(`removed ${f} from your desk`,'muted'); }); explain('Deleted from the desk only. Git will report it as "deleted" until you stage that with git add (or git rm).'); };
+L.teammate=a=>teammate(a[0]||'team.md');
+L.pwd=()=>print('/home/you/learn-git');
+L.cd=()=>print('(the simulator lives in one folder)','muted');
+
+G.help=()=>L.help();
+G.init=()=>{ print('Reinitialized existing Git repository in /home/you/learn-git/.git/'); explain('In real life, git init turns a plain folder into a repo by creating a hidden .git folder (the warehouse). This sandbox already has one.'); };
+G.clone=()=>{ print('This sandbox is already a clone of origin.','muted'); explain('git clone <url> downloads the whole history from a server and sets up "origin" to point back to it.'); };
+G.config=a=>{ print(a.length>2?`(saved ${a[a.length-2]} = ${a[a.length-1]})`:'user.name=You\nuser.email=you@example.com','muted'); };
+G.version=()=>print('git version 2.47.0 (simulated)');
+
+G.status=()=>{
+  const b=curBranch();
+  print(b?`On branch ${b}`:`HEAD detached at ${headId()}`);
+  if(b&&S.upstream[b]&&S.tracking['origin/'+S.upstream[b]]){
+    const up='origin/'+S.upstream[b]; const [ah,bh]=aheadBehind(headId(),S.tracking[up]);
+    if(!ah&&!bh) print(`Your branch is up to date with '${up}'.`);
+    else if(ah&&!bh) print(`Your branch is ahead of '${up}' by ${ah} commit${ah>1?'s':''}.\n  (use "git push" to publish your local commits)`);
+    else if(!ah&&bh) print(`Your branch is behind '${up}' by ${bh} commit${bh>1?'s':''}, and can be fast-forwarded.\n  (use "git pull" to update your local branch)`);
+    else print(`Your branch and '${up}' have diverged,\nand have ${ah} and ${bh} different commits each, respectively.\n  (use "git pull" to merge the remote branch into yours)`);
+  }
+  const conf=keys(S.index).filter(f=>S.index[f]==='CONFLICT');
+  if(S.merge){
+    if(conf.length) print('\nYou have unmerged paths.\n  (fix conflicts and run "git commit")\n  (use "git merge --abort" to abort the merge)');
+    else print('\nAll conflicts fixed but you are still merging.\n  (use "git commit" to conclude merge)');
+  }
+  const st=stagedList().filter(x=>S.index[x.f]!=='CONFLICT');
+  const un=unstagedList().filter(x=>S.index[x.f]!=='CONFLICT');
+  const ut=untracked();
+  if(conf.length){ print('\nUnmerged paths:\n  (use "git add <file>..." to mark resolution)'); conf.forEach(f=>print(`\tboth modified:   ${f}`,'err')); }
+  if(st.length){ print('\nChanges to be committed:\n  (use "git restore --staged <file>..." to unstage)'); st.forEach(x=>print(`\t${(x.kind+':').padEnd(12)} ${x.f}`,'ok')); }
+  if(un.length){ print('\nChanges not staged for commit:\n  (use "git add <file>..." to update what will be committed)\n  (use "git restore <file>..." to discard changes in working directory)'); un.forEach(x=>print(`\t${(x.kind+':').padEnd(12)} ${x.f}`,'err')); }
+  if(ut.length){ print('\nUntracked files:\n  (use "git add <file>..." to include in what will be committed)'); ut.forEach(f=>print(`\t${f}`,'err')); }
+  if(!conf.length&&!st.length&&!un.length&&!S.merge) print(ut.length?'\nnothing added to commit but untracked files present':'nothing to commit, working tree clean');
+  explain('Green = packed in the box (staged). Red = still only on your desk. status never changes anything, so run it whenever you feel lost.');
+};
+
+G.add=a=>{
+  const files0=a.filter(x=>!x.startsWith('-')||x==='-A');
+  if(!files0.length&&!a.includes('--all')) fail('Nothing specified, nothing added.\nhint: Maybe you wanted to say \'git add .\'?');
+  const all=a.includes('.')||a.includes('-A')||a.includes('--all');
+  const files=all?uniq(keys(S.work),keys(S.index)):files0;
+  const before={...S.index};
+  for(const f of files){
+    if(f in S.work){ if(S.work[f]==='CONFLICT') fail(`error: ${f} still contains conflict markers.\nRun "edit ${f}" (or git checkout --ours/--theirs ${f}) first.`); S.index[f]=S.work[f]; }
+    else if(f in S.index) delete S.index[f];
+    else fail(`fatal: pathspec '${f}' did not match any files`);
+  }
+  const ch=changed(before,S.index);
+  if(ch.length) print(`staged: ${ch.join(', ')}`,'muted');
+  explain(S.merge&&!keys(S.index).some(f=>S.index[f]==='CONFLICT')?'Conflict marked as resolved. Finish the merge with: git commit':'git add packs changes into the staging box. The box is what the next commit will seal; your desk can keep changing.');
+};
+
+G.commit=a=>{
+  let msg=null,all=false,amend=false;
+  for(let i=0;i<a.length;i++){
+    const x=a[i];
+    if(x==='-m'||x==='--message') msg=a[++i];
+    else if(x==='-a'||x==='--all') all=true;
+    else if(x==='-am'||x==='-ma'){all=true;msg=a[++i];}
+    else if(x==='--amend') amend=true;
+    else if(x==='--no-edit'||x==='-q') {}
+    else fail(`error: unknown option '${x}'`);
+  }
+  if(all) for(const f of keys(S.index)){ if(f in S.work){ if(S.work[f]==='CONFLICT') fail(`error: ${f} still has conflict markers.`); S.index[f]=S.work[f]; } else delete S.index[f]; }
+  if(keys(S.index).some(f=>S.index[f]==='CONFLICT')) fail('error: Committing is not possible because you have unmerged files.\nhint: Fix them up in the work tree ("edit <file>"), then use "git add <file>".');
+  const h=headId(); const label=curBranch()||'detached HEAD';
+  if(amend){
+    if(S.merge) fail('fatal: You are in the middle of a merge -- cannot amend.');
+    const old=S.commits[h]; if(!msg) msg=old.msg;
+    const c=mkCommit(old.parents,msg,S.index);
+    moveHead(c.id,`commit (amend): ${msg}`);
+    print(`[${label} ${c.id}] ${msg}`);
+    S.flags.amended=true;
+    explain(`Amend doesn't edit ${h}; it builds a replacement commit ${c.id} and moves the branch to it. The old one is now orphaned (hollow circle). Fine before pushing — avoid on commits others already pulled.`);
+    return;
+  }
+  if(!msg&&S.merge) msg=S.merge.msg;
+  if(!msg) fail('Aborting commit due to empty commit message.\nhint: use git commit -m "describe your change"');
+  const parents=S.merge?[h,S.merge.theirs]:[h];
+  const ch=changed(headTree(),S.index);
+  if(!S.merge&&!ch.length){
+    print(`On branch ${label}\nnothing to commit${unstagedList().length||untracked().length?' (changes on your desk are not staged — use "git add")':', working tree clean'}`,'warn');
+    explain('Commit only seals what is in the staging box, and the box matches the last commit. Stage something first with git add.');
+    return;
+  }
+  const c=mkCommit(parents,msg,S.index);
+  moveHead(c.id,`commit${S.merge?' (merge)':''}: ${msg}`);
+  S.flags.userCommits=(S.flags.userCommits||0)+1;
+  print(`[${label} ${c.id}] ${msg}`);
+  print(` ${ch.length} file${ch.length===1?'':'s'} changed`,'muted');
+  if(S.merge){
+    if(S.merge.hadConflict) S.flags.resolvedConflict=true;
+    S.merge=null;
+    explain('Merge concluded. This merge commit has two parents — it is the junction where two roads join.');
+  } else {
+    explain(curBranch()?`Sealed the box into snapshot ${c.id} and moved the "${curBranch()}" sticky note forward to it.`:`You committed with a detached HEAD — no branch points here. Create one now (git switch -c <name>) or this commit will be orphaned when you leave.`);
+  }
+};
+
+G.log=a=>{
+  const oneline=a.includes('--oneline'), all=a.includes('--all');
+  const ref=a.find(x=>!x.startsWith('-'));
+  let ts=all?tips():[ref?mustResolve(ref):headId()];
+  const set=new Set(); ts.forEach(t=>ancestors(t).forEach(x=>set.add(x)));
+  const list=[...set].sort((x,y)=>S.commits[y].n-S.commits[x].n).slice(0,30);
+  list.forEach(id=>{
+    const c=S.commits[id];
+    if(oneline) print(`${id}${deco(id)} ${c.msg}`,'');
+    else { print(`commit ${id}${deco(id)}`,'warn'); if(c.parents.length>1) print(`Merge: ${c.parents.join(' ')}`); print(`Author: ${c.author}\n\n    ${c.msg}\n`); }
+  });
+  if(a.includes('--graph')) explain('The commit graph panel on the right draws this for you.');
+  else explain('Newest first. Each commit points back to its parent — like each photo in an album knowing which photo came before it.');
+};
+
+G.show=a=>{
+  const id=mustResolve(a.find(x=>!x.startsWith('-'))||'HEAD'); const c=S.commits[id];
+  print(`commit ${id}${deco(id)}`,'warn');
+  if(c.parents.length>1) print(`Merge: ${c.parents.join(' ')}`);
+  print(`Author: ${c.author}\n\n    ${c.msg}\n`);
+  const p=c.parents[0]?tree(c.parents[0]):{};
+  changed(p,c.tree).forEach(f=>print(`  ${f}: ${p[f]||'(new)'} → ${c.tree[f]||'(deleted)'}`,c.tree[f]?'ok':'err'));
+};
+
+G.diff=a=>{
+  const st=a.includes('--staged')||a.includes('--cached');
+  const refs=a.filter(x=>!x.startsWith('-'));
+  let from,to,what;
+  if(refs.length>=2){ from=tree(mustResolve(refs[0])); to=tree(mustResolve(refs[1])); what=`${refs[0]} vs ${refs[1]}`; }
+  else if(refs.length===1){ from=tree(mustResolve(refs[0])); to=S.work; what=`${refs[0]} vs your desk`; }
+  else if(st){ from=headTree(); to=S.index; what='staged (box vs last commit)'; }
+  else { from=S.index; to={}; keys(S.index).forEach(f=>{ if(f in S.work) to[f]=S.work[f]; }); what='unstaged (desk vs box)'; }
+  const ch=changed(from,to).filter(f=>refs.length===1?(f in from||f in S.index):true);
+  if(!ch.length) print('(no differences)','muted');
+  ch.forEach(f=>print(`  ${f}: ${from[f]||'(none)'} → ${to[f]||'(deleted)'}`,to[f]?'ok':'err'));
+  explain(st?'diff --staged shows what is in the box, i.e. what the next commit will contain.':refs.length?`Comparing ${what}.`:'Plain diff shows changes on your desk that are NOT in the box yet. Use --staged to see what is.');
+};
+
+G.branch=a=>{
+  const cb=curBranch();
+  if(!a.length||['-a','--all','-v','-vv','--list'].includes(a[0])){
+    keys(S.branches).sort().forEach(b=>print(`${b===cb?'* ':'  '}${b}${a[0]&&a[0].startsWith('-v')?'  '+S.branches[b]+' '+S.commits[S.branches[b]].msg:''}`,b===cb?'ok':''));
+    if(S.HEAD.type==='detached') print(`* (HEAD detached at ${headId()})`,'ok');
+    if(a[0]==='-a'||a[0]==='--all') keys(S.tracking).sort().forEach(b=>print(`  remotes/${b}`,'err'));
+    explain('The * marks where HEAD is — your "you are here" sticker.');
+    return;
+  }
+  if(['-d','-D','--delete'].includes(a[0])){
+    const n=a[1]; if(!n) fail('fatal: branch name required');
+    if(!S.branches[n]) fail(`error: branch '${n}' not found.`);
+    if(n===cb) fail(`error: Cannot delete branch '${n}' checked out. Switch to another branch first.`);
+    if(a[0]!=='-D'&&!isAncestor(S.branches[n],headId())) fail(`error: The branch '${n}' is not fully merged.\nIf you are sure you want to delete it, run 'git branch -D ${n}'.`);
+    print(`Deleted branch ${n} (was ${S.branches[n]}).`);
+    delete S.branches[n]; delete S.upstream[n];
+    explain('Only the sticky note was removed. Commits that are merged elsewhere stay; unmerged ones become orphaned (and recoverable via git reflog for a while).');
+    return;
+  }
+  if(a[0]==='-m'||a[0]==='-M'){
+    let old,neu; if(a.length===2){old=cb;neu=a[1];}else{old=a[1];neu=a[2];}
+    if(!old||!S.branches[old]) fail('error: no branch to rename');
+    if(!neu||S.branches[neu]) fail(`fatal: a branch named '${neu}' already exists`);
+    S.branches[neu]=S.branches[old]; delete S.branches[old];
+    if(S.upstream[old]){S.upstream[neu]=S.upstream[old]; delete S.upstream[old];}
+    if(cb===old) S.HEAD.name=neu;
+    print(`renamed ${old} → ${neu}`,'muted'); return;
+  }
+  const n=a[0];
+  if(n.startsWith('-')) fail(`error: option '${n}' isn't simulated`);
+  if(!/^[A-Za-z0-9._\/-]+$/.test(n)) fail(`fatal: '${n}' is not a valid branch name`);
+  if(S.branches[n]) fail(`fatal: a branch named '${n}' already exists`);
+  const start=a[1]?mustResolve(a[1]):headId();
+  if(S.ghosts.has(start)) S.flags.recovered=true;
+  S.branches[n]=start;
+  explain(`Stuck a new sticky note "${n}" on ${start}. You're still on ${cb||'a detached HEAD'} — use "git switch ${n}" to stand on it.`);
+};
+
+function doSwitch(tid,name,create){
+  if(S.merge) fail('error: you need to resolve your current merge first (or run "git merge --abort").');
+  const h=headTree(),t=tree(tid),U=untrackedMap();
+  const dirty=new Set([...changed(h,S.index),...keys(S.index).filter(f=>S.work[f]!==S.index[f])]);
+  const blockers=[...dirty].filter(f=>h[f]!==t[f]);
+  if(blockers.length) fail(`error: Your local changes to the following files would be overwritten by checkout:\n\t${blockers.join('\n\t')}\nPlease commit your changes or stash them before you switch branches.`);
+  const ublock=keys(U).filter(f=>f in t);
+  if(ublock.length) fail(`error: The following untracked working tree files would be overwritten by checkout:\n\t${ublock.join('\n\t')}`);
+  const ni={...t},nw={...t};
+  dirty.forEach(f=>{ if(f in S.index) ni[f]=S.index[f]; else delete ni[f]; if(f in S.work) nw[f]=S.work[f]; else delete nw[f]; });
+  Object.assign(nw,U);
+  S.index=ni; S.work=nw;
+  const from=curBranch()||headId();
+  if(create) S.branches[name]=tid;
+  if(S.ghosts.has(tid)) S.flags.recovered=true;
+  S.prev=from;
+  S.HEAD=name?{type:'branch',name}:{type:'detached',id:tid};
+  S.reflog.unshift({id:tid,action:`checkout: moving from ${from} to ${name||tid}`});
+  if(name) print(create?`Switched to a new branch '${name}'`:`Switched to branch '${name}'`);
+  else{ print(`Note: switching to '${tid}'.\n\nYou are in 'detached HEAD' state. You can look around and make experimental\ncommits; create a branch to keep them: git switch -c <new-branch-name>\n\nHEAD is now at ${short(tid)}`,'warn'); }
+  dirty.forEach(f=>print(`M\t${f}`,'muted'));
+  if(name) explain(create?`New sticky note "${name}" created on ${tid}, and your "you are here" sticker (HEAD) moved onto it. Commits now move "${name}" forward.`:`HEAD now points at "${name}". Your desk was updated to match its snapshot${dirty.size?' (your uncommitted changes came along since they didn\'t clash)':''}.`);
+  else explain('Detached HEAD = standing on a photo with no sticky note. Fine for looking around; make a branch if you want to keep commits made here.');
+}
+function pickSide(side,files){
+  if(!S.merge) fail(`error: --${side} only makes sense during a merge conflict`);
+  files.forEach(f=>{
+    const v=side==='ours'?headTree()[f]:tree(S.merge.theirs)[f];
+    if(v===undefined) delete S.work[f]; else S.work[f]=v;
+    print(`Updated ${f} with ${side} version (${v||'deleted'})`,'muted');
+  });
+  explain(`Took the ${side==='ours'?'current branch':'incoming branch'}'s version. Now: git add ${files.join(' ')} → git commit`);
+}
+function restoreFiles(files){
+  files.forEach(f=>{ if(!(f in S.index)) fail(`error: pathspec '${f}' did not match any file(s) known to git`); S.work[f]=S.index[f]; });
+  print(`Updated ${files.length} path${files.length>1?'s':''} from the index`,'muted');
+  explain('Discarded desk changes: the file was copied back from the staging box. This cannot be undone!');
+}
+G.checkout=a=>{
+  if(!a.length) fail('usage: git checkout <branch> | -b <new-branch> | -- <file>');
+  if(a[0]==='-b'||a[0]==='-B'){ const n=a[1]; if(!n) fail('fatal: switch `b\' requires a value'); if(S.branches[n]&&a[0]==='-b') fail(`fatal: a branch named '${n}' already exists`); return doSwitch(a[2]?mustResolve(a[2]):headId(),n,true); }
+  if(a[0]==='--ours'||a[0]==='--theirs') return pickSide(a[0].slice(2),a.slice(1).filter(x=>x!=='--'));
+  const dd=a.indexOf('--'); if(dd>=0) return restoreFiles(a.slice(dd+1).includes('.')?keys(S.index):a.slice(dd+1));
+  let t=a[0];
+  if(t==='-'){ if(!S.prev) fail('error: no previous branch'); t=S.prev; }
+  if(S.branches[t]) return doSwitch(S.branches[t],t,false);
+  if(S.tracking['origin/'+t]){ doSwitch(S.tracking['origin/'+t],t,true); S.upstream[t]=t; print(`branch '${t}' set up to track 'origin/${t}'.`,'muted'); return; }
+  const id=resolve(t); if(id) return doSwitch(id,null,false);
+  if(t in S.index||t==='.') return restoreFiles(t==='.'?keys(S.index):[t]);
+  fail(`error: pathspec '${t}' did not match any file(s) known to git`);
+};
+G.switch=a=>{
+  if(!a.length) fail('fatal: missing branch or commit argument');
+  if(a[0]==='-c'||a[0]==='-C'||a[0]==='--create'){ const n=a[1]; if(!n) fail('fatal: missing branch name'); if(S.branches[n]&&a[0]!=='-C') fail(`fatal: a branch named '${n}' already exists`); return doSwitch(a[2]?mustResolve(a[2]):headId(),n,true); }
+  if(a[0]==='--detach'||a[0]==='-d') return doSwitch(mustResolve(a[1]||'HEAD'),null,false);
+  let t=a[0]; if(t==='-'){ if(!S.prev) fail('error: no previous branch'); t=S.prev; }
+  if(S.branches[t]) return doSwitch(S.branches[t],t,false);
+  if(S.tracking['origin/'+t]){ doSwitch(S.tracking['origin/'+t],t,true); S.upstream[t]=t; print(`branch '${t}' set up to track 'origin/${t}'.`,'muted'); return; }
+  if(resolve(t)) fail(`fatal: a branch is expected, got commit '${t}'\nhint: to look at a commit, use: git switch --detach ${t}`);
+  fail(`fatal: invalid reference: ${t}\nhint: to create it, use: git switch -c ${t}`);
+};
+G.restore=a=>{
+  const staged=a.includes('--staged')||a.includes('-S');
+  let files=a.filter(x=>!x.startsWith('-'));
+  if(!files.length) fail('fatal: you must specify path(s) to restore');
+  if(staged){
+    const h=headTree(); if(files.includes('.')) files=uniq(keys(S.index),keys(h));
+    files.forEach(f=>{ if(f in h) S.index[f]=h[f]; else delete S.index[f]; });
+    print(`unstaged: ${files.join(', ')}`,'muted');
+    explain('Took it back out of the box. Your desk copy is untouched.');
+  } else restoreFiles(files.includes('.')?keys(S.index):files);
+};
+
+G.merge=a=>{
+  if(a[0]==='--abort'){
+    if(!S.merge) fail('fatal: There is no merge to abort (MERGE_HEAD missing).');
+    const U=untrackedMap(); S.index={...headTree()}; S.work=Object.assign({...headTree()},U); S.merge=null;
+    print('Merge aborted.','muted'); explain('Everything is back to how it was before you ran git merge.'); return;
+  }
+  if(a[0]==='--continue'){ if(!S.merge) fail('fatal: There is no merge in progress.'); return G.commit([]); }
+  const noff=a.includes('--no-ff');
+  const mi=a.indexOf('-m'); const customMsg=mi>=0?a[mi+1]:null;
+  const ref=a.filter((x,i)=>!x.startsWith('-')&&a[i-1]!=='-m')[0];
+  if(!ref) fail('fatal: specify the branch to merge, e.g. git merge feature');
+  if(S.merge) fail('fatal: You have not concluded your merge. Commit or run "git merge --abort".');
+  const t=mustResolve(ref); const h=headId();
+  if(isDirty()) fail('error: Your local changes would be overwritten by merge.\nPlease commit your changes or stash them before you merge.');
+  if(isAncestor(t,h)){ print('Already up to date.'); explain(`Everything in ${ref} is already part of your branch.`); return; }
+  const U=untrackedMap();
+  if(isAncestor(h,t)&&!noff){
+    const ch=changed(tree(h),tree(t));
+    S.index={...tree(t)}; S.work=Object.assign({...tree(t)},U);
+    moveHead(t,`merge ${ref}: Fast-forward`);
+    print(`Updating ${h}..${t}\nFast-forward`); ch.forEach(f=>print(` ${f}`,'muted'));
+    explain(`Fast-forward: your branch hadn't moved since ${ref} split off, so the road was straight — Git just slid your sticky note forward. No merge commit needed.`);
+    return;
+  }
+  const base=mergeBase(h,t); const B=tree(base),O=tree(h),T=tree(t);
+  const res={},conflicts=[];
+  uniq(keys(B),keys(O),keys(T)).forEach(f=>{
+    const o=O[f],th=T[f],b=B[f]; let v;
+    if(o===th) v=o; else if(o===b) v=th; else if(th===b) v=o; else { v='CONFLICT'; conflicts.push(f); }
+    if(v!==undefined) res[f]=v;
+  });
+  const msg=customMsg||`Merge ${S.branches[ref]?`branch '${ref}'`:S.tracking[ref]?`remote-tracking branch '${ref}'`:ref} into ${curBranch()||'HEAD'}`;
+  changed(O,res).forEach(f=>print(`Auto-merging ${f}`,'muted'));
+  if(conflicts.length){
+    S.merge={theirs:t,msg,hadConflict:true,ref};
+    S.index=res; S.work=Object.assign({...res},U);
+    conflicts.forEach(f=>print(`CONFLICT (content): Merge conflict in ${f}`,'err'));
+    print('Automatic merge failed; fix conflicts and then commit the result.','err');
+    explain(`Both roads changed ${conflicts.join(', ')} differently since they split, so Git asks you to decide. Steps: "cat ${conflicts[0]}" to look → "edit ${conflicts[0]}" (or git checkout --theirs ${conflicts[0]}) → git add ${conflicts[0]} → git commit. Or bail out with git merge --abort.`);
+    return;
+  }
+  const c=mkCommit([h,t],msg,res);
+  S.index={...res}; S.work=Object.assign({...res},U);
+  moveHead(c.id,`merge ${ref}: Merge made by the 'ort' strategy.`);
+  print("Merge made by the 'ort' strategy.");
+  explain(`Created merge commit ${c.id} with two parents (${h} and ${t}) — the intersection where both roads join.`);
+};
+
+G.rebase=a=>{
+  if(a[0]==='--abort'||a[0]==='--continue'||a[0]==='--skip') fail('fatal: No rebase in progress? (this simulator never pauses mid-rebase)');
+  if(a.includes('-i')||a.includes('--interactive')) fail('Interactive rebase (-i) isn\'t simulated — see "Merge & rebase" in the cheat sheet for what it does.');
+  const ref=a.find(x=>!x.startsWith('-')); if(!ref) fail('fatal: specify what to rebase onto, e.g. git rebase main');
+  const up=mustResolve(ref);
+  if(S.merge) fail('fatal: finish or abort your merge first.');
+  if(isDirty()) fail('error: cannot rebase: You have unstaged changes.\nerror: Please commit or stash them.');
+  const b=curBranch(), h=headId(), U=untrackedMap();
+  if(isAncestor(up,h)){ print(`Current branch ${b||'HEAD'} is up to date.`); return; }
+  if(isAncestor(h,up)){
+    S.index={...tree(up)}; S.work=Object.assign({...tree(up)},U); moveHead(up,`rebase (finish): onto ${ref}`);
+    print(`Successfully rebased and updated ${b?'refs/heads/'+b:'HEAD'}.`);
+    explain('You had no commits of your own, so this was just a fast-forward.'); return;
+  }
+  const upAnc=ancestors(up);
+  const todo=[...ancestors(h)].filter(x=>!upAnc.has(x)&&S.commits[x].parents.length<=1).sort((x,y)=>S.commits[x].n-S.commits[y].n);
+  let baseTree={...tree(up)}; const plan=[];
+  for(const id of todo){
+    const c=S.commits[id], p=c.parents[0]?tree(c.parents[0]):{}, ch=changed(p,c.tree);
+    for(const f of ch) if(baseTree[f]!==p[f]&&baseTree[f]!==c.tree[f]) fail(`CONFLICT (content): could not apply ${id}... ${c.msg}  (file ${f})\nThis simulator cancels conflicting rebases, so nothing changed.\nTip: use "git merge ${ref}" to practise resolving this conflict instead.`);
+    const nt={...baseTree}; ch.forEach(f=>{ if(f in c.tree) nt[f]=c.tree[f]; else delete nt[f]; });
+    if(!changed(baseTree,nt).length){ plan.push({id,skip:true}); continue; }
+    plan.push({id,tree:nt}); baseTree=nt;
+  }
+  let base=up;
+  plan.forEach(p=>{
+    if(p.skip){ print(`dropping ${p.id} — its changes are already upstream`,'muted'); return; }
+    const old=S.commits[p.id]; const nc=mkCommit([base],old.msg,p.tree,{author:old.author});
+    print(`Applied ${p.id} → ${nc.id}  ${old.msg}`,'muted'); base=nc.id;
+  });
+  S.index={...baseTree}; S.work=Object.assign({...baseTree},U);
+  moveHead(base,`rebase (finish): ${b||'HEAD'} onto ${ref}`);
+  print(`Successfully rebased and updated ${b?'refs/heads/'+b:'HEAD'}.`,'ok');
+  S.flags.rebased=true;
+  explain(`Your commits were replayed on top of ${ref} as NEW commits with new ids (the old ones are now hollow/orphaned). Like re-laying your road so it starts at the end of ${ref}: a straight history, but rewritten — never rebase commits others already pulled.`);
+};
+
+G.reset=a=>{
+  let mode='mixed'; const rest=[];
+  a.forEach(x=>{ if(x==='--soft'||x==='--mixed'||x==='--hard') mode=x.slice(2); else if(x!=='--'&&x!=='-q') rest.push(x); });
+  if(rest.length&&!resolve(rest[0])&&(rest[0] in S.index||rest[0] in headTree()||rest[0]==='.')){
+    const h=headTree(); const files=rest.includes('.')?uniq(keys(S.index),keys(h)):rest;
+    files.forEach(f=>{ if(f in h) S.index[f]=h[f]; else delete S.index[f]; });
+    print(`Unstaged changes after reset:\n${files.map(f=>'M\t'+f).join('\n')}`,'muted');
+    explain('Took the file back out of the box (same as git restore --staged). Desk unchanged.'); return;
+  }
+  const ref=rest[0]||'HEAD'; const t=mustResolve(ref); const old=headId(); const U=untrackedMap();
+  if(S.ghosts.has(t)) S.flags.recovered=true;
+  moveHead(t,`reset: moving to ${ref}`);
+  if(mode!=='soft'){ S.index={...tree(t)}; S.merge=null; }
+  if(mode==='hard'){ S.work=Object.assign({...tree(t)},U); print(`HEAD is now at ${short(t)}`); }
+  else if(mode==='mixed'){ const un=unstagedList(); if(un.length) print(`Unstaged changes after reset:\n${un.map(x=>'M\t'+x.f).join('\n')}`,'muted'); }
+  if(t!==old&&isAncestor(t,old)&&mode!=='hard') S.flags.softUndo=true;
+  const lost=t!==old&&!isAncestor(old,t);
+  const msgs={
+    soft:'--soft: only the branch sticky note moved back. The undone changes are still packed in the box (staged), ready to re-commit.',
+    mixed:'--mixed (default): the sticky note moved back and the box was unpacked onto your desk. Your changes are still there, just unstaged.',
+    hard:'--hard: sticky note moved back AND your desk was wiped to match. Uncommitted work is gone for good.'
+  };
+  explain(msgs[mode]+(lost?` Commit ${old} is now orphaned — find it later with git reflog.`:''));
+};
+
+G.revert=a=>{
+  const ref=a.find(x=>!x.startsWith('-')); if(!ref) fail('usage: git revert <commit>');
+  const id=mustResolve(ref); const c=S.commits[id];
+  if(S.merge||isDirty()) fail('error: your local changes would be overwritten by revert. Commit or stash them first.');
+  if(c.parents.length>1) fail('error: commit is a merge but no -m option was given. (Reverting merges isn\'t simulated.)');
+  if(!c.parents.length) fail('error: reverting the very first commit isn\'t simulated.');
+  const p=tree(c.parents[0]), ch=changed(p,c.tree), cur={...headTree()}, U=untrackedMap();
+  for(const f of ch) if(cur[f]!==c.tree[f]) fail(`error: could not revert ${id}... ${c.msg}\n${f} was changed again later, so this would conflict. (Simulator cancelled — nothing changed.)`);
+  ch.forEach(f=>{ if(f in p) cur[f]=p[f]; else delete cur[f]; });
+  const nc=mkCommit([headId()],`Revert "${c.msg}"`,cur);
+  S.index={...cur}; S.work=Object.assign({...cur},U); moveHead(nc.id,`revert: Revert "${c.msg}"`);
+  print(`[${curBranch()||'detached HEAD'} ${nc.id}] Revert "${c.msg}"`);
+  S.flags.reverted=true;
+  explain(`Like an accountant fixing a ledger: you don't erase entry ${id}, you add a new entry ${nc.id} that cancels it. History stays intact, so this is the safe undo for commits already pushed.`);
+};
+
+G['cherry-pick']=a=>{
+  const ref=a.find(x=>!x.startsWith('-')); if(!ref) fail('usage: git cherry-pick <commit>');
+  const id=mustResolve(ref); const c=S.commits[id];
+  if(S.merge||isDirty()) fail('error: your local changes would be overwritten by cherry-pick. Commit or stash them first.');
+  if(c.parents.length>1) fail('error: cherry-picking a merge commit isn\'t simulated.');
+  const p=c.parents[0]?tree(c.parents[0]):{}, ch=changed(p,c.tree), cur={...headTree()}, U=untrackedMap();
+  for(const f of ch) if(cur[f]!==p[f]&&cur[f]!==c.tree[f]) fail(`error: could not apply ${id}... ${c.msg}\nconflict in ${f}. (Simulator cancelled — nothing changed.)`);
+  ch.forEach(f=>{ if(f in c.tree) cur[f]=c.tree[f]; else delete cur[f]; });
+  if(!changed(headTree(),cur).length){ print('The previous cherry-pick is now empty — those changes are already here.','warn'); return; }
+  if(S.ghosts.has(id)) S.flags.recovered=true;
+  const nc=mkCommit([headId()],c.msg,cur,{author:c.author});
+  S.index={...cur}; S.work=Object.assign({...cur},U); moveHead(nc.id,`cherry-pick: ${c.msg}`);
+  print(`[${curBranch()||'detached HEAD'} ${nc.id}] ${c.msg}`);
+  explain(`Copied the change from ${id} onto your branch as a new commit ${nc.id}. Like photocopying one page from someone else's notebook into yours.`);
+};
+
+G.stash=a=>{
+  const sub=a[0]&&!a[0].startsWith('-')?a[0]:'push';
+  if(sub==='push'||sub==='save'){
+    if(S.merge) fail('error: cannot stash during a merge.');
+    if(!isDirty()){ print('No local changes to save'); explain('Stash only saves changes to tracked files. Brand-new (untracked) files stay on your desk unless you add them first.'); return; }
+    const h=headTree(), base=headId(), U=untrackedMap(), w={};
+    uniq(keys(S.index),keys(h)).forEach(f=>{ w[f]=f in S.work?S.work[f]:null; });
+    const mi=a.indexOf('-m');
+    const e={work:w,index:{...S.index},base,branch:curBranch()||'(no branch)',msg:mi>=0?a[mi+1]:S.commits[base].msg};
+    S.stash.unshift(e);
+    S.index={...h}; S.work=Object.assign({...h},U);
+    print(`Saved working directory and index state WIP on ${e.branch}: ${base} ${e.msg}`);
+    explain('Your unfinished work went into a drawer, and your desk is clean again. Switch branches, fix something, then get it back with git stash pop.'); return;
+  }
+  if(sub==='list'){ if(!S.stash.length) print('(stash is empty)','muted'); S.stash.forEach((e,i)=>print(`stash@{${i}}: WIP on ${e.branch}: ${e.base} ${e.msg}`)); return; }
+  if(sub==='drop'){ if(!S.stash.length) fail('error: No stash entries found.'); S.stash.shift(); print('Dropped refs/stash@{0}'); return; }
+  if(sub==='clear'){ S.stash=[]; print('stash cleared','muted'); return; }
+  if(sub==='pop'||sub==='apply'){
+    if(!S.stash.length) fail('error: No stash entries found.');
+    const e=S.stash[0], bt=tree(e.base), h=headTree();
+    const files=keys(e.work).filter(f=>(e.work[f]===null?undefined:e.work[f])!==bt[f]||e.index[f]!==bt[f]);
+    for(const f of files) if(S.work[f]!==h[f]) fail(`error: Your local changes to ${f} would be overwritten. Commit or stash them first.`);
+    for(const f of files) if(h[f]!==bt[f]&&e.work[f]!==h[f]) fail(`CONFLICT: ${f} changed both in the stash and on this branch.\n(Simulator cancelled — stash kept, nothing changed.)`);
+    files.forEach(f=>{ if(e.work[f]===null) delete S.work[f]; else{ S.work[f]=e.work[f]; if(!(f in S.index)) S.index[f]=e.work[f]; } });
+    print(`On branch ${curBranch()||'(detached)'}`); files.forEach(f=>print(`\tmodified:   ${f}`,'err'));
+    if(sub==='pop'){ S.stash.shift(); print(`Dropped refs/stash@{0}`,'muted'); S.flags.stashPopped=true; }
+    explain(sub==='pop'?'Took the work out of the drawer and put it back on your desk (the drawer entry is removed).':'Copied the work back onto your desk but left it in the drawer too (apply keeps it).'); return;
+  }
+  fail(`error: unknown stash subcommand '${sub}'`);
+};
+
+G.tag=a=>{
+  if(!a.length||a[0]==='-l'||a[0]==='--list'){ const t=keys(S.tags).sort(); if(!t.length) print('(no tags)','muted'); t.forEach(x=>print(x)); return; }
+  if(a[0]==='-d'){ if(!S.tags[a[1]]) fail(`error: tag '${a[1]}' not found.`); print(`Deleted tag '${a[1]}' (was ${S.tags[a[1]]})`); delete S.tags[a[1]]; return; }
+  const pos=a.filter((x,i)=>!x.startsWith('-')&&a[i-1]!=='-m');
+  const n=pos[0]; if(S.tags[n]) fail(`fatal: tag '${n}' already exists`);
+  if(!/^[A-Za-z0-9._\/-]+$/.test(n)) fail(`fatal: '${n}' is not a valid tag name`);
+  S.tags[n]=pos[1]?mustResolve(pos[1]):headId();
+  explain(`Tag "${n}" is a permanent label on ${S.tags[n]} — unlike a branch, it never moves. Perfect for releases like v1.0.`);
+};
+
+G.remote=a=>{
+  if(a[0]==='-v') { print('origin\thttps://gitlab.example.com/you/learn-git.git (fetch)\norigin\thttps://gitlab.example.com/you/learn-git.git (push)'); }
+  else if(a[0]==='add') fail('error: remote origin already exists. (Only one remote in this sandbox.)');
+  else print('origin');
+  explain('"origin" is just the nickname for the server you cloned from — here, a pretend GitLab project.');
+};
+
+G.fetch=a=>{
+  const lines=[];
+  keys(S.remote.branches).forEach(b=>{
+    const id=S.remote.branches[b], old=S.tracking['origin/'+b];
+    if(old!==id){ lines.push(old?`   ${old}..${id}  ${b.padEnd(10)} -> origin/${b}`:` * [new branch]      ${b.padEnd(10)} -> origin/${b}`); S.tracking['origin/'+b]=id; markKnown(id); }
+  });
+  keys(S.tracking).forEach(t=>{ const b=t.slice(7); if(!S.remote.branches[b]&&(a.includes('--prune')||a.includes('-p'))){ lines.push(` - [deleted]         (none)     -> ${t}`); delete S.tracking[t]; } });
+  if(!lines.length){ print('(nothing new on origin)','muted'); explain('Fetch checked the server: your origin/… copies are already current.'); return; }
+  print('From gitlab.example.com:you/learn-git'); lines.forEach(l=>print(l));
+  if(S.flags.teammate&&S.tracking['origin/main']&&isAncestor(S.flags.teammate,S.tracking['origin/main'])) S.flags.fetchedTeammate=true;
+  explain('Fetch = bringing the mail inside without opening it. origin/… labels moved to show what is on the server, but YOUR branches did not change. Next: git merge origin/main (or just use git pull).');
+};
+
+G.pull=a=>{
+  const b=curBranch(); if(!b) fail('fatal: You are not currently on a branch.');
+  const up=S.upstream[b];
+  if(!up) fail(`There is no tracking information for the current branch.\n    git branch --set-upstream-to=origin/${b} ${b}\nor push it first with: git push -u origin ${b}`);
+  if(!S.remote.branches[up]) fail(`fatal: couldn't find remote ref ${up}`);
+  const exp=$('#explainToggle').checked; $('#explainToggle').checked=false;
+  try{ G.fetch([]); if(a.includes('--rebase')||a.includes('-r')) G.rebase(['origin/'+up]); else G.merge(['origin/'+up]); }
+  finally{ $('#explainToggle').checked=exp; }
+  if(S.flags.teammate&&isAncestor(S.flags.teammate,headId())) S.flags.teammatePulled=true;
+  explain(`Pull = fetch + ${a.includes('--rebase')?'rebase':'merge'}: grabbed the mail from the server, then combined origin/${up} into your ${b}.${S.merge?' There is a conflict to resolve first.':''}`);
+};
+
+G.push=a=>{
+  const force=a.some(x=>['--force','-f','--force-with-lease'].includes(x));
+  const setUp=a.includes('-u')||a.includes('--set-upstream');
+  const del=a.includes('--delete')||a.includes('-d');
+  if(a.includes('--tags')){ print(`To gitlab.example.com:you/learn-git.git\n${keys(S.tags).map(t=>` * [new tag]  ${t} -> ${t}`).join('\n')||'Everything up-to-date'}`); return; }
+  const pos=a.filter(x=>!x.startsWith('-'));
+  let br;
+  if(pos.length){ if(pos[0]!=='origin') fail(`fatal: '${pos[0]}' does not appear to be a git repository (the only remote here is "origin")`); br=pos[1]; }
+  if(del){ if(!br) fail('fatal: --delete needs a branch name'); if(!S.remote.branches[br]) fail(`error: unable to delete '${br}': remote ref does not exist`); delete S.remote.branches[br]; delete S.tracking['origin/'+br]; print(`To gitlab.example.com:you/learn-git.git\n - [deleted]         ${br}`); return; }
+  if(!br){
+    br=curBranch(); if(!br) fail('fatal: You are not currently on a branch.');
+    if(!S.upstream[br]&&!setUp) fail(`fatal: The current branch ${br} has no upstream branch.\nTo push the current branch and set the remote as upstream, use\n\n    git push -u origin ${br}\n`);
+  }
+  const local=S.branches[br]; if(!local) fail(`error: src refspec ${br} does not match any`);
+  const rid=S.remote.branches[br];
+  if(setUp){ S.upstream[br]=br; }
+  if(rid===local){ print('Everything up-to-date'); explain('The server already has exactly what you have.'); return; }
+  const forced=rid&&!isAncestor(rid,local);
+  if(forced&&!force){
+    print(`To gitlab.example.com:you/learn-git.git\n ! [rejected]        ${br} -> ${br} (fetch first)`,'err');
+    fail(`error: failed to push some refs to 'origin'\nhint: Updates were rejected because the remote contains work that you do\nhint: not have locally. Run "git pull" first, then push again.`);
+  }
+  S.remote.branches[br]=local; S.tracking['origin/'+br]=local;
+  print(`To gitlab.example.com:you/learn-git.git\n ${rid?(forced?'+ ':'  ')+rid+(forced?'...':'..')+local:'* [new branch]     '}  ${br} -> ${br}${forced?' (forced update)':''}`);
+  if(setUp) print(`branch '${br}' set up to track 'origin/${br}'.`,'muted');
+  S.flags.pushed=true;
+  if(S.flags.teammate&&isAncestor(S.flags.teammate,local)&&br==='main') S.flags.syncDone=true;
+  if(forced) explain('Force push REPLACED the server\'s history with yours. Your teammate\'s commits that weren\'t in your branch are gone from the server. Prefer --force-with-lease, and never force-push shared branches like main.');
+  else explain(rid?`Mailed your new commits to the server. origin/${br} now matches your ${br}.`:`Created branch "${br}" on the server. In GitLab, this is when you'd open a merge request.`);
+};
+
+G.reflog=()=>{
+  S.reflog.slice(0,20).forEach((r,i)=>print(`${r.id} HEAD@{${i}}: ${r.action}`,S.ghosts.has(r.id)?'warn':''));
+  explain('The reflog is Git\'s flight recorder: every place HEAD has been, even commits no branch points to anymore (highlighted). Recover one with git reset --hard <id> or git branch rescue <id>.');
+};
+
+G.rm=a=>{
+  const cached=a.includes('--cached'); const files=a.filter(x=>!x.startsWith('-'));
+  if(!files.length) fail('usage: git rm [--cached] <file>');
+  files.forEach(f=>{ if(!(f in S.index)) fail(`fatal: pathspec '${f}' did not match any files`); delete S.index[f]; if(!cached) delete S.work[f]; print(`rm '${f}'`); });
+  explain(cached?'Removed from tracking but kept on your desk — the usual fix after accidentally committing a file that belongs in .gitignore.':'Deleted the file and staged the deletion in one step.');
+};
+G.mv=a=>{
+  const [s,d]=a; if(!s||!d) fail('usage: git mv <source> <destination>');
+  if(!(s in S.index)) fail(`fatal: not under version control, source=${s}`);
+  if(d in S.work) fail(`fatal: destination exists, source=${s}, destination=${d}`);
+  S.work[d]=S.work[s]; delete S.work[s]; S.index[d]=S.index[s]; delete S.index[s];
+  explain('Git doesn\'t really track renames — it sees "deleted old + added new" with the same content.');
+};
+
+/* ---------- teammate ---------- */
+function teammate(file){
+  const tip=S.remote.branches.main;
+  if(!tip) return print('origin/main no longer exists on the server.','err');
+  const t={...tree(tip)}; S.ver[file]=(S.ver[file]||0)+1; t[file]='v'+S.ver[file];
+  const c=mkCommit([tip],`Teammate updates ${file}`,t,{author:'Teammate',remoteOnly:true});
+  S.remote.branches.main=c.id; S.flags.teammate=c.id;
+  print(`🧑‍💻 A teammate pushed ${c.id} "${c.msg}" to the server's main.`,'note');
+  explain(`You can't see it in your graph yet — your origin/main is a snapshot from your last fetch. Run git fetch (look) or git pull (look + merge). If you push first, the server will reject you.${file==='README.md'?' Since they edited README.md, editing it yourself first will cause a conflict on pull — good practice!':''}`);
+}
+
+/* ---------- dispatcher ---------- */
+function tokenize(s){ const out=[],re=/"([^"]*)"|'([^']*)'|(\S+)/g; let m; while((m=re.exec(s))) out.push(m[1]??m[2]??m[3]); return out; }
+const hist=[]; let hpos=0;
+function run(line){
+  line=line.trim(); if(!line) return;
+  hist.push(line); hpos=hist.length;
+  print('$ '+line,'cmd');
+  const args=tokenize(line); const cmd=args[0];
+  try{
+    if(cmd==='git'){
+      const sub=args[1];
+      if(!sub) L.help();
+      else if(sub==='--version') G.version();
+      else if(G[sub]) G[sub](args.slice(2));
+      else fail(`git: '${sub}' is not a git command in this simulator. Try "help".`);
+    }
+    else if(L[cmd]) L[cmd](args.slice(1));
+    else fail(`command not found: ${cmd}  (try "help"; git commands start with "git")`);
+  }catch(e){
+    if(e instanceof GitError) print(e.message,'err'); else { print('Simulator error: '+e.message,'err'); console.error(e); }
+  }
+  after();
+}
+function after(){
+  const now=reachable();
+  S.prevVisible.forEach(x=>{ if(!now.has(x)) S.ghosts.add(x); });
+  now.forEach(x=>S.ghosts.delete(x));
+  S.prevVisible=now;
+  render(); checkChallenges();
+  const o=$('#out'); o.scrollTop=o.scrollHeight;
+}
+
+/* =========================================================
+   Challenges
+   ========================================================= */
+const CH=[
+ {id:'c1',t:'Make your first commit',g:'Change a file, stage it, and commit it.',h:'edit app.js\ngit status\ngit add app.js\ngit commit -m "Update app"',ok:()=>(S.flags.userCommits||0)>=1},
+ {id:'c2',t:'Branch out',g:'Create a branch called feature, commit on it, then switch back to main.',h:'git switch -c feature\nedit app.js\ngit commit -am "Feature work"\ngit switch main',ok:()=>S.branches.feature&&S.branches.main&&!isAncestor(S.branches.feature,S.branches.main)&&curBranch()==='main'},
+ {id:'c3',t:'Merge your feature',g:'Bring the feature branch into main.',h:'(on main)\ngit merge feature',ok:()=>done.c2&&S.branches.feature&&S.branches.main&&isAncestor(S.branches.feature,S.branches.main)&&S.branches.feature!==S.order[0]},
+ {id:'c4',t:'Survive a merge conflict',g:'Change README.md differently on two branches, merge, and resolve the conflict.',h:'git switch -c clash\nedit README.md\ngit commit -am "Clash change"\ngit switch main\nedit README.md\ngit commit -am "Main change"\ngit merge clash\ncat README.md\nedit README.md\ngit add README.md\ngit commit -m "Resolve conflict"',ok:()=>S.flags.resolvedConflict},
+ {id:'c5',t:'Undo a commit, keep the work',g:'Move your branch back one commit without losing the changes.',h:'git reset --soft HEAD~1\ngit status   (changes are still staged)',ok:()=>S.flags.softUndo},
+ {id:'c6',t:'Stash and come back',g:'Put unfinished work in the drawer, then bring it back.',h:'edit app.js\ngit stash\ngit status   (clean!)\ngit stash pop',ok:()=>S.flags.stashPopped},
+ {id:'c7',t:'Sync with a teammate',g:'Click "Teammate pushes", commit something yourself, then get their work and push yours.',h:'(click 🧑‍💻 Teammate pushes)\nedit app.js\ngit commit -am "My work"\ngit push        (rejected!)\ngit pull\ngit push',ok:()=>S.flags.syncDone},
+ {id:'c8',t:'Rescue a "lost" commit',g:'Lose a commit with reset --hard, then find it in the reflog and bring it back.',h:'edit app.js\ngit commit -am "Precious"\ngit reset --hard HEAD~1\ngit reflog\ngit reset --hard <id of Precious>',ok:()=>S.flags.recovered},
+ {id:'c9',t:'Rebase a branch',g:'Replay a branch\'s commits on top of the latest main.',h:'git switch -c topic\nedit notes.md\ngit add notes.md\ngit commit -m "Topic work"\ngit switch main\nedit app.js\ngit commit -am "Main moves on"\ngit switch topic\ngit rebase main',ok:()=>S.flags.rebased},
+];
+function checkChallenges(){
+  let changedAny=false;
+  CH.forEach(c=>{ let ok=false; try{ok=!!c.ok()}catch(e){} if(ok&&!done[c.id]){ done[c.id]=true; changedAny=true; print(`🎉 Challenge complete: ${c.t}`,'win'); } });
+  if(changedAny) saveDone();
+  renderChallenges();
+}
+function renderChallenges(){
+  const n=CH.filter(c=>done[c.id]).length;
+  $('#chCount').textContent=`${n}/${CH.length}`; $('#chBar').style.width=(n/CH.length*100)+'%';
+  $('#challenges').innerHTML=CH.map((c,i)=>`<div class="ch ${done[c.id]?'done':''}"><div class="num">${done[c.id]?'✓':i+1}</div><div><div class="t">${esc(c.t)}</div><div class="g">${esc(c.g)}</div><details><summary>Show steps</summary><code>${esc(c.h)}</code></details></div></div>`).join('');
+}
+
+/* =========================================================
+   Rendering
+   ========================================================= */
+function render(){
+  const b=curBranch();
+  $('#ps').textContent=`~/learn-git (${b||headId()}${S.merge?'|MERGING':''}) $`;
+  // status bar
+  let sb=`<span class="pill accent">HEAD → ${esc(b||'detached @ '+headId())}</span><span class="pill">${headId()}</span>`;
+  if(b&&S.upstream[b]&&S.tracking['origin/'+S.upstream[b]]){ const [ah,bh]=aheadBehind(headId(),S.tracking['origin/'+S.upstream[b]]); sb+=`<span class="pill ${ah||bh?'warn':''}">vs origin/${esc(S.upstream[b])}: ↑${ah} ↓${bh}</span>`; }
+  else if(b) sb+=`<span class="pill warn">not pushed yet</span>`;
+  if(S.merge) sb+=`<span class="pill err">MERGING ${esc(S.merge.ref)}</span>`;
+  if(isDirty()||untracked().length) sb+=`<span class="pill warn">uncommitted changes</span>`;
+  $('#statusbar').innerHTML=sb;
+  renderGraph(); renderAreas(); renderRemote();
+}
+function renderAreas(){
+  const h=headTree(), files=uniq(keys(S.work),keys(S.index)).sort();
+  const w=files.map(f=>{
+    let tag='',cls='';
+    if(S.work[f]==='CONFLICT'){tag='conflict';cls='C';}
+    else if(!(f in S.work)){tag='deleted';cls='D';}
+    else if(!(f in S.index)){tag='untracked';cls='U';}
+    else if(S.work[f]!==S.index[f]){tag='modified';cls='M';}
+    else return `<div class="file"><span>${esc(f)}</span><span class="tag">${esc(S.work[f])}</span></div>`;
+    return `<div class="file"><span>${esc(f)} <span class="tag ${cls}">${tag}</span></span><span class="tag">${esc(S.work[f]==='CONFLICT'?'⚠':S.work[f]||'—')}</span></div>`;
+  }).join('');
+  $('#aWork').innerHTML=w||'<div class="empty">no files</div>';
+  const st=stagedList();
+  $('#aStage').innerHTML=st.length?st.map(x=>`<div class="file"><span>${esc(x.f)} <span class="tag ${S.index[x.f]==='CONFLICT'?'C':x.kind==='deleted'?'D':x.kind==='new file'?'N':'S'}">${S.index[x.f]==='CONFLICT'?'conflict':x.kind}</span></span><span class="tag">${esc(S.index[x.f]==='CONFLICT'?'⚠':S.index[x.f]||'—')}</span></div>`).join(''):'<div class="empty">empty — matches last commit</div>';
+  $('#aHead').innerHTML=keys(h).sort().map(f=>`<div class="file"><span>${esc(f)}</span><span class="tag">${esc(h[f])}</span></div>`).join('')||'<div class="empty">no files</div>';
+}
+function renderRemote(){
+  const rb=keys(S.remote.branches).sort();
+  $('#rServer').innerHTML=rb.map(b=>{ const id=S.remote.branches[b], seen=S.tracking['origin/'+b]; return `<div class="kv"><span>${esc(b)}</span><span>${id}${seen!==id?' <em>(new — fetch to see)</em>':''}</span></div>`; }).join('')||'<div class="empty">no branches</div>';
+  $('#rStash').innerHTML=S.stash.length?S.stash.map((e,i)=>`<div class="kv"><span>stash@{${i}}</span><span style="font-family:var(--sans)">WIP on ${esc(e.branch)}</span></div>`).join(''):'<div class="empty">empty</div>';
+}
+function renderGraph(){
+  const showGhost=$('#ghostToggle').checked;
+  const reach=reachable(), vis=new Set(reach);
+  if(showGhost) S.ghosts.forEach(x=>ancestors(x).forEach(y=>vis.add(y)));
+  const ids=[...vis].sort((a,b)=>S.commits[a].n-S.commits[b].n);
+  const col={}; ids.forEach((id,i)=>col[id]=i);
+  // lanes: walk first-parent chains from each ref, main first
+  const lane={}; let nl=0;
+  const order=[];
+  if(S.branches.main) order.push(S.branches.main);
+  if(curBranch()) order.push(S.branches[curBranch()]);
+  keys(S.branches).sort().forEach(b=>order.push(S.branches[b]));
+  keys(S.tracking).sort().forEach(b=>order.push(S.tracking[b]));
+  keys(S.tags).sort().forEach(b=>order.push(S.tags[b]));
+  order.push(headId());
+  if(showGhost) [...S.ghosts].sort((a,b)=>S.commits[b].n-S.commits[a].n).forEach(g=>order.push(g));
+  order.forEach(tip=>{ let x=tip,any=false; while(x&&vis.has(x)&&lane[x]===undefined){ lane[x]=nl; any=true; x=S.commits[x].parents[0]; } if(any) nl++; });
+  ids.forEach(id=>{ if(lane[id]===undefined) lane[id]=nl++; });
+  // compact lane numbers
+  const used=[...new Set(ids.map(i=>lane[i]))].sort((a,b)=>a-b); const remap={}; used.forEach((l,i)=>remap[l]=i);
+  ids.forEach(id=>lane[id]=remap[lane[id]]);
+  const nLanes=used.length||1;
+  const labels={}; const rows=new Array(nLanes).fill(0);
+  ids.forEach(id=>{ labels[id]=refsAt(id); rows[lane[id]]=Math.max(rows[lane[id]],labels[id].length); });
+  const top=[]; let acc=6; for(let l=0;l<nLanes;l++){ top[l]=acc; acc+=rows[l]*20+62; }
+  const X=id=>48+col[id]*100, Y=id=>top[lane[id]]+rows[lane[id]]*20+30;
+  const W=Math.max(48*2+(ids.length-1)*100,300), H=acc+4;
+  const muted=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#888';
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Commit graph">`;
+  // edges
+  ids.forEach(id=>{
+    const c=S.commits[id], cx=X(id), cy=Y(id), ghost=!reach.has(id);
+    c.parents.forEach((p,i)=>{ if(!vis.has(p)) return;
+      const px=X(p),py=Y(p), color=ghost?muted:LANES[(i===0?lane[id]:lane[p])%LANES.length];
+      let d;
+      if(py===cy) d=`M${px} ${py}L${cx} ${cy}`;
+      else if(cx-px<=100) d=`M${px} ${py}C${(px+cx)/2} ${py},${(px+cx)/2} ${cy},${cx} ${cy}`;
+      else if(i===0) d=`M${px} ${py}C${px+50} ${py},${px+50} ${cy},${px+100} ${cy}L${cx} ${cy}`;
+      else d=`M${px} ${py}L${cx-100} ${py}C${cx-50} ${py},${cx-50} ${cy},${cx} ${cy}`;
+      svg+=`<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5"${ghost||i>0?' stroke-dasharray="'+(ghost?'4 4':'6 3')+'"':''} opacity="${ghost?.55:1}"/>`;
+    });
+  });
+  // nodes + labels
+  const hid=headId();
+  ids.forEach(id=>{
+    const c=S.commits[id], x=X(id), y=Y(id), ghost=!reach.has(id), color=LANES[lane[id]%LANES.length];
+    svg+=`<g class="node" data-id="${id}">`;
+    if(id===hid) svg+=`<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+    svg+=`<circle cx="${x}" cy="${y}" r="11" fill="${ghost?'var(--bg)':color}" stroke="${ghost?muted:color}" stroke-width="2" ${ghost?'stroke-dasharray="3 3"':''}/>`;
+    if(c.parents.length>1) svg+=`<circle cx="${x}" cy="${y}" r="4" fill="var(--panel)"/>`;
+    if(c.author==='Teammate') svg+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" fill="#fff">T</text>`;
+    svg+=`<text x="${x}" y="${y+28}" text-anchor="middle" font-size="10.5" fill="${ghost?muted:'var(--fg)'}">${id}</text>`;
+    svg+=`<rect x="${x-46}" y="${y-14}" width="92" height="50" fill="transparent"/>`;
+    svg+=`<title>${esc(id+' — '+c.msg+' ('+c.author+')'+(ghost?' — orphaned':''))}</title></g>`;
+    labels[id].forEach((lb,i)=>{
+      const w=Math.min(lb.t.length*6.7+14,96), ly=y-24-i*20;
+      let fill='var(--chip)',stroke=color,tc='var(--fg)',dash='';
+      if(lb.k==='headbranch'||lb.k==='head'){fill='var(--accent)';stroke='var(--accent)';tc='var(--on-accent)';}
+      else if(lb.k==='remote'){fill='var(--panel)';stroke=muted;tc=muted;dash=' stroke-dasharray="3 2"';}
+      else if(lb.k==='tag'){fill='var(--panel)';stroke='var(--warn)';tc='var(--warn)';}
+      const txt=lb.t.length>13?lb.t.slice(0,12)+'…':lb.t;
+      svg+=`<g><rect x="${x-w/2}" y="${ly-8.5}" width="${w}" height="17" rx="8.5" fill="${fill}" stroke="${stroke}" stroke-width="1.2"${dash}/><text x="${x}" y="${ly+3.8}" text-anchor="middle" font-size="10.5" fill="${tc}">${esc(txt)}</text><title>${esc(lb.t)}</title></g>`;
+    });
+  });
+  svg+='</svg>';
+  const gw=$('#graphwrap'); gw.innerHTML=svg; gw.scrollLeft=gw.scrollWidth;
+  gw.querySelectorAll('.node').forEach(n=>{
+    const id=n.dataset.id;
+    const info=()=>{ const c=S.commits[id]; const p=c.parents[0]?tree(c.parents[0]):{}; const ch=changed(p,c.tree);
+      $('#commitInfo').textContent=`${id} · "${c.msg}" · ${c.author} · parents: ${c.parents.join(', ')||'none'} · changed: ${ch.join(', ')||'—'}${reach.has(id)?'':' · ORPHANED (find via git reflog)'}`; };
+    n.addEventListener('mouseenter',info);
+    n.addEventListener('click',()=>{ info(); const inp=$('#cmd'); inp.value=(inp.value&&!inp.value.endsWith(' ')?inp.value+' ':inp.value)+id; inp.focus(); });
+  });
+}
+
+/* =========================================================
+   Cheat sheet
+   ========================================================= */
+const SHEET=[
+ {t:'Setup (once per computer)',a:'Like writing your name in a guestbook: every commit you make is stamped with this name and email.',r:[
+  ['git config --global user.name "Your Name"','Set the name stamped on your commits.',null],
+  ['git config --global user.email "you@example.com"','Set your email (use the one GitLab knows).',null],
+  ['git config --global init.defaultBranch main','New repos start with a branch called main.',null],
+  ['git init','Turn the current folder into a repo (creates the hidden .git warehouse).',null],
+  ['git clone <url>','Download a repo and its whole history; sets up "origin".',null]]},
+ {t:'The three areas',a:'Your desk (working directory) is where you edit. The packing box (staging area) is what you choose to ship. The warehouse (repository) stores every sealed box (commit) forever. git add puts things in the box; git commit seals and ships it.',r:[
+  ['git status','What changed? What is staged? Always safe — run it often.','git status'],
+  ['git add <file>','Put a file\'s current changes into the box.','git add app.js'],
+  ['git add .','Stage everything that changed in this folder.','git add .'],
+  ['git commit -m "message"','Seal the box into a snapshot with a message.','git commit -m "Describe the change"'],
+  ['git commit -am "message"','Stage all tracked files and commit in one go (new files still need git add).','git commit -am "Quick commit"'],
+  ['git diff','Desk vs box: changes not staged yet.','git diff'],
+  ['git diff --staged','Box vs last commit: what the next commit will contain.','git diff --staged']]},
+ {t:'Looking at history',a:'Commits are photos in an album. Each photo remembers which photo came right before it — that chain IS your history.',r:[
+  ['git log --oneline','Compact list of commits, newest first.','git log --oneline'],
+  ['git log --oneline --graph --all','Every branch as a text graph.','git log --oneline --all'],
+  ['git show <commit>','What one commit changed.','git show HEAD'],
+  ['git diff main feature','Compare two branches.','git diff main HEAD'],
+  ['git blame <file>','Who last changed each line.',null],
+  ['HEAD~1, HEAD~2, HEAD^2','"One back", "two back", "second parent of a merge".','git show HEAD~1']]},
+ {t:'Branches',a:'A branch is just a sticky note on a commit. HEAD is your "you are here" sticker, stuck on one branch. When you commit, the note you\'re standing on moves forward to the new photo. Creating a branch is free — it\'s one tiny note.',r:[
+  ['git branch','List branches (* = where you are).','git branch'],
+  ['git branch <name>','Create a branch here — but stay where you are.','git branch experiment'],
+  ['git switch <name>','Move to a branch (updates your desk).','git switch main'],
+  ['git switch -c <name>','Create a branch and move to it.','git switch -c feature'],
+  ['git checkout -b <name>','Older spelling of switch -c.','git checkout -b feature'],
+  ['git switch -','Go back to the previous branch.','git switch -'],
+  ['git branch -m <new>','Rename the current branch.',null],
+  ['git branch -d <name>','Delete a merged branch (-D to force).','git branch -d feature']]},
+ {t:'Merge & rebase',a:'Merge: two roads meet at a new intersection (a merge commit with two parents). Fast-forward: the road was straight, so the sign just slides forward. Rebase: pick up your road and re-lay it from the end of main — same trips, new pavement, new commit ids.',r:[
+  ['git merge <branch>','Bring another branch\'s commits into yours.','git merge feature'],
+  ['git merge --no-ff <branch>','Always create a merge commit, even if fast-forward was possible.','git merge --no-ff feature'],
+  ['git merge --abort','Give up on a conflicted merge; go back to before.','git merge --abort'],
+  ['git checkout --theirs <file>','During a conflict, take the incoming version (or --ours).','git checkout --theirs README.md'],
+  ['git rebase main','Replay your branch\'s commits on top of main.','git rebase main'],
+  ['git rebase -i HEAD~3','Interactive: squash, reorder, reword your last 3 commits.',null],
+  ['git cherry-pick <commit>','Copy one commit onto your branch.','git cherry-pick '],
+ ],x:'<div class="warnbox">⚠ Golden rule: never rebase commits that others have already pulled. Rebase rewrites ids, so their copies and yours stop matching.</div>'},
+ {t:'Undo (choose carefully)',a:'Reset is rewinding the tape: you move the branch back in time. Revert is how accountants fix a ledger: never erase an entry, add a new one that cancels it. Rewind only your private tape; use revert for anything already shared.',r:[
+  ['git restore <file>','Throw away desk changes to a file (cannot be undone!).','git restore app.js'],
+  ['git restore --staged <file>','Take a file back out of the box; keep the desk copy.','git restore --staged app.js'],
+  ['git commit --amend -m "msg"','Fix the last commit\'s message or contents (before pushing).','git commit --amend -m "Better message"'],
+  ['git reset --soft HEAD~1','Undo last commit; changes stay staged.','git reset --soft HEAD~1'],
+  ['git reset HEAD~1','Undo last commit; changes stay on desk, unstaged.','git reset HEAD~1'],
+  ['git reset --hard HEAD~1','Undo last commit AND throw away its changes.','git reset --hard HEAD~1'],
+  ['git revert <commit>','Add a new commit that undoes an old one. Safe for pushed work.','git revert HEAD'],
+  ['git reflog','Black-box flight recorder: every place HEAD has been. Finds "lost" commits.','git reflog']],
+  x:`<table class="mini"><tr><th>reset mode</th><th>branch moves</th><th>staging box</th><th>your desk</th></tr>
+  <tr><td>--soft</td><td>✓</td><td>kept</td><td>kept</td></tr>
+  <tr><td>--mixed (default)</td><td>✓</td><td>reset</td><td>kept</td></tr>
+  <tr><td>--hard</td><td>✓</td><td>reset</td><td><b>wiped</b></td></tr></table>`},
+ {t:'Which undo do I need?',a:'Find your situation, run the command.',r:[
+  ['git restore <file>','"I messed up a file and want the last committed version."','git restore app.js'],
+  ['git restore --staged <file>','"I staged something by accident."','git restore --staged app.js'],
+  ['git commit --amend','"Typo in my last commit message, not pushed yet."','git commit --amend -m "Fixed message"'],
+  ['git reset --soft HEAD~1','"My last commit was wrong, not pushed yet."','git reset --soft HEAD~1'],
+  ['git revert <commit>','"A bad commit is already pushed."','git revert HEAD'],
+  ['git reflog → git reset --hard <id>','"I lost a commit!"','git reflog']]},
+ {t:'Stash',a:'A desk drawer. Sweep unfinished work into it so your desk is clean, go handle something urgent on another branch, then pull it back out.',r:[
+  ['git stash','Save uncommitted changes and clean the desk.','git stash'],
+  ['git stash -m "note"','Stash with a description.','git stash -m "half-done login"'],
+  ['git stash list','See what\'s in the drawer.','git stash list'],
+  ['git stash pop','Put the latest stash back and remove it from the drawer.','git stash pop'],
+  ['git stash apply','Put it back but keep a copy in the drawer.','git stash apply'],
+  ['git stash drop','Throw away the latest stash.','git stash drop']]},
+ {t:'Remotes (GitLab)',a:'Fetch is bringing the mail inside without opening it: origin/main updates, your main doesn\'t. Pull is fetch + open + merge. Push is mailing your commits to the server. origin/main is "the last photo you took of the server".',r:[
+  ['git remote -v','Where is "origin"?','git remote -v'],
+  ['git fetch','Download new commits; update origin/… only.','git fetch'],
+  ['git pull','fetch + merge into your current branch.','git pull'],
+  ['git pull --rebase','fetch + rebase your commits on top (straighter history).','git pull --rebase'],
+  ['git push','Send your commits to the server.','git push'],
+  ['git push -u origin <branch>','First push of a new branch; remembers the link.','git push -u origin feature'],
+  ['git push --force-with-lease','Overwrite server history only if no one else pushed. Use rarely.',null],
+  ['git push origin --delete <branch>','Delete a branch on the server.','git push origin --delete feature']]},
+ {t:'GitLab merge request flow',a:'Your daily loop: branch off, commit, push, open an MR, merge, tidy up. The merge to main is what triggers pipelines — like your GitLab Pages job.',r:[
+  ['git switch main && git pull','Start from the latest main.','git pull'],
+  ['git switch -c feature/thing','Make a branch for the work.','git switch -c feature/thing'],
+  ['git commit -am "…"','Commit in small steps.','git commit -am "Add thing"'],
+  ['git push -u origin feature/thing','Publish the branch; GitLab offers a "Create merge request" link.','git push -u origin feature/thing'],
+  ['(merge in GitLab UI)','Review, pipeline passes, click Merge.',null],
+  ['git switch main && git pull','Bring the merged result down.','git switch main'],
+  ['git branch -d feature/thing','Delete the finished local branch.','git branch -d feature/thing']]},
+ {t:'Tags',a:'A tag is a sticky note that never moves — a bookmark for "this is release v1.0".',r:[
+  ['git tag v1.0','Tag the current commit.','git tag v1.0'],
+  ['git tag -a v1.0 -m "Release"','Annotated tag with a message (preferred for releases).',null],
+  ['git tag','List tags.','git tag'],
+  ['git push origin --tags','Send tags to the server (plain push doesn\'t).','git push origin --tags'],
+  ['git tag -d v1.0','Delete a local tag.','git tag -d v1.0']]},
+ {t:'Ignoring & housekeeping',a:'.gitignore is the "do not pack" list taped to your box: logs, build output, secrets, node_modules.',r:[
+  ['.gitignore','Patterns like *.log, dist/, .env, node_modules/',null],
+  ['git rm --cached <file>','Stop tracking a file that should be ignored (keeps it on disk).',null],
+  ['git rm <file>','Delete a file and stage the deletion.',null],
+  ['git mv <old> <new>','Rename/move a tracked file.',null],
+  ['git clean -n','Preview deleting untracked files (-fd to actually do it — careful!).',null]]},
+];
+function renderSheet(q=''){
+  q=q.trim().toLowerCase();
+  const html=SHEET.map((s,si)=>{
+    const rows=s.r.filter(r=>!q||s.t.toLowerCase().includes(q)||r[0].toLowerCase().includes(q)||r[1].toLowerCase().includes(q));
+    if(!rows.length&&q&&!s.a.toLowerCase().includes(q)) return '';
+    return `<div class="card"><h3>${esc(s.t)}</h3><div class="analogy"><b>Think of it like</b>${esc(s.a)}</div>${rows.map(r=>`<div class="row"><code>${esc(r[0])}</code>${r[2]!==null?`<button data-try="${esc(r[2])}">Try</button>`:'<span class="real">real git only</span>'}<div class="d">${esc(r[1])}</div></div>`).join('')}${!q&&s.x?s.x:''}</div>`;
+  }).join('');
+  $('#sheetBody').innerHTML=html||'<p style="color:var(--muted)">No matches.</p>';
+}
+
+/* =========================================================
+   Wiring
+   ========================================================= */
+function showTab(t){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  $('#sim').classList.toggle('hidden',t!=='sim'); $('#sheet').classList.toggle('hidden',t!=='sheet');
+}
+function welcome(){
+  print('Welcome to your sandbox repo! It has two files (README.md, app.js), one commit, and is connected to a pretend GitLab server called "origin".','ok');
+  print('Nothing here touches your real files. Try:  edit app.js   then   git status','muted');
+  print('Type "help" for all commands, or follow the challenges below.','muted');
+}
+function fill(cmd,run_){ showTab('sim'); const i=$('#cmd'); i.value=cmd; i.focus(); if(run_) { run(cmd); i.value=''; } }
+
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+$('#cmd').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; run(v); }
+  else if(e.key==='ArrowUp'){ if(hpos>0){hpos--; e.target.value=hist[hpos];} e.preventDefault(); }
+  else if(e.key==='ArrowDown'){ if(hpos<hist.length-1){hpos++; e.target.value=hist[hpos];} else {hpos=hist.length; e.target.value='';} e.preventDefault(); }
+  else if(e.key==='Tab'){
+    e.preventDefault(); const v=e.target.value, m=v.match(/(\S*)$/), part=m[1];
+    const cands=uniq(keys(S.branches),keys(S.tracking),keys(S.tags),keys(S.work),['main','HEAD']).filter(c=>c.startsWith(part)&&c!==part);
+    if(cands.length===1) e.target.value=v.slice(0,v.length-part.length)+cands[0]+' ';
+    else if(cands.length>1) print(cands.join('   '),'muted');
+  }
+});
+const CHIPS=[['git status',1],['edit app.js',1],['git add .',1],['git commit -m ""',0],['git log --oneline',1],['git branch',1],['git switch -c feature',0],['git merge ',0],['git push',1],['git pull',1],['git reflog',1],['help',1]];
+$('#chips').innerHTML=CHIPS.map(([c])=>`<button>${esc(c)}</button>`).join('');
+$('#chips').querySelectorAll('button').forEach((b,i)=>b.addEventListener('click',()=>{
+  const [c,r]=CHIPS[i];
+  if(r) fill(c,true); else { fill(c,false); const inp=$('#cmd'); const q=c.indexOf('""'); if(q>=0) inp.setSelectionRange(q+1,q+1); }
+}));
+$('#tmTeam').addEventListener('click',()=>{ teammate('team.md'); after(); });
+$('#tmReadme').addEventListener('click',()=>{ teammate('README.md'); after(); });
+$('#restart').addEventListener('click',()=>{ L.restart(); after(); });
+$('#resetProgress').addEventListener('click',()=>{ done={}; saveDone(); renderChallenges(); });
+$('#ghostToggle').addEventListener('change',render);
+$('#q').addEventListener('input',e=>renderSheet(e.target.value));
+$('#sheetBody').addEventListener('click',e=>{ const b=e.target.closest('button[data-try]'); if(b) fill(b.dataset.try,false); });
+
+init(); welcome(); renderSheet(); after();
+window.gitsim={run,get state(){return S},get done(){return done}};
+</script>
+</body>
+</html>
