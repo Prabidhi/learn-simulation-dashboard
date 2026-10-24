@@ -7,8 +7,6 @@
 pages:
   stage: deploy
   image: python:3.12-alpine
-  script:
-    - python scripts/build_index.py
   artifacts:
     paths:
       - public
