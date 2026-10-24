@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantum vs Classical Chips</title>
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --classical:#0969da;--classical-soft:#ddf4ff;--quantum:#8250df;--quantum-soft:#f3efff;
+  --heat:#d1580a;--cold:#0a7ea4;--ok:#1a7f37;--err:#cf222e;--on-accent:#fff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --classical:#58a6ff;--classical-soft:#0c2d4f;--quantum:#bc8cff;--quantum-soft:#2a1f45;
+  --heat:#fb8f44;--cold:#39c5cf;--ok:#3fb950;--err:#f85149;--on-accent:#0d1117;}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 18px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.6rem;line-height:1.25}
+header p{margin:0;color:var(--muted);max-width:760px}
+.thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:860px}
+.thesis b{color:var(--quantum)}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+nav div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap}
+nav a{font-size:.85rem;text-decoration:none;color:var(--fg);padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--quantum)}
+main{max-width:1180px;margin:0 auto;padding:10px 20px 50px}
+section{margin:26px 0 10px;scroll-margin-top:60px}
+section>h2{font-size:1.25rem;margin:0 0 4px}
+section>p.lead{margin:0 0 14px;color:var(--muted);max-width:820px}
+.analogy{border-left:3px solid var(--quantum);background:var(--quantum-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:860px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:1rem;display:flex;align-items:center;gap:8px}
+.card .sub{color:var(--muted);font-size:.84rem;margin-bottom:8px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.cl .dot{background:var(--classical)} .qu .dot{background:var(--quantum)}
+canvas{display:block;width:100%;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+button{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button:hover{border-color:var(--fg)}
+button.pri-c{background:var(--classical);border-color:var(--classical);color:var(--on-accent)}
+button.pri-q{background:var(--quantum);border-color:var(--quantum);color:var(--on-accent)}
+button[aria-pressed="true"]{outline:2px solid var(--quantum);outline-offset:1px}
+label.rng{display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--muted);flex:1;min-width:200px}
+label.rng input{flex:1}
+input[type=range]{accent-color:var(--quantum)}
+.cl input[type=range]{accent-color:var(--classical)}
+.readout{font-family:var(--mono);font-size:.82rem;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--chip);min-height:2.4em;white-space:pre-wrap}
+.msg{font-size:.86rem;margin-top:8px;min-height:2.6em}
+.msg.good{color:var(--ok)} .msg.bad{color:var(--err)}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:6px 8px;align-items:center;font-family:var(--mono);font-size:.8rem;margin-top:10px}
+.bar{height:12px;border-radius:6px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--quantum);transition:width .25s}
+.takeaway{margin-top:14px;padding:10px 14px;border-radius:10px;border:1px dashed var(--line);font-size:.9rem;background:var(--panel)}
+.takeaway b{color:var(--quantum)}
+/* temperature */
+.temp-wrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+#tSlider{width:100%;accent-color:var(--cold)}
+.tval{font-size:1.4rem;font-weight:600;font-family:var(--mono)}
+.tval small{font-size:.85rem;font-weight:400;color:var(--muted);font-family:var(--sans);margin-left:8px}
+.marks{position:relative;height:38px;margin-top:2px}
+.marks span{position:absolute;transform:translateX(-50%);font-size:.7rem;color:var(--muted);text-align:center;line-height:1.15;white-space:nowrap;cursor:pointer}
+.marks span::before{content:"";display:block;width:1px;height:6px;background:var(--muted);margin:0 auto 2px}
+.marks span.active{color:var(--fg);font-weight:600}
+/* chain */
+.types{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chain{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;position:relative}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative}
+.step .n{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.step h4{margin:2px 0 6px;font-size:.98rem}
+.step p{margin:0;font-size:.86rem}
+.step.same{border-color:var(--line)}
+.step.varies{border-color:var(--quantum);background:var(--quantum-soft)}
+.step:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:50%;transform:translate(50%,-50%);color:var(--muted);font-size:1.1rem}
+.badge{display:inline-block;font-size:.68rem;padding:1px 7px;border-radius:999px;margin-left:4px;vertical-align:middle;border:1px solid var(--line);color:var(--muted)}
+.varies .badge{border-color:var(--quantum);color:var(--quantum)}
+table{width:100%;border-collapse:collapse;font-size:.86rem;margin-top:14px;background:var(--panel);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--chip);font-weight:600}
+tr.hl td{background:var(--quantum-soft)}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:.8rem}
+@media (max-width:860px){.two{grid-template-columns:1fr}.chain{grid-template-columns:1fr 1fr}.step:nth-child(2)::after{display:none}}
+@media (max-width:520px){.chain{grid-template-columns:1fr}.step::after{display:none}header,main,footer{padding-left:14px;padding-right:14px}header h1{font-size:1.3rem}.marks span{font-size:.62rem}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Quantum vs classical chips: the real difference</h1>
+  <p>Four hands-on scenes. Drag the sliders, press the buttons, and watch what changes.</p>
+  <div class="thesis">Bedrock idea: <b>a classical bit is a crowd shouting; a qubit is a single whisper.</b> The crowd is robust, so you can listen any time. The whisper is destroyed by anything that overhears it. Superconductors, freezers and vacuum chambers are just different ways to soundproof the whisper.</div>
+</header>
+<nav><div>
+  <a href="#s1">1 · Crowd vs whisper</a>
+  <a href="#s2">2 · Does electricity flow?</a>
+  <a href="#s3">3 · Why so cold?</a>
+  <a href="#s4">4 · The chain</a>
+</div></nav>
+
+<main>
+<!-- ============ SCENE 1 ============ -->
+<section id="s1">
+  <h2>1 · Crowd vs whisper: what a bit and a qubit actually are</h2>
+  <p class="lead">Turn up the noise on both sides. Read, copy and measure. One side shrugs it off; the other changes the moment you look.</p>
+  <div class="two">
+    <div class="card cl">
+      <h3><span class="dot"></span>Classical bit (CPU / GPU)</h3>
+      <div class="sub">Thousands of electrons stored together. The voltage they create is the bit.</div>
+      <canvas id="c1a" data-h="230" aria-label="Electrons in a storage node"></canvas>
+      <div class="controls">
+        <button class="pri-c" id="b1Toggle">Set bit to 0</button>
+        <button id="b1Read">Read it</button>
+        <button id="b1Copy">Copy it</button>
+        <label class="rng">Noise <input type="range" id="r1Noise" min="0" max="100" value="25"></label>
+      </div>
+      <div class="readout" id="o1a"></div>
+      <div class="msg" id="m1a">Reading a crowd doesn't change it. Ask again and you get the same answer.</div>
+    </div>
+    <div class="card qu">
+      <h3><span class="dot"></span>Qubit (QPU)</h3>
+      <div class="sub">One quantum object holding a blend of 0 and 1. The arrow shows the blend.</div>
+      <canvas id="c1b" data-h="230" aria-label="Qubit state arrow"></canvas>
+      <div class="controls">
+        <label class="rng">Blend <input type="range" id="r1Theta" min="0" max="180" value="90"></label>
+      </div>
+      <div class="bars">
+        <span>P(0)</span><div class="bar"><i id="p0"></i></div><span id="p0t"></span>
+        <span>P(1)</span><div class="bar"><i id="p1"></i></div><span id="p1t"></span>
+      </div>
+      <div class="controls">
+        <button class="pri-q" id="b1Measure">Measure</button>
+        <button id="b1QCopy">Copy it</button>
+        <button id="b1Prep">Re-prepare</button>
+        <label class="rng">Environment noise <input type="range" id="r1QNoise" min="0" max="100" value="0"></label>
+      </div>
+      <div class="readout" id="o1b"></div>
+      <div class="msg" id="m1b"></div>
+    </div>
+  </div>
+  <div class="takeaway">Takeaway: a classical bit survives noise, reading and copying because it's a <b>majority vote of many electrons</b>. A qubit's blend is real information, but <b>looking at it, copying it, or letting the environment touch it destroys it.</b> That one fact drives everything else on this page.</div>
+</section>
+
+<!-- ============ SCENE 2 ============ -->
+<section id="s2">
+  <h2>2 · Does electricity flow through it?</h2>
+  <p class="lead">A CPU pushes current <em>through</em> its transistors, in one side and out the other. A superconducting qubit is a closed loop where current <em>sloshes back and forth</em>, like water in a U-tube.</p>
+  <div class="two">
+    <div class="card cl">
+      <h3><span class="dot"></span>Transistor circuit (CPU / GPU)</h3>
+      <div class="sub">Close the switch: electrons stream around the circuit. Friction (resistance) turns into heat.</div>
+      <canvas id="c2a" data-h="250" aria-label="Current flowing through a transistor circuit"></canvas>
+      <div class="controls">
+        <button class="pri-c" id="b2Switch">Close the switch</button>
+      </div>
+      <div class="readout" id="o2a"></div>
+    </div>
+    <div class="card qu">
+      <h3><span class="dot"></span>Superconducting qubit</h3>
+      <div class="sub">No wire in, no wire out. A microwave pulse sets paired electrons sloshing between capacitor and junction.</div>
+      <canvas id="c2b" data-h="250" aria-label="Current sloshing inside a qubit loop"></canvas>
+      <div class="controls">
+        <button class="pri-q" id="b2Pulse">Send microwave pulse</button>
+        <button id="b2Mat" aria-pressed="false">Material: superconductor</button>
+      </div>
+      <div class="readout" id="o2b"></div>
+    </div>
+  </div>
+  <div class="takeaway">Try switching the qubit to <b>normal metal</b>: resistance acts like friction on a guitar string, so the ringing dies almost immediately and the energy leaks out as heat. That's why chip-based qubits use superconductors. Zero resistance lets the "note" ring long enough to compute with. (Animations are slowed down by about ten billion times.)</div>
+</section>
+
+<!-- ============ SCENE 3 ============ -->
+<section id="s3">
+  <h2>3 · Why so cold? Watch the "heat sea" rise</h2>
+  <p class="lead">Heat is random jiggling energy. Picture it as a sea level. If the sea rises above the gap between 0 and 1, heat alone starts flipping states. Drag the temperature down.</p>
+  <div class="temp-wrap">
+    <div class="tval" id="tVal">300 K<small>room temperature</small></div>
+    <input type="range" id="tSlider" min="0" max="1000" value="0" aria-label="Temperature, warmer on the left, colder on the right">
+    <div class="marks" id="tMarks"></div>
+  </div>
+  <div class="two">
+    <div class="card cl">
+      <h3><span class="dot"></span>Classical bit</h3>
+      <div class="sub">Switching energy ≈ 1 electron-volt, the same as heat at about 11,600 K. The gap is enormous.</div>
+      <canvas id="c3a" data-h="260" aria-label="Heat sea versus classical bit gap"></canvas>
+      <div class="readout" id="o3a"></div>
+    </div>
+    <div class="card qu">
+      <h3><span class="dot"></span>Superconducting qubit (5 GHz)</h3>
+      <div class="sub">Energy gap between |0⟩ and |1⟩ ≈ the same as heat at only 0.24 K. The gap is tiny.</div>
+      <canvas id="c3b" data-h="260" aria-label="Heat sea versus qubit gap"></canvas>
+      <div class="readout" id="o3b"></div>
+    </div>
+  </div>
+  <div class="takeaway">The gaps are drawn the same height so you can compare the <b>sea level</b>. At room temperature, the sea is a puddle for the CPU but floods the qubit. Even outer space (2.7 K) is too hot. Only around <b>0.01 K</b>, in a dilution refrigerator, does the qubit sit calmly in |0⟩, ready to be used.</div>
+</section>
+
+<!-- ============ SCENE 4 ============ -->
+<section id="s4">
+  <h2>4 · The chain: same bedrock, different soundproofing</h2>
+  <p class="lead">Every quantum computer starts from the same two facts. Pick a qubit technology and see how the last two steps change.</p>
+  <div class="types" id="types"></div>
+  <div class="chain">
+    <div class="step same"><div class="n">Step 1 <span class="badge">same for all</span></div><h4>Bedrock</h4><p>Information lives in a fragile quantum state (a whisper), not a robust classical one (a crowd).</p></div>
+    <div class="step same"><div class="n">Step 2 <span class="badge">same for all</span></div><h4>Therefore</h4><p>Any contact with the outside world counts as a measurement, so the qubit must be isolated from <em>everything</em>.</p></div>
+    <div class="step varies"><div class="n">Step 3 <span class="badge">depends on type</span></div><h4>How it's isolated</h4><p id="st3"></p></div>
+    <div class="step varies"><div class="n">Step 4 <span class="badge">depends on type</span></div><h4>What that forces you to build</h4><p id="st4"></p></div>
+  </div>
+  <div style="overflow-x:auto;margin-top:14px;border-radius:10px"><table style="margin-top:0;min-width:640px">
+    <thead><tr><th>Technology</th><th>The "whisper" (qubit)</th><th>Superconducting?</th><th>Shares CPU fabs?</th><th>Who</th></tr></thead>
+    <tbody id="typeTable"></tbody>
+  </table></div>
+  <div class="takeaway">Superconductivity is <b>one answer to step 3</b>, not the bedrock difference. The bedrock is step 1. A CPU never needs steps 2–4 because a crowd of electrons doesn't care who's listening.</div>
+</section>
+</main>
+<footer>Works fully offline. Sizes, speeds and electron counts are cartoon-scaled for clarity; temperatures and energy gaps are real-world values.</footer>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let COL={};
+function readColors(){ const s=getComputedStyle(document.documentElement); ['fg','muted','line','chip','panel','bg','classical','quantum','heat','cold','ok','err','classical-soft','quantum-soft'].forEach(k=>COL[k]=s.getPropertyValue('--'+k).trim()); }
+readColors(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readColors);
+function fit(c){
+  const r=c.getBoundingClientRect(), d=window.devicePixelRatio||1, w=Math.max(10,Math.round(r.width)), h=+c.dataset.h||220;
+  if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){ c.width=Math.round(w*d); c.height=Math.round(h*d); c.style.height=h+'px'; }
+  const x=c.getContext('2d'); x.setTransform(d,0,0,d,0,0); x.clearRect(0,0,w,h); return {x,w,h};
+}
+function alpha(hex,a){ if(!hex.startsWith('#')) return hex; const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+function txt(x,s,px,py,o={}){ x.font=`${o.w||400} ${o.size||12}px system-ui,-apple-system,Segoe UI,sans-serif`; x.fillStyle=o.color||COL.muted; x.textAlign=o.align||'center'; x.textBaseline=o.base||'middle'; x.fillText(s,px,py); }
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+/* ================= SCENE 1 ================= */
+const s1={bit:1,noise:.25,dots:[],reads:[],theta:Math.PI/2,coh:1,measured:false,decohered:false,qnoise:0,qreads:[],wob:0,wv:0};
+for(let i=0;i<64;i++) s1.dots.push({i,ox:0,oy:0,px:null,py:null});
+function s1Layout(w,h){ return {bx:w*.18,by:24,bw:w*.64,bh:110, gx:w*.18,gy:h-58,gw:w*.64,gh:34}; }
+function s1Home(d,L){
+  const cols=16, r=Math.floor(d.i/cols), c=d.i%cols;
+  if(s1.bit) return {x:L.bx+14+c*(L.bw-28)/(cols-1), y:L.by+18+r*(L.bh-36)/3};
+  return {x:L.gx+10+c*(L.gw-20)/(cols-1), y:L.gy+8+r*(L.gh-16)/3};
+}
+function s1Voltage(L){ let n=0; s1.dots.forEach(d=>{ if(d.px>=L.bx&&d.px<=L.bx+L.bw&&d.py>=L.by&&d.py<=L.by+L.bh) n++; }); return n/s1.dots.length; }
+function drawS1(dt){
+  const {x,w,h}=fit($('#c1a')); const L=s1Layout(w,h);
+  x.strokeStyle=COL.classical; x.lineWidth=1.5; x.setLineDash([]); x.strokeRect(L.bx,L.by,L.bw,L.bh);
+  x.fillStyle=alpha(COL.classical,.06); x.fillRect(L.bx,L.by,L.bw,L.bh);
+  txt(x,'storage node  →  "1" when full',w/2,L.by+L.bh+14,{size:11});
+  x.strokeStyle=COL.muted; x.setLineDash([4,3]); x.strokeRect(L.gx,L.gy,L.gw,L.gh); x.setLineDash([]);
+  txt(x,'ground  →  "0" when the electrons are here',w/2,L.gy+L.gh+12,{size:11});
+  const amp=s1.noise*62;
+  s1.dots.forEach(d=>{
+    d.ox+=rnd(-1,1)*s1.noise*260*dt; d.oy+=rnd(-1,1)*s1.noise*260*dt;
+    const m=Math.hypot(d.ox,d.oy); if(m>amp){ d.ox*=amp/(m||1); d.oy*=amp/(m||1); }
+    const hm=s1Home(d,L), tx=hm.x+d.ox, ty=hm.y+d.oy;
+    if(d.px===null){d.px=tx;d.py=ty;}
+    const k=Math.min(1,dt*6); d.px+=(tx-d.px)*k; d.py+=(ty-d.py)*k;
+    x.beginPath(); x.arc(d.px,d.py,3.4,0,7); x.fillStyle=COL.classical; x.fill();
+  });
+  const V=s1Voltage(L), bit=V>0.5?1:0;
+  $('#o1a').textContent=`Voltage ≈ ${(V*1.0).toFixed(2)} V  →  reads as ${bit}   (threshold 0.50 V)\nReads so far: ${s1.reads.length?s1.reads.join(', '):'—'}`;
+  // qubit
+  const q=fit($('#c1b')); const X=q.x, cx=q.w/2, cy=q.h/2, R=Math.min(q.w*.34,q.h*.36);
+  if(!s1.measured&&!s1.decohered&&s1.qnoise>0){ s1.coh-=s1.qnoise*dt*0.45; if(s1.coh<=0.04){ s1.coh=0.04; s1.decohered=true; setQMsg('The environment "overheard" the qubit. Its blend has leaked away (decoherence). Now it behaves like a plain random coin, not a quantum state.','bad'); } }
+  s1.wv+=(rnd(-1,1)*s1.qnoise*14-s1.wv*2)*dt; s1.wob+=s1.wv*dt; s1.wob*=0.98;
+  X.strokeStyle=COL.line; X.lineWidth=1.2; X.beginPath(); X.arc(cx,cy,R,0,7); X.stroke();
+  X.setLineDash([3,4]); X.beginPath(); X.moveTo(cx-R,cy); X.lineTo(cx+R,cy); X.stroke(); X.setLineDash([]);
+  txt(X,'|0⟩',cx,cy-R-12,{size:13,w:600,color:COL.fg}); txt(X,'|1⟩',cx,cy+R+12,{size:13,w:600,color:COL.fg});
+  txt(X,'50/50 blend',cx+R+8,cy-9,{size:10,align:'left'});
+  const th=s1.theta+(s1.measured?0:s1.wob), tipx=cx+Math.sin(th)*R, tipy=cy-Math.cos(th)*R;
+  const a=s1.decohered?0.22:0.3+0.7*s1.coh;
+  X.strokeStyle=alpha(COL.quantum,a); X.lineWidth=3; X.setLineDash(s1.decohered?[5,4]:[]);
+  X.beginPath(); X.moveTo(cx,cy); X.lineTo(tipx,tipy); X.stroke(); X.setLineDash([]);
+  X.beginPath(); X.arc(tipx,tipy,12,0,7); X.fillStyle=alpha(COL.quantum,a*.22); X.fill();
+  X.beginPath(); X.arc(tipx,tipy,6,0,7); X.fillStyle=alpha(COL.quantum,a); X.fill();
+  if(s1.qnoise>0&&!s1.measured&&!s1.decohered){ for(let i=0;i<Math.round(s1.qnoise*10);i++){ const ang=rnd(0,6.28), rr=rnd(R*.3,R*1.2); X.beginPath(); X.arc(cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr,1.6,0,7); X.fillStyle=alpha(COL.heat,.6); X.fill(); } }
+  txt(X,s1.decohered?'blend lost':s1.measured?'collapsed':`coherence ${(s1.coh*100).toFixed(0)}%`,12,14,{size:11,align:'left',color:s1.decohered?COL.err:COL.muted});
+  const P1=Math.sin(s1.theta/2)**2;
+  $('#p0').style.width=((1-P1)*100)+'%'; $('#p1').style.width=(P1*100)+'%';
+  $('#p0t').textContent=((1-P1)*100).toFixed(0)+'%'; $('#p1t').textContent=(P1*100).toFixed(0)+'%';
+  $('#o1b').textContent=`Measurements: ${s1.qreads.length?s1.qreads.join(', '):'—'}`;
+}
+function setQMsg(t,c){ const m=$('#m1b'); m.textContent=t; m.className='msg'+(c?' '+c:''); }
+function prepQ(){ s1.theta=$('#r1Theta').value*Math.PI/180; s1.measured=false; s1.decohered=false; s1.coh=1; s1.qreads=[]; s1.wob=0; s1.wv=0; $('#b1Measure').textContent='Measure';
+  setQMsg('Prepared. Before you look, it is genuinely both: the bars are the odds of what a measurement will show.'); }
+$('#b1Toggle').onclick=()=>{ s1.bit^=1; s1.reads=[]; $('#b1Toggle').textContent='Set bit to '+(s1.bit?0:1); $('#m1a').textContent='Electrons pushed '+(s1.bit?'into storage → 1.':'to ground → 0.'); $('#m1a').className='msg'; };
+$('#b1Read').onclick=()=>{ const L=s1Layout($('#c1a').getBoundingClientRect().width,230); const v=s1Voltage(L)>.5?1:0; s1.reads.push(v); $('#m1a').textContent=`Read ${s1.reads.length}× and got ${v} every time. Looking doesn't disturb a crowd.`; $('#m1a').className='msg good'; };
+$('#b1Copy').onclick=()=>{ const L=s1Layout($('#c1a').getBoundingClientRect().width,230); $('#m1a').textContent=`Copied: ${s1Voltage(L)>.5?1:0} → ${s1Voltage(L)>.5?1:0} ✓ Classical bits copy perfectly. That's what RAM, disks and networks do all day.`; $('#m1a').className='msg good'; };
+$('#r1Noise').oninput=e=>{ s1.noise=e.target.value/100; $('#m1a').textContent=s1.noise>.7?'Lots of jostling, but the majority still sits in the right place. The bit holds.':'Electrons jiggle, but the voltage stays clearly above or below the threshold.'; $('#m1a').className='msg'; };
+$('#r1Theta').oninput=()=>prepQ();
+$('#r1QNoise').oninput=e=>{ s1.qnoise=e.target.value/100; if(s1.qnoise>0&&!s1.measured&&!s1.decohered) setQMsg('Stray heat and vibration are "bumping into" the qubit. Watch coherence drain away.'); };
+$('#b1Measure').onclick=()=>{
+  const P1=Math.sin(s1.theta/2)**2; const r=Math.random()<P1?1:0;
+  if(s1.measured){ s1.qreads.push(s1.qreads[s1.qreads.length-1]); setQMsg(`Same answer again (${s1.qreads[s1.qreads.length-1]}). The blend was destroyed by the first look; there's nothing left to reveal.`,'bad'); return; }
+  const wasDeco=s1.decohered;
+  s1.theta=r?Math.PI:0; s1.measured=true; s1.coh=1; s1.decohered=false; s1.qreads.push(r); $('#b1Measure').textContent='Measure again';
+  setQMsg(wasDeco?`Got ${r}, but it was already just a random coin; the quantum blend was lost before you looked.`:`Collapsed to |${r}⟩. You got one random answer, and the blend is gone. Press Re-prepare and measure again to see a different random outcome.`,wasDeco?'bad':'');
+};
+$('#b1QCopy').onclick=()=>setQMsg('✗ Not possible. Physics forbids copying an unknown quantum state (the no-cloning theorem). There\'s no "backup" of a whisper.','bad');
+$('#b1Prep').onclick=prepQ;
+
+/* ================= SCENE 2 ================= */
+const s2={on:false,heat:0,u:[],A:0,t:0,mat:'super',qheat:0,ringT:0};
+for(let i=0;i<34;i++) s2.u.push(i/34);
+function loopPoint(u,L){ const P=2*(L.w+L.h); let d=((u%1)+1)%1*P;
+  if(d<L.w) return {x:L.x+d,y:L.y}; d-=L.w; if(d<L.h) return {x:L.x+L.w,y:L.y+d}; d-=L.h; if(d<L.w) return {x:L.x+L.w-d,y:L.y+L.h}; d-=L.w; return {x:L.x,y:L.y+L.h-d}; }
+function drawS2(dt){
+  // CPU
+  let {x,w,h}=fit($('#c2a')); const L={x:40,y:36,w:w-80,h:h-82};
+  s2.heat=Math.max(0,Math.min(1,s2.heat+(s2.on?0.45:-0.3)*dt));
+  if(s2.on) s2.u=s2.u.map(u=>u+0.09*dt);
+  const tx=L.x+L.w/2, rx=L.x+L.w, ry=L.y+L.h/2;
+  x.fillStyle=alpha(COL.heat,s2.heat*.35); x.beginPath(); x.roundRect(tx-40,L.y-24,80,48,10); x.fill(); x.beginPath(); x.roundRect(rx-22,ry-40,44,80,10); x.fill();
+  x.strokeStyle=COL.muted; x.lineWidth=3; x.strokeRect(L.x,L.y,L.w,L.h);
+  s2.u.forEach(u=>{ const p=loopPoint(u,L); x.beginPath(); x.arc(p.x,p.y,3.3,0,7); x.fillStyle=COL.classical; x.fill(); });
+  x.clearRect(L.x-14,ry-14,28,28); x.fillStyle=COL.bg; x.fillRect(L.x-14,ry-14,28,28);
+  x.strokeStyle=COL.fg; x.lineWidth=3; x.beginPath(); x.moveTo(L.x-12,ry-6); x.lineTo(L.x+12,ry-6); x.stroke(); x.lineWidth=5; x.beginPath(); x.moveTo(L.x-6,ry+5); x.lineTo(L.x+6,ry+5); x.stroke();
+  txt(x,'power',L.x+30,ry,{size:11,align:'left'});
+  x.fillStyle=COL.bg; x.fillRect(tx-28,L.y-14,56,28); x.strokeStyle=s2.on?COL.classical:COL.muted; x.lineWidth=2; x.strokeRect(tx-28,L.y-14,56,28);
+  txt(x,s2.on?'ON':'OFF',tx,L.y,{size:11,w:600,color:s2.on?COL.classical:COL.muted});
+  txt(x,'transistor (switch)',tx,L.y-24,{size:11});
+  x.fillStyle=COL.bg; x.fillRect(rx-10,ry-26,20,52); x.strokeStyle=COL.fg; x.lineWidth=2; x.beginPath(); x.moveTo(rx,ry-26); for(let i=0;i<6;i++) x.lineTo(rx+(i%2?-8:8),ry-20+i*8); x.lineTo(rx,ry+26); x.stroke();
+  txt(x,'wires and load (resistance)',rx-14,ry+44,{size:11,align:'right'});
+  if(s2.on){ txt(x,'→ electrons flow through, round and round →',w/2,h-16,{size:11,color:COL.classical}); }
+  else txt(x,'switch open: no current flows',w/2,h-16,{size:11});
+  $('#o2a').textContent=`Current: ${s2.on?'flowing (in one side, out the other)':'stopped'}\nHeat generated: ${(s2.heat*100).toFixed(0)}%  ${s2.heat>.6?'🔥 needs a heatsink':''}`;
+  // Qubit
+  ({x,w,h}=fit($('#c2b'))); const Q={x:56,y:36,w:w-112,h:h-82}; const cyM=Q.y+Q.h/2, jx=Q.x+Q.w;
+  const gamma=s2.mat==='super'?0.035:1.4; const omega=2*Math.PI*0.75;
+  const before=s2.A*s2.A; s2.A*=Math.exp(-gamma*dt); const lost=before-s2.A*s2.A;
+  if(s2.mat!=='super') s2.qheat=Math.min(1,s2.qheat+lost*1.6); s2.qheat=Math.max(0,s2.qheat-0.25*dt);
+  s2.t+=dt; if(s2.A>0.02) s2.ringT+=dt;
+  const ph=Math.cos(omega*s2.t), cur=Math.sin(omega*s2.t), q=s2.A*ph, I=s2.A*cur;
+  if(s2.qheat>0.01){ x.fillStyle=alpha(COL.heat,s2.qheat*.35); x.beginPath(); x.roundRect(Q.x-10,Q.y-10,Q.w+20,Q.h+20,14); x.fill(); }
+  x.strokeStyle=s2.mat==='super'?COL.quantum:COL.muted; x.lineWidth=3; x.strokeRect(Q.x,Q.y,Q.w,Q.h);
+  x.fillStyle=COL.bg; x.fillRect(Q.x-16,cyM-12,32,24);
+  const plate=(yy,sign)=>{ const v=q*sign; x.strokeStyle=v>0.05?alpha(COL.heat,.4+.6*Math.min(1,v)):v<-0.05?alpha(COL.cold,.4+.6*Math.min(1,-v)):COL.fg; x.lineWidth=4; x.beginPath(); x.moveTo(Q.x-16,yy); x.lineTo(Q.x+16,yy); x.stroke(); };
+  plate(cyM-9,1); plate(cyM+9,-1);
+  for(let i=-1;i<=1;i++){ x.strokeStyle=alpha(COL.quantum,Math.abs(q)*.9); x.lineWidth=1.2; x.beginPath(); x.moveTo(Q.x+i*8,cyM-6); x.lineTo(Q.x+i*8,cyM+6); x.stroke(); }
+  txt(x,'capacitor',Q.x+22,cyM-22,{size:11,align:'left'}); txt(x,'(stores charge)',Q.x+22,cyM-9,{size:10,align:'left'});
+  x.fillStyle=alpha(COL.quantum,.15+.6*Math.abs(I)); x.beginPath(); x.arc(jx,cyM,14+6*Math.abs(I),0,7); x.fill();
+  x.fillStyle=COL.bg; x.fillRect(jx-11,cyM-11,22,22); x.strokeStyle=COL.fg; x.lineWidth=2; x.strokeRect(jx-11,cyM-11,22,22);
+  x.beginPath(); x.moveTo(jx-11,cyM-11); x.lineTo(jx+11,cyM+11); x.moveTo(jx+11,cyM-11); x.lineTo(jx-11,cyM+11); x.stroke();
+  txt(x,'Josephson',jx-20,cyM-20,{size:11,align:'right'}); txt(x,'junction',jx-20,cyM-7,{size:11,align:'right'});
+  const n=14, disp=s2.A*ph*0.045, P=2*(Q.w+Q.h), gapU=(Q.h/2+Q.w*2+Q.h)/P;
+  for(let i=0;i<n;i++){ let u=gapU+0.04+i*(0.92/n)+disp; const p=loopPoint(u,Q); const p2=loopPoint(u+0.004,Q); const dx=p2.x-p.x, dy=p2.y-p.y, m=Math.hypot(dx,dy)||1, nx=-dy/m*3.2, ny=dx/m*3.2;
+    x.fillStyle=s2.mat==='super'?COL.quantum:COL.muted; [1,-1].forEach(s=>{ x.beginPath(); x.arc(p.x+nx*s,p.y+ny*s,2.6,0,7); x.fill(); }); }
+  txt(x,s2.A>0.03?(s2.mat==='super'?'↔ pairs slosh together as ONE quantum wave':'↔ sloshing… friction is killing it'):'at rest: send a pulse',w/2,h-16,{size:11,color:s2.A>0.03?COL.quantum:COL.muted});
+  $('#o2b').textContent=`Energy left: ${(s2.A*s2.A*100).toFixed(0)}%   ${s2.A>0.03?'ringing':'quiet'}\nCurrent in/out of the chip: none (closed loop)${s2.qheat>.05?'   heat: '+(s2.qheat*100).toFixed(0)+'%':''}`;
+}
+$('#b2Switch').onclick=()=>{ s2.on=!s2.on; $('#b2Switch').textContent=s2.on?'Open the switch':'Close the switch'; };
+$('#b2Pulse').onclick=()=>{ s2.A=1; s2.ringT=0; };
+$('#b2Mat').onclick=()=>{ s2.mat=s2.mat==='super'?'normal':'super'; $('#b2Mat').textContent='Material: '+(s2.mat==='super'?'superconductor':'normal metal (has resistance)'); $('#b2Mat').setAttribute('aria-pressed',s2.mat!=='super'); };
+
+/* ================= SCENE 3 ================= */
+const TMAX=300,TMIN=0.005; const lg=Math.log10;
+const MARKS=[[300,'room','temp'],[77,'liquid','nitrogen'],[4.2,'liquid','helium'],[2.7,'outer','space'],[0.24,'qubit','gap'],[0.01,'dilution','fridge']];
+const tToPos=T=>(lg(TMAX)-lg(T))/(lg(TMAX)-lg(TMIN))*1000;
+const s3={T:300,state:0,acc:0,cpuState:0};
+function fmtT(T){ return T>=10?T.toFixed(0)+' K':T>=1?T.toFixed(1)+' K':T>=0.1?T.toFixed(2)+' K':(T*1000).toFixed(T<0.01?1:0)+' mK'; }
+function nearestLabel(T){ let best=null,bd=1e9; MARKS.forEach(m=>{ const d=Math.abs(lg(m[0])-lg(T)); if(d<bd){bd=d;best=m;} }); return bd<0.12?best[1]+' '+best[2]:''; }
+$('#tMarks').innerHTML=MARKS.map(m=>`<span data-t="${m[0]}" style="left:${tToPos(m[0])/10}%">${m[1]}<br>${m[2]}</span>`).join('');
+$('#tMarks').querySelectorAll('span').forEach(sp=>sp.onclick=()=>{ $('#tSlider').value=tToPos(+sp.dataset.t); setT(); });
+function setT(){ const v=+$('#tSlider').value/1000; s3.T=10**(lg(TMAX)+(lg(TMIN)-lg(TMAX))*v);
+  const nl=nearestLabel(s3.T); $('#tVal').innerHTML=`${fmtT(s3.T)}<small>${nl||'&nbsp;'}</small>`;
+  $('#tMarks').querySelectorAll('span').forEach(sp=>sp.classList.toggle('active',Math.abs(lg(+sp.dataset.t)-lg(s3.T))<0.12)); }
+$('#tSlider').oninput=setT;
+function sciProb(log10p){ if(log10p<-40) return 'effectively never (less than 1 in 10^40)'; if(log10p>-3) return (10**log10p*100).toFixed(log10p>-1?0:2)+'%'; return '1 in 10^'+Math.round(-log10p); }
+function drawLadder(cv,gapK,label0,label1,color,isQ,dt){
+  const {x,w,h}=fit(cv); const y0=h-46, G=150, y1=y0-G, T=s3.T;
+  const seaH=Math.min(h-20,(T/gapK)*G), seaTop=y0-seaH;
+  const t=performance.now()/1000;
+  x.fillStyle=alpha(COL.heat,.18); x.beginPath(); x.moveTo(20,h-12); x.lineTo(20,seaTop);
+  for(let px=20;px<=w-20;px+=6) x.lineTo(px,seaTop+Math.sin(px/18+t*3)*Math.min(5,seaH*.3));
+  x.lineTo(w-20,h-12); x.closePath(); x.fill();
+  x.strokeStyle=alpha(COL.heat,.7); x.lineWidth=1.5; x.beginPath();
+  for(let px=20;px<=w-20;px+=6){ const yy=seaTop+Math.sin(px/18+t*3)*Math.min(5,seaH*.3); px===20?x.moveTo(px,yy):x.lineTo(px,yy);} x.stroke();
+  [[y0,label0],[y1,label1]].forEach(([yy,lb])=>{ x.strokeStyle=COL.fg; x.lineWidth=2; x.beginPath(); x.moveTo(w*.3,yy); x.lineTo(w*.7,yy); x.stroke(); txt(x,lb,w*.3-8,yy,{size:12,align:'right',color:COL.fg,w:600}); });
+  x.strokeStyle=COL.muted; x.lineWidth=1; x.setLineDash([3,3]); x.beginPath(); x.moveTo(w*.75,y0); x.lineTo(w*.75,y1); x.stroke(); x.setLineDash([]);
+  txt(x,'gap',w*.75+6,(y0+y1)/2,{size:11,align:'left'});
+  const p=isQ?1/(1+Math.exp(gapK/T)):0;
+  const excited=isQ?s3.state:0;
+  const jig=Math.min(1,T/gapK)*7;
+  const bx=w/2+rnd(-jig,jig), by=(excited?y1:y0)-10+rnd(-jig,jig);
+  x.beginPath(); x.arc(bx,by,9,0,7); x.fillStyle=color; x.fill();
+  txt(x,seaH>=G?'heat sea is ABOVE the gap':seaH<4?'heat sea: barely a film':'heat sea',w-24,Math.max(14,seaTop-10),{size:11,align:'right',color:COL.heat});
+  return p;
+}
+function drawS3(dt){
+  s3.acc+=dt; const pq=1/(1+Math.exp(0.24/s3.T));
+  if(s3.acc>0.22){ s3.acc=0; s3.state=Math.random()<pq?1:0; }
+  drawLadder($('#c3a'),11600,'bit','flipped',COL.classical,false,dt);
+  drawLadder($('#c3b'),0.24,'|0⟩','|1⟩',COL.quantum,true,dt);
+  const lcpu=-11600/s3.T/Math.LN10;
+  $('#o3a').textContent=`Heat energy ≈ ${fmtT(s3.T)}  vs gap ≈ 11,600 K\nChance heat flips the bit: ${sciProb(lcpu)}  → rock solid`;
+  const lq=lg(pq);
+  $('#o3b').textContent=`Heat energy ≈ ${fmtT(s3.T)}  vs gap ≈ 0.24 K\nChance heat has kicked it to |1⟩: ${sciProb(lq)}  → ${pq>0.3?'useless: pure noise':pq>0.01?'too noisy':pq>1e-4?'getting close':'calm and usable ✓'}`;
+}
+setT();
+
+/* ================= SCENE 4 ================= */
+const TYPES=[
+ {k:'sc',name:'Superconducting',q:'A tiny metal circuit ringing like a guitar string',sc:'Yes',fab:'Same tool families, different materials',who:'IBM, Google',
+  s3:'A loop of superconducting metal (zero resistance, so no friction drains the "note"), kept below the qubit\'s 0.24 K energy gap.',
+  s4:'A dilution refrigerator at ~0.01 K, magnetic shielding, coaxial cables for microwave pulses, and racks of classical control electronics.'},
+ {k:'ion',name:'Trapped ions',q:'A single charged atom',sc:'No',fab:'Low: the chip is just electrodes',who:'Quantinuum, IonQ',
+  s3:'Single charged atoms float in an ultra-high vacuum, held in place by electric fields. Nothing physically touches them, and lasers cool them almost to a standstill.',
+  s4:'Vacuum chambers, precisely aimed lasers to control and read each ion, and an electrode-trap chip (no transistors).'},
+ {k:'spin',name:'Silicon spin',q:'The spin of one electron in silicon',sc:'No (semiconductor)',fab:'High: modified transistors in CMOS fabs',who:'Intel',
+  s3:'One electron is trapped inside a structure much like a transistor; its spin (up/down) is the qubit, shielded by ultra-pure silicon.',
+  s4:'Cooling to roughly 0.1–1 K, fabrication on standard 300 mm wafer lines, and voltage plus microwave control.'},
+ {k:'atom',name:'Neutral atoms',q:'An uncharged atom held by light',sc:'No',fab:'Almost none: no chip for the qubits',who:'QuEra, Atom Computing',
+  s3:'Neutral atoms are held in a vacuum by focused laser beams ("optical tweezers"), isolated from walls and wires.',
+  s4:'Vacuum cells, banks of lasers and optics for trapping, moving and controlling atoms, and cameras for readout.'},
+ {k:'ph',name:'Photonic',q:'A single particle of light',sc:'Detectors only',fab:'High: silicon photonics in commercial foundries',who:'PsiQuantum',
+  s3:'Single photons barely interact with anything, so they stay quantum naturally. The hard part is making them interact when you want.',
+  s4:'Silicon photonic chips with waveguides, plus single-photon sources and detectors (detectors typically need cryogenic cooling).'},
+];
+let cur='sc';
+function renderTypes(){
+  $('#types').innerHTML=TYPES.map(t=>`<button data-k="${t.k}" aria-pressed="${t.k===cur}" class="${t.k===cur?'pri-q':''}">${t.name}</button>`).join('');
+  $('#types').querySelectorAll('button').forEach(b=>b.onclick=()=>{ cur=b.dataset.k; renderTypes(); });
+  const t=TYPES.find(x=>x.k===cur); $('#st3').textContent=t.s3; $('#st4').textContent=t.s4;
+  $('#typeTable').innerHTML=TYPES.map(x=>`<tr class="${x.k===cur?'hl':''}"><td><b>${x.name}</b></td><td>${x.q}</td><td>${x.sc}</td><td>${x.fab}</td><td>${x.who}</td></tr>`).join('')
+   +`<tr><td><b>CPU / GPU (for contrast)</b></td><td>A crowd of electrons, not a qubit</td><td>No (semiconductor)</td><td>It <em>is</em> the fab</td><td>Intel, AMD, NVIDIA, TSMC…</td></tr>`;
+}
+renderTypes();
+
+/* ================= LOOP ================= */
+prepQ();
+const vis={s1:true,s2:true,s3:true};
+if('IntersectionObserver' in window){ const io=new IntersectionObserver(es=>es.forEach(e=>vis[e.target.id]=e.isIntersecting),{rootMargin:'100px'}); ['s1','s2','s3'].forEach(id=>io.observe(document.getElementById(id))); }
+let last=performance.now();
+function frame(t){ const dt=Math.min(0.05,(t-last)/1000)*(reduce?0.5:1); last=t;
+  if(vis.s1) drawS1(dt); if(vis.s2) drawS2(dt); if(vis.s3) drawS3(dt);
+  requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+window.qdemo={s1,s2,s3};
+</script>
+</body>
+</html>
