@@ -17,6 +17,7 @@
   --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --radius:12px;
+  --np:#be185d; --np-bg:#fdf2f8;
   color-scheme:light;
 }
 html[data-theme="dark"]{
@@ -26,6 +27,7 @@ html[data-theme="dark"]{
   --c-subj:#60a5fa; --c-topic:#22d3ee; --c-obj:#fbbf24; --c-loc:#34d399; --c-part:#a3e635;
   --c-conn:#fb7185; --c-tense:#fb923c; --c-mod:#e879f9; --c-final:#94a3b8;
   --c-stemv:#a78bfa; --c-stemn:#cbd5e1; --c-adv:#5eead4; --c-other:#9ca3af;
+  --np:#f9a8d4; --np-bg:#2a1220;
   color-scheme:dark;
 }
 html[data-theme="twilight"]{
@@ -35,6 +37,7 @@ html[data-theme="twilight"]{
   --c-subj:#8fc4ff; --c-topic:#6fd6e0; --c-obj:#ffcf7a; --c-loc:#7ee2c0; --c-part:#c4e88a;
   --c-conn:#ff8fa3; --c-tense:#ffab7a; --c-mod:#f0a6ff; --c-final:#b9aac4;
   --c-stemv:#c7aaff; --c-stemn:#e4d9f2; --c-adv:#7ee2d4; --c-other:#b9aac4;
+  --np:#ffb3d1; --np-bg:#4a2a48;
   color-scheme:dark;
 }
 html[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
@@ -43,7 +46,7 @@ html[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3
   --accent:#8b93ff; --accent-ink:#0e1015; --danger:#f87171;
   --c-subj:#60a5fa; --c-topic:#22d3ee; --c-obj:#fbbf24; --c-loc:#34d399; --c-part:#a3e635;
   --c-conn:#fb7185; --c-tense:#fb923c; --c-mod:#e879f9; --c-final:#94a3b8;
-  --c-stemv:#a78bfa; --c-stemn:#cbd5e1; --c-adv:#5eead4; --c-other:#9ca3af; color-scheme:dark;
+  --c-stemv:#a78bfa; --c-stemn:#cbd5e1; --c-adv:#5eead4; --c-other:#9ca3af; --np:#f9a8d4; --np-bg:#2a1220; color-scheme:dark;
 }}
 /* Learning Lab shared Day / Twilight / Dark switch */
 .themes{display:flex;gap:2px;padding:3px;border:1px solid var(--border);background:var(--surface);border-radius:999px;flex:none}
@@ -109,6 +112,13 @@ select.btn{padding-right:8px}
 .tx-h{font-size:.8rem}
 td.romc{color:var(--muted);white-space:nowrap}
 body.hide-rom .rom{display:none!important}
+body.hide-np .npx{display:none!important}
+.np,.npx{font-family:"Kohinoor Devanagari","Devanagari Sangam MN","Nirmala UI","Mangal","Noto Sans Devanagari",var(--font-ui)}
+.sent-np{display:inline-block;font-size:1.02rem;font-weight:600;color:var(--np);background:var(--np-bg);border-radius:8px;padding:3px 10px;margin:-2px 0 10px}
+.tile .tn{font-size:.82rem;font-weight:600;color:var(--np);line-height:1.25}
+.insp dd.np{color:var(--np);font-weight:600}
+td.npc{color:var(--np);font-weight:600;white-space:nowrap}
+.grp .np{color:var(--np);font-weight:600}
 .trans{display:block;min-height:1.6em;margin:0 0 12px;padding:6px 10px;border-radius:8px;border:1px dashed var(--border);color:var(--text);font-size:.92rem;outline:none}
 .trans:empty::before{content:attr(data-ph);color:var(--muted)}
 .trans:focus{border-style:solid;border-color:var(--accent);background:var(--surface-2)}
@@ -220,7 +230,7 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;margin-top:24px}
   </div>
 
   <section class="card" style="margin-top:18px" aria-labelledby="tvH">
-    <h2 id="tvH">Segment visualizer <span style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><span class="hint">Hover a tile to preview · click to pin its inspector</span><label class="toggle"><input type="checkbox" id="romToggle" checked> Romanization</label></span></h2>
+    <h2 id="tvH">Segment visualizer <span style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><span class="hint">Hover a tile to preview · click to pin its inspector</span><label class="toggle"><input type="checkbox" id="romToggle" checked> Romanization</label><label class="toggle"><input type="checkbox" id="npToggle" checked> Nepali phonetics <span lang="ne" class="np" style="font-weight:400">उच्चारण</span></label></span></h2>
     <div id="tiles"><div class="empty">Paste Korean text and press <b>Analyze &amp; Parse</b>, or try <b>Load Sample</b>.</div></div>
   </section>
 
@@ -294,7 +304,7 @@ const RR_REP = {'ㄱ':'ㄱ','ㄲ':'ㄱ','ㅋ':'ㄱ','ㄳ':'ㄱ','ㄺ':'ㄱ','ㄴ
 const RR_ASP = {'ㄱ':'ㅋ','ㄷ':'ㅌ','ㅂ':'ㅍ','ㅈ':'ㅊ'};
 const RR_NASAL = {'ㄱ':'ㅇ','ㄷ':'ㄴ','ㅂ':'ㅁ'};
 
-function romanizeWord(word) {
+function pronounce(word) {
   const S = [...word].map(ch => {
     const k = ch.charCodeAt(0);
     if (k < 0xAC00 || k > 0xD7A3) return { other: ch };
@@ -339,6 +349,10 @@ function romanizeWord(word) {
     if ((nx.cho === 'ㄴ' || nx.cho === 'ㅁ') && RR_NASAL[rep]) rep = RR_NASAL[rep];   // 합니다 → 함니다 (비음화)
     s.fin = rep;
   }
+  return S;
+}
+function romanizeWord(word) {
+  const S = pronounce(word);
   let out = '';
   for (let i = 0; i < S.length; i++) {
     const s = S[i]; if (s.other) { out += s.other; continue; }
@@ -350,6 +364,59 @@ function romanizeWord(word) {
   return out;
 }
 function romanize(text) { return String(text || '').split(/(\s+)/).map(w => /\s/.test(w) ? w : romanizeWord(w)).join(''); }
+
+/* =====================================================================
+   NEPALI PHONETICS — how the Korean sounds, written in Devanagari (नेपाली उच्चारण)
+   Built on the same sound-change engine as the romanization, using these rules:
+   • ㄱ ㄷ ㅂ ㅈ: word-initial → क त प च · after a vowel or ㄴ ㄹ ㅁ ㅇ → ग द ब ज · after a stop → क त प च
+   • aspirated ㅋ ㅌ ㅍ ㅊ → ख थ फ छ · tense ㄲ ㄸ ㅃ ㅆ ㅉ → क्क त्त प्प स्स च्च
+   • ㄹ → र (ल after ㄹ, ल् as a final) · ㅇ silent at the start, ङ as a final
+   • 어 and 으 → अ (서 → सअ, 그 → कअ) · 애/에 → ए · 외/웨/왜 → वे · 의 → इ
+   • finals ㄱ ㄷ ㅂ → क् त् प् ; ㄴ ㅁ ㅇ ㄹ → न म ङ ल (with ् inside a word)
+   ===================================================================== */
+const NP_C = {'ㄲ':'क्क','ㄸ':'त्त','ㅃ':'प्प','ㅆ':'स्स','ㅉ':'च्च','ㅋ':'ख','ㅌ':'थ','ㅍ':'फ','ㅊ':'छ','ㅎ':'ह','ㄴ':'न','ㅁ':'म','ㅅ':'स','ㄹ':'र'};
+const NP_PLAIN = {'ㄱ':['क','ग'],'ㄷ':['त','द'],'ㅂ':['प','ब'],'ㅈ':['च','ज']};   // [unvoiced, voiced]
+const NP_FIN = {'ㄱ':'क','ㄷ':'त','ㅂ':'प','ㄴ':'न','ㅁ':'म','ㅇ':'ङ','ㄹ':'ल'};
+// jung index → [glide, vowel]; glide 'y'/'w' becomes य/व, vowel is a key of NP_V
+const NP_JUNG = [['','a'],['','e'],['y','a'],['y','e'],['','eo'],['','e'],['y','eo'],['y','e'],['','o'],['w','a'],['w','e'],['w','e'],
+  ['y','o'],['','u'],['w','eo'],['w','e'],['w','i'],['y','u'],['','eu'],['','i'],['','i']];
+const NP_V = { a:['आ','ा'], e:['ए','े'], o:['ओ','ो'], u:['उ','ु'], i:['इ','ि'], eo:['अ',''], eu:['अ',''] };
+const H = '्';
+function nepaliWord(word) {
+  const S = pronounce(word);
+  let out = '';
+  for (let i = 0; i < S.length; i++) {
+    const s = S[i]; if (s.other) { out += s.other; continue; }
+    const prev = i > 0 && !S[i - 1].other ? S[i - 1] : null;
+    const isLast = !(S[i + 1] && !S[i + 1].other);
+    let con = '';
+    if (s.cho !== 'ㅇ') {
+      if (NP_PLAIN[s.cho]) {
+        const voiced = prev && ['', 'ㄴ', 'ㄹ', 'ㅁ', 'ㅇ'].includes(prev.fin || '');
+        con = NP_PLAIN[s.cho][voiced ? 1 : 0];
+      } else if (s.cho === 'ㄹ' && prev && prev.fin === 'ㄹ') con = 'ल';
+      else con = NP_C[s.cho];
+    }
+    const [glide, v] = NP_JUNG[s.jung];
+    const closed = !!s.fin;
+    let syl;
+    if (!con) {                                            // silent ㅇ: write the vowel on its own
+      if (glide) syl = (glide === 'y' ? 'य' : 'व') + NP_V[v][1] + ((v === 'eo' || v === 'eu') && !closed ? 'अ' : '');
+      else syl = NP_V[v][0];
+    } else {
+      const base = glide ? con + H + (glide === 'y' ? 'य' : 'व') : con;
+      syl = base + NP_V[v][1] + ((v === 'eo' || v === 'eu') && !closed ? 'अ' : '');
+    }
+    if (closed) {
+      const f = NP_FIN[s.fin];
+      const stop = s.fin === 'ㄱ' || s.fin === 'ㄷ' || s.fin === 'ㅂ';
+      syl += f + (isLast && !stop ? '' : H);
+    }
+    out += syl;
+  }
+  return out;
+}
+function toNepali(text) { return String(text || '').split(/(\s+)/).map(w => /\s/.test(w) ? w : nepaliWord(w)).join(''); }
 
 
 /* =====================================================================
@@ -478,6 +545,10 @@ const ADV = {
   '이':['this','Determiner'],'그':['that','Determiner'],'저':['that (over there)','Determiner'],'모든':['all; every','Determiner'],
   '새':['new','Determiner'],'한':['one; a','Determiner'],'두':['two','Determiner'],'세':['three','Determiner'],'어떤':['some; what kind of','Determiner'],
   '무슨':['what (kind of)','Determiner'],'어느':['which','Determiner'],'몇':['how many; a few','Determiner'],
+  '이렇게':['like this; this way (from 이렇다)','Adverb'],'그렇게':['like that; so (from 그렇다)','Adverb'],'저렇게':['like that, over there (from 저렇다)','Adverb'],
+  '가끔':['sometimes','Adverb'],'별로':['not particularly (+ negative)','Adverb'],'전혀':['not at all (+ negative)','Adverb'],
+  '혹시':['by any chance; perhaps','Adverb'],'열심히':['hard; diligently','Adverb'],'계속':['continuously; keep on','Adverb'],'특히':['especially','Adverb'],
+  '바로':['right; exactly; immediately','Adverb'],'아까':['a while ago','Time adverb'],'나중에':['later','Time adverb'],'요즘':['these days','Time adverb'],
   '네':['yes','Interjection'],'아니요':['no','Interjection'],'아':['ah','Interjection'],'오':['oh','Interjection']
 };
 // Contractions & irregular whole words (checked before the rule engine)
@@ -888,7 +959,7 @@ const SAMPLES = [
 ];
 const LS_KEY = 'korean-breakdown-tool.v1';
 const FIELDS = ['stem', 'affixes', 'role', 'tense', 'notes'];
-let state = { text: '', overrides: {}, dict: {}, sentenceNotes: {}, editing: true, theme: '', showRoman: true };
+let state = { text: '', overrides: {}, dict: {}, sentenceNotes: {}, editing: true, theme: '', showRoman: true, showNepali: true };
 let parsed = [];
 let tokIndex = {};
 let selKey = null;
@@ -998,6 +1069,7 @@ function inspectorHTML(t) {
     : (t.affixes.length ? `<div class="aff">${t.affixes.map(a => `<div><span class="chip cat-${a.cat}">${esc(a.f)}</span><span>${esc(a.label)}</span><span class="muted">${esc(a.en)}</span></div>`).join('')}</div>` : '<span class="muted">none</span>');
   return `<div class="eq ko">${eq}</div><dl>
     <dt>Say it</dt><dd><i>${esc(romanize(t.core))}</i></dd>
+    <dt>नेपाली उच्चारण</dt><dd class="np" lang="ne">${esc(toNepali(t.core))}</dd>
     <dt>Root stem</dt><dd class="ko">${esc(eff(t, 'stem'))}${t.gloss && source(t, 'stem') === 'default' ? ` <span class="muted">— ${esc(t.gloss)}</span>` : ''}</dd>
     <dt>Class</dt><dd>${esc(t.pos)}</dd>
     <dt>Affixes</dt><dd>${aff}</dd>
@@ -1012,6 +1084,7 @@ function tileHTML(t) {
     ${hasDict || hasOv ? '<span class="dot" title="Has your edits"></span>' : ''}
     <div class="tw ko">${t.pre ? `<span class="punct">${esc(t.pre)}</span>` : ''}${esc(t.core)}${t.post ? `<span class="punct">${esc(t.post)}</span>` : ''}</div>
     <div class="tr rom">${esc(romanize(t.core))}</div>
+    <div class="tn npx" lang="ne">${esc(toNepali(t.core))}</div>
     <div class="tm">${stemChip}${t.affixes.map(a => `<span class="chip cat-${a.cat}">${esc(a.f)}</span>`).join('')}</div>
     <div class="insp">${inspectorHTML(t)}</div></div>`;
 }
@@ -1041,6 +1114,7 @@ function renderTiles() {
     <div class="sent">
       <div class="sent-h"><span class="sent-n">Sentence ${si + 1}</span><span class="sent-t ko">${esc(s.text)}</span></div>
       <div class="sent-r rom" title="Revised Romanization (with standard sound changes)">${esc(romanize(s.text))}</div>
+      <div class="sent-np npx" lang="ne" title="How it sounds, written in Nepali (Devanagari) letters">🔊 ${esc(toNepali(s.text))}</div>
       ${meaningsHTML(s)}
       <div class="tx-tools"><span class="tx-l">Translation</span>
         <a class="btn small" href="https://papago.naver.com/?sk=ko&amp;tk=en&amp;st=${encodeURIComponent(s.text)}" target="_blank" rel="noopener" title="Opens Papago in a new tab (needs internet)">Papago ↗</a>
@@ -1059,14 +1133,14 @@ function renderTable() {
   if (!parsed.length) { $('tableWrap').innerHTML = '<div class="empty">The breakdown table appears here after analysis.</div>'; return; }
   let n = 0;
   const rows = parsed.map((s, si) => {
-    const head = `<tr class="grp"><td colspan="9"><span class="muted">Sentence ${si + 1} ·</span> <span class="ko">${esc(s.text)}</span> <span class="muted rom"><i>${esc(romanize(s.text))}</i></span></td></tr>`;
+    const head = `<tr class="grp"><td colspan="10"><span class="muted">Sentence ${si + 1} ·</span> <span class="ko">${esc(s.text)}</span> <span class="muted rom"><i>${esc(romanize(s.text))}</i></span> <span class="np npx" lang="ne">${esc(toNepali(s.text))}</span></td></tr>`;
     return head + s.tokens.map(t => {
       n++;
       const tds = FIELDS.map(f => { const src = source(t, f); return `<td class="ed${f === 'stem' ? ' ko' : ''}${f === 'notes' ? ' notes' : ''}${src === 'override' ? ' edited' : src === 'dict' ? ' fromdict' : ''}" data-field="${f}" ${state.editing ? 'contenteditable="true"' : ''} spellcheck="false" title="${src === 'override' ? 'Edited by you' : src === 'dict' ? 'From your dictionary' : 'Built-in analysis'}">${cellHTML(t, f)}</td>`; }).join('');
-      return `<tr class="row${t.key === selKey ? ' sel' : ''}" data-key="${esc(t.key)}"><td class="idx">${n}</td><td class="seg ko">${esc(t.raw)}</td><td class="romc rom"><i>${esc(romanize(t.core))}</i></td>${tds}<td class="act"><button class="btn small" data-act="dict" type="button" title="Save this row to your dictionary">＋Dict</button><button class="btn small ghost" data-act="reset" type="button" title="Reset this row to the built-in analysis">Reset</button></td></tr>`;
+      return `<tr class="row${t.key === selKey ? ' sel' : ''}" data-key="${esc(t.key)}"><td class="idx">${n}</td><td class="seg ko">${esc(t.raw)}</td><td class="romc rom"><i>${esc(romanize(t.core))}</i></td><td class="npc np npx" lang="ne">${esc(toNepali(t.core))}</td>${tds}<td class="act"><button class="btn small" data-act="dict" type="button" title="Save this row to your dictionary">＋Dict</button><button class="btn small ghost" data-act="reset" type="button" title="Reset this row to the built-in analysis">Reset</button></td></tr>`;
     }).join('');
   }).join('');
-  $('tableWrap').innerHTML = `<table class="bd${state.editing ? ' editing' : ''}"><thead><tr><th>#</th><th>Clause / word segment</th><th class="rom">Romanization</th><th>Stem / base word</th><th>Particles &amp; affixes</th><th>Grammatical function / role</th><th>Tense / mood</th><th>Meaning / notes</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  $('tableWrap').innerHTML = `<table class="bd${state.editing ? ' editing' : ''}"><thead><tr><th>#</th><th>Clause / word segment</th><th class="rom">Romanization</th><th class="npx">Nepali phonetics <span lang="ne">(उच्चारण)</span></th><th>Stem / base word</th><th>Particles &amp; affixes</th><th>Grammatical function / role</th><th>Tense / mood</th><th>Meaning / notes</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function renderDict() {
   const keys = Object.keys(state.dict).sort((a, b) => a.localeCompare(b, 'ko'));
@@ -1099,11 +1173,11 @@ function toMarkdown() {
   if (!parsed.length) return '';
   let md = '# Korean Sentence Breakdown\n\n';
   parsed.forEach((s, si) => {
-    md += `## Sentence ${si + 1}\n\n> ${s.text}\n>\n> *${romanize(s.text)}*\n\n`;
+    md += `## Sentence ${si + 1}\n\n> ${s.text}\n>\n> *${romanize(s.text)}*\n>\n> 🔊 ${toNepali(s.text)}\n\n`;
     if (state.sentenceNotes[s.text]) md += `*Translation / notes:* ${state.sentenceNotes[s.text]}\n\n`;
     md += '**Clauses:** ' + s.clauses.map(c => `[${CLAUSE_LABEL[c.type][0]}] ${c.words.map(w => w.raw).join(' ')}`).join(' · ') + '\n\n';
-    md += '| Clause / Word Segment | Romanization | Stem / Base Word | Particles & Affixes | Grammatical Function / Role | Tense / Mood | Meaning / Notes |\n|---|---|---|---|---|---|---|\n';
-    s.tokens.forEach(t => { md += `| ${mdCell(t.raw)} | ${mdCell(romanize(t.core))} | ${mdCell(eff(t, 'stem'))} | ${mdCell(eff(t, 'affixes'))} | ${mdCell(eff(t, 'role'))} | ${mdCell(eff(t, 'tense'))} | ${mdCell(eff(t, 'notes'))} |\n`; });
+    md += '| Clause / Word Segment | Romanization | Nepali phonetics | Stem / Base Word | Particles & Affixes | Grammatical Function / Role | Tense / Mood | Meaning / Notes |\n|---|---|---|---|---|---|---|---|\n';
+    s.tokens.forEach(t => { md += `| ${mdCell(t.raw)} | ${mdCell(romanize(t.core))} | ${mdCell(toNepali(t.core))} | ${mdCell(eff(t, 'stem'))} | ${mdCell(eff(t, 'affixes'))} | ${mdCell(eff(t, 'role'))} | ${mdCell(eff(t, 'tense'))} | ${mdCell(eff(t, 'notes'))} |\n`; });
     md += '\n';
   });
   return md;
@@ -1173,6 +1247,9 @@ function bind() {
   const applyRoman = () => { document.body.classList.toggle('hide-rom', state.showRoman === false); $('romToggle').checked = state.showRoman !== false; };
   $('romToggle').onchange = e => { state.showRoman = e.target.checked; applyRoman(); schedule(); };
   applyRoman();
+  const applyNepali = () => { document.body.classList.toggle('hide-np', state.showNepali === false); $('npToggle').checked = state.showNepali !== false; };
+  $('npToggle').onchange = e => { state.showNepali = e.target.checked; applyNepali(); schedule(); };
+  applyNepali();
   $('editToggle').checked = state.editing;
   $('editToggle').onchange = e => { state.editing = e.target.checked; renderTable(); schedule(); };
 
