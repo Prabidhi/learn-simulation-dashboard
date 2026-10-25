@@ -10,7 +10,7 @@
 :root{
   --bg:#f5f3ef;--bg2:#ece8e1;--panel:#fffdf9;--fg:#1c1a17;--muted:#6b665d;--line:#ddd7cc;
   --grid:rgba(28,26,23,.05);--shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px -12px rgba(28,26,23,.18);
-  --git:#e5532d;--quantum:#7a4fe0;--oracle:#c74634;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
+  --git:#e5532d;--quantum:#7a4fe0;--ai:#0f8a6c;--oracle:#c74634;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Charter,"Book Antiqua",Georgia,serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -19,19 +19,19 @@
 :root[data-theme="dark"]{
   --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
   --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-  --git:#ff7a52;--quantum:#a98bff;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
+  --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
 }
 :root[data-theme="twilight"]{
   --bg:#231f38;--bg2:#332c50;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;
   --grid:rgba(246,235,230,.05);--shadow:0 1px 2px rgba(10,6,25,.35),0 14px 34px -14px rgba(10,6,25,.75);
-  --git:#ff9b6e;--quantum:#c7aaff;--oracle:#ff8f86;--default:#ffc47d;--on-c:#211b33;
+  --git:#ff9b6e;--quantum:#c7aaff;--ai:#7ee2c0;--oracle:#ff8f86;--default:#ffc47d;--on-c:#211b33;
   --sky:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme]){
     --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
     --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-    --git:#ff7a52;--quantum:#a98bff;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
+    --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
   }
 }
 *{box-sizing:border-box}
@@ -238,6 +238,15 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
    ===================================================================== */
 const DASHBOARDS = [
   {
+    title: 'How AI Models Are Made',
+    href: 'ai/how-models-are-made.html',
+    topic: 'ai',
+    added: '2026-10-24',
+    desc: 'From raw data to a frozen model answering your questions. Train a tiny language model live and walk every stage.',
+    points: ['Watch gradient descent roll downhill', 'Train a real tiny language model', 'Freeze it, quantize it, run inference'],
+    tags: ['training', 'loss', 'rlhf', 'inference']
+  },
+  {
     title: 'Git Cheat Sheet & Simulator',
     href: 'git/git-simulator.html',
     topic: 'git',
@@ -261,6 +270,7 @@ const DASHBOARDS = [
 DASHBOARDS.sort((a, b) => (b.added || '').localeCompare(a.added || '') || a.title.localeCompare(b.title));
 
 const TOPICS = {
+  ai:      { label: 'AI',      color: 'var(--ai)' },
   git:     { label: 'Git',     color: 'var(--git)' },
   quantum: { label: 'Quantum', color: 'var(--quantum)' },
   oracle:  { label: 'Oracle',  color: 'var(--oracle)' },
@@ -268,6 +278,13 @@ const TOPICS = {
 
 /* ---------- card illustrations ---------- */
 const ART = {
+  ai: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    ${(()=>{ const L=[[70,[45,85,125]],[150,[30,65,105,140]],[230,[30,65,105,140]],[300,[85]]]; let e='',n='';
+      for(let i=0;i<L.length-1;i++) L[i][1].forEach((y1,a)=>L[i+1][1].forEach((y2,b)=>{ e+=`<line x1="${L[i][0]}" y1="${y1}" x2="${L[i+1][0]}" y2="${y2}" stroke="${c}" stroke-width="${(a+b)%3===0?2:1}" opacity="${(a+b)%3===0?.6:.2}"/>`; }));
+      L.forEach(([x,ys],i)=>ys.forEach(y=>{ n+=`<circle cx="${x}" cy="${y}" r="${i===3?11:8}" fill="${i===3?c:'var(--panel)'}" stroke="${c}" stroke-width="2.5"/>`; }));
+      return e+n; })()}
+    <path class="flow" d="M20 158 C 90 150, 140 120, 200 128 S 300 150, 330 156" fill="none" stroke="${c}" stroke-width="2" opacity=".45"/>
+  </svg>`,
   git: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <g fill="none" stroke-width="3" stroke-linecap="round">
       <path d="M-10 92 H350" stroke="${c}" opacity=".9"/>

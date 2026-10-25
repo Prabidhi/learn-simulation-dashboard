@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How AI Models Are Made</title>
+<meta name="description" content="From raw data to a frozen model answering questions: train a tiny language model live and see every stage of a frontier model's life.">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --model:#7a4fe0;--model-soft:#f1ecff;--data:#0f8a6c;--data-soft:#e1f5ee;--loss:#d1580a;--loss-soft:#fdebdd;
+  --ok:#1a7f37;--err:#cf222e;--on-accent:#ffffff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --model:#b392ff;--model-soft:#271d44;--data:#3fcf9e;--data-soft:#0f2f27;--loss:#ff9b5c;--loss-soft:#3a2312;--ok:#3fb950;--err:#f85149;--on-accent:#0d1117;}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --model:#b392ff;--model-soft:#271d44;--data:#3fcf9e;--data-soft:#0f2f27;--loss:#ff9b5c;--loss-soft:#3a2312;--ok:#3fb950;--err:#f85149;--on-accent:#0d1117;}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
+  --model:#c7aaff;--model-soft:#3a2d58;--data:#7ee2c0;--data-soft:#2a3a4a;--loss:#ffab7a;--loss-soft:#4a3040;--ok:#7ee2a8;--err:#ff8f86;--on-accent:#211b33;}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 16px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
+header p{margin:0;color:var(--muted);max-width:780px}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+:root[data-theme="twilight"] nav{background:#2a2444}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--model)}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
+.readout,.bubble,.gen,.frozen,.msg,.toks span{overflow-wrap:anywhere;word-break:break-word}
+section{margin:30px 0 8px;scroll-margin-top:60px}
+section>h2{font-size:1.28rem;margin:0 0 4px}
+section>p.lead{margin:0 0 12px;color:var(--muted);max-width:840px}
+.analogy{border-left:3px solid var(--model);background:var(--model-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:880px}
+.analogy b{color:var(--model)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card .sub{color:var(--muted);font-size:.84rem;margin-bottom:10px}
+canvas{display:block;width:100%;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+button.b{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.b:hover:not(:disabled){border-color:var(--fg)}
+button.b:disabled{opacity:.45;cursor:not-allowed}
+button.pri{background:var(--model);border-color:var(--model);color:var(--on-accent)}
+button.dat{background:var(--data);border-color:var(--data);color:var(--on-accent)}
+label.rng{display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--muted);flex:1;min-width:200px}
+label.rng input{flex:1;accent-color:var(--model)}
+.readout{font-family:var(--mono);font-size:.8rem;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--chip);white-space:pre-wrap;min-height:2.4em}
+.msg{font-size:.86rem;margin-top:8px;min-height:1.4em}
+.msg.bad{color:var(--err)} .msg.good{color:var(--ok)}
+.takeaway{margin-top:14px;padding:10px 14px;border-radius:10px;border:1px dashed var(--line);font-size:.9rem;background:var(--panel)}
+.takeaway b{color:var(--model)}
+/* lifecycle strip */
+.life{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-top:16px}
+.life a{text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 10px 9px;position:relative;font-size:.8rem;line-height:1.3}
+.life a:hover{border-color:var(--model)}
+.life b{display:block;font-size:.86rem;margin-bottom:2px}
+.life i{font-style:normal;font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.life a:not(:last-child)::after{content:"›";position:absolute;right:-8px;top:50%;transform:translate(50%,-50%);color:var(--muted)}
+/* data funnel */
+.fstep{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);font-size:.86rem}
+.fstep:first-of-type{border-top:0}
+.fbar{height:14px;border-radius:7px;background:var(--chip);overflow:hidden}
+.fbar i{display:block;height:100%;background:var(--data);transition:width .4s}
+.fstep input{accent-color:var(--data)}
+.fstep .n{font-family:var(--mono);font-size:.78rem;color:var(--muted);min-width:52px;text-align:right}
+.meter{display:flex;gap:10px;align-items:center;margin-top:10px;font-size:.84rem}
+.meter .fbar{flex:1}
+.meter .fbar i{background:var(--model)}
+/* tokenizer */
+textarea{width:100%;font:inherit;font-size:.9rem;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);resize:vertical;min-height:62px}
+.toks{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;font-family:var(--mono);font-size:.82rem}
+.toks span{padding:2px 6px;border-radius:5px;border:1px solid var(--line);white-space:pre;position:relative}
+.toks span small{display:block;font-size:.6rem;color:var(--muted);line-height:1}
+/* post-training */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--model);color:var(--on-accent);border-color:var(--model)}
+.bubble{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);font-size:.9rem;white-space:pre-wrap}
+.bubble.q{background:var(--model-soft);border-color:transparent;margin-bottom:8px}
+.why{font-size:.84rem;color:var(--muted);margin-top:8px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.pick{text-align:left;font:inherit;font-size:.86rem;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.45}
+.pick:hover:not(:disabled){border-color:var(--model)}
+.pick.chosen{border-color:var(--model);box-shadow:0 0 0 1px var(--model)}
+.pick:disabled{cursor:default}
+.rm{display:grid;grid-template-columns:auto 1fr auto;gap:6px 8px;align-items:center;font-family:var(--mono);font-size:.78rem;margin-top:10px}
+.rm .fbar i{background:var(--model)}
+/* release gate */
+.gate{display:grid;gap:6px;margin-top:6px}
+.check{display:flex;align-items:center;gap:10px;font-size:.88rem;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.check .st{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;border:1px solid var(--line);flex:none}
+.check.run .st{border-color:var(--model);color:var(--model)}
+.check.pass .st{background:var(--ok);border-color:var(--ok);color:#fff}
+.frozen{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--model);background:var(--model-soft);font-family:var(--mono);font-size:.8rem;white-space:pre-wrap}
+.prec{display:flex;gap:6px;flex-wrap:wrap}
+.prec button[aria-pressed="true"]{background:var(--model);color:var(--on-accent);border-color:var(--model)}
+.big{font-size:1.6rem;font-weight:600;font-family:var(--mono)}
+/* inference */
+.loop{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.8rem;margin-bottom:10px}
+.loop span{padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
+.loop span.lock{border-color:var(--model);color:var(--model)}
+.gen{font-family:var(--mono);font-size:.95rem;padding:12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);min-height:70px;line-height:1.7}
+.gen .w{border-radius:4px;padding:0 2px}
+.gen .new{background:var(--model-soft);color:var(--model);font-weight:600}
+.cands{display:grid;grid-template-columns:auto 1fr auto;gap:5px 8px;align-items:center;font-family:var(--mono);font-size:.8rem;margin-top:10px}
+.cands .fbar i{background:var(--model)}
+.cands .picked{color:var(--model);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.86rem;background:var(--panel);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--chip);font-weight:600}
+.tscroll{overflow-x:auto;border-radius:10px;border:1px solid var(--line);margin-top:10px}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:.8rem}
+@media (max-width:900px){.two{grid-template-columns:1fr}.life{grid-template-columns:repeat(4,minmax(0,1fr))}.life a:nth-child(4)::after{display:none}}
+@media (max-width:560px){.life{grid-template-columns:repeat(2,minmax(0,1fr))}.life a:nth-child(2n)::after{display:none}.pair{grid-template-columns:1fr}
+  .themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}header h1{font-size:1.35rem}}
+</style>
+</head>
+<body>
+<header>
+  <h1>How AI models are made: from raw text to your daily chat</h1>
+  <p>Every frontier model goes through the same life: collect data, train billions of knobs to reduce a loss, teach it to be helpful, test it, freeze it, then serve it. Here you'll do every step with a model small enough to train in your browser.</p>
+  <div class="life" id="life">
+    <a href="#s1"><b>Collect data</b><i>the library</i></a>
+    <a href="#s1"><b>Tokenize</b><i>Lego bricks</i></a>
+    <a href="#s2"><b>Knobs + loss</b><i>golf score</i></a>
+    <a href="#s3"><b>Pretrain</b><i>read it all</i></a>
+    <a href="#s4"><b>Post-train</b><i>coaching</i></a>
+    <a href="#s5"><b>Evaluate</b><i>final exams</i></a>
+    <a href="#s5"><b>Freeze + ship</b><i>print the book</i></a>
+    <a href="#s6"><b>Inference</b><i>daily use</i></a>
+  </div>
+</header>
+<nav><div>
+  <a href="#s1">1 · Data &amp; tokens</a>
+  <a href="#s2">2 · Knobs &amp; loss</a>
+  <a href="#s3">3 · Pretraining</a>
+  <a href="#s4">4 · Post-training</a>
+  <a href="#s5">5 · Freeze &amp; ship</a>
+  <a href="#s6">6 · Inference</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+
+<main>
+<!-- ===================== 1 DATA ===================== -->
+<section id="s1">
+  <h2>1 · Data &amp; tokens: what the model learns from</h2>
+  <p class="lead">A model only knows what's in its training data. Labs gather enormous amounts of text (web pages, books, code, maths), clean it hard, then chop it into tokens.</p>
+  <div class="analogy"><b>Think of it like</b> building a library and then cutting every book into Lego bricks. The cleaning decides which books go on the shelves; the tokenizer decides what the bricks look like.</div>
+  <div class="two">
+    <div class="card">
+      <h3>Cleaning the crawl</h3>
+      <div class="sub">Toggle each cleaning step and watch how much data survives and how good it is. (Illustrative proportions; real pipelines vary.)</div>
+      <div id="funnel"></div>
+      <div class="meter"><span>Data quality</span><div class="fbar"><i id="qbar"></i></div><span id="qtxt" style="font-family:var(--mono);font-size:.8rem;min-width:48px;text-align:right"></span></div>
+      <div class="msg" id="fmsg"></div>
+    </div>
+    <div class="card">
+      <h3>Tokenizer playground</h3>
+      <div class="sub">Models don't read letters or words. They read tokens: common chunks of text, each with an ID number. Type anything.</div>
+      <textarea id="tokIn" aria-label="Text to tokenize">Unbelievably, transformers predict the next token.</textarea>
+      <div class="toks" id="toks"></div>
+      <div class="readout" id="tokOut"></div>
+    </div>
+  </div>
+  <div class="takeaway">Takeaway: <b>garbage in, garbage out</b>. Deduplication and quality filtering throw away most of the raw crawl, and that's a good thing. Then every piece of text becomes a list of token IDs, which is the only thing the model ever sees.</div>
+</section>
+
+<!-- ===================== 2 KNOBS & LOSS ===================== -->
+<section id="s2">
+  <h2>2 · Knobs &amp; loss: how "learning" actually works</h2>
+  <p class="lead">A model is a function with adjustable numbers (parameters, or knobs). The <b>loss</b> measures how wrong its guesses are. Training repeatedly nudges every knob a little in the direction that lowers the loss. That's gradient descent.</p>
+  <div class="analogy"><b>Think of it like</b> standing on a foggy hillside, trying to reach the lowest valley. You can't see the valley, but you can feel which way the ground slopes under your feet. Take a step downhill, feel again, repeat. The <b>learning rate</b> is your step size.</div>
+  <div class="two">
+    <div class="card">
+      <h3>The model's guess vs the data</h3>
+      <div class="sub">This model has just 2 knobs: slope <code>w</code> and offset <code>b</code>. Red lines are the errors; the loss is their average squared length.</div>
+      <canvas id="c2fit" data-h="260" aria-label="Data points and the model's current line"></canvas>
+      <div class="readout" id="o2"></div>
+    </div>
+    <div class="card">
+      <h3>The loss landscape</h3>
+      <div class="sub">Every point is one setting of the two knobs. Colour = loss (teal low, orange high). The ball is your model. Click anywhere to drop it there.</div>
+      <canvas id="c2land" data-h="260" aria-label="Loss landscape over the two knobs"></canvas>
+      <div class="controls">
+        <button class="b pri" id="b2play">▶ Train</button>
+        <button class="b" id="b2step">One step</button>
+        <button class="b" id="b2reset">Random start</button>
+        <label class="rng">Learning rate <input type="range" id="r2lr" min="0" max="100" value="45"><span id="lrv" style="font-family:var(--mono);min-width:40px"></span></label>
+      </div>
+      <div class="msg" id="m2"></div>
+    </div>
+  </div>
+  <div class="takeaway">Try a learning rate near the maximum: the ball overshoots and <b>the loss explodes</b>. Too small and it crawls. A frontier model does exactly this, but with hundreds of billions of knobs at once. Calculus (backpropagation) works out the downhill direction for every knob in one sweep.</div>
+</section>
+
+<!-- ===================== 3 PRETRAINING ===================== -->
+<section id="s3">
+  <h2>3 · Pretraining: train a real (tiny) language model, live</h2>
+  <p class="lead">Pretraining is one job repeated trillions of times: <em>read some text, guess the next token, measure the loss, nudge the knobs.</em> Below is a genuine language model with fewer than 1,000 knobs that learns to predict the next character of a short text.</p>
+  <div class="analogy"><b>Think of it like</b> a student reading the same library over and over. One full read is an <b>epoch</b>. At first the guesses are random; after enough passes, the student can finish sentences in the library's style. That's all a base model is: an extremely good next-token predictor.</div>
+  <div class="two">
+    <div class="card">
+      <h3>Loss over training</h3>
+      <div class="sub">Lower is better. The top line is random guessing; the bottom line is the best this tiny model could ever do.</div>
+      <canvas id="c3loss" data-h="210" aria-label="Training loss curve"></canvas>
+      <div class="controls">
+        <button class="b pri" id="b3train">▶ Train</button>
+        <button class="b" id="b3save">Save checkpoint</button>
+        <button class="b" id="b3reset">Reset knobs</button>
+        <label class="rng">Learning rate <select id="s3lr" style="font:inherit;font-size:.84rem;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)"><option value="0.1">0.1 (slow)</option><option value="0.5" selected>0.5</option><option value="2">2 (fast)</option></select></label>
+      </div>
+      <div class="readout" id="o3"></div>
+      <div class="msg" id="m3"></div>
+      <div id="ckpts" class="controls"></div>
+    </div>
+    <div class="card">
+      <h3>What the model writes</h3>
+      <div class="sub">A sample generated by the current knobs. Watch it go from gibberish to word-like text as the loss drops.</div>
+      <div class="bubble" id="sample" style="font-family:var(--mono);min-height:92px"></div>
+      <div class="sub" style="margin:12px 0 6px">The knobs themselves: each cell is how likely the <b>next</b> character (column) is after the <b>current</b> one (row). Hover a cell.</div>
+      <canvas id="c3heat" data-h="250" aria-label="Learned next-character probabilities"></canvas>
+      <div class="msg" id="m3heat"></div>
+    </div>
+  </div>
+  <div class="takeaway">The bottom dashed line is a <b>ceiling on what this model can learn</b>: it only looks at one previous character. Frontier models look back over thousands of tokens using the transformer's attention, and have billions of times more knobs, so their loss keeps dropping far lower. Same loop, vastly bigger.</div>
+</section>
+
+<!-- ===================== 4 POST-TRAINING ===================== -->
+<section id="s4">
+  <h2>4 · Post-training: from autocomplete to assistant</h2>
+  <p class="lead">A pretrained base model just continues text. It doesn't know it's supposed to <em>answer</em> you. Post-training teaches it to follow instructions, be helpful and honest, and decline harmful requests.</p>
+  <div class="analogy"><b>Think of it like</b> a brilliant graduate who has read everything but never had a job. <b>Fine-tuning</b> is an apprenticeship with worked examples of good answers. <b>Reinforcement learning from feedback</b> is a coach giving thumbs-up or thumbs-down on many attempts, so they learn what "good" looks like.</div>
+  <div class="two">
+    <div class="card">
+      <h3>Same prompt, three stages</h3>
+      <div class="tabs" id="ptTabs"></div>
+      <div class="bubble q">How do I reset my home router?</div>
+      <div class="bubble" id="ptAns"></div>
+      <div class="why" id="ptWhy"></div>
+    </div>
+    <div class="card">
+      <h3>You are the feedback</h3>
+      <div class="sub">Pick the better answer. Each choice becomes training data for a <b>reward model</b>, which then scores the model's attempts during reinforcement learning.</div>
+      <div class="bubble q" id="pgQ"></div>
+      <div class="pair" id="pgPair"></div>
+      <div class="msg" id="pgMsg"></div>
+      <div class="rm" id="pgRM"></div>
+      <div class="controls"><button class="b" id="pgNext" disabled>Next pair →</button></div>
+    </div>
+  </div>
+  <div class="takeaway">Modern models also get reinforcement learning on tasks where answers can be <b>checked automatically</b> (does the code pass its tests, is the maths answer right?), which rewards actually getting things correct, not just sounding good. Post-training doesn't add much knowledge; it shapes <b>how</b> the model uses what it already learned.</div>
+</section>
+
+<!-- ===================== 5 FREEZE & SHIP ===================== -->
+<section id="s5">
+  <h2>5 · Evaluate, freeze &amp; ship</h2>
+  <p class="lead">Before release, a candidate model is tested for capability, safety and regressions. The winning checkpoint is then frozen: its weights are saved to files, versioned, and never changed again. Improvements ship later as a new version.</p>
+  <div class="analogy"><b>Think of it like</b> publishing a book. Final exams and an inspection come first. Then you <b>print it</b>: every copy is identical and the text is fixed. Readers use the book every day, but reading never changes the words on the page.</div>
+  <div class="two">
+    <div class="card">
+      <h3>Release gate for your tiny model</h3>
+      <div class="sub">Run the checks, then freeze the knobs you trained in section 3.</div>
+      <div class="gate" id="gate"></div>
+      <div class="controls">
+        <button class="b pri" id="b5run">Run release checks</button>
+        <button class="b" id="b5freeze" disabled>🔒 Freeze &amp; publish v1.0</button>
+        <button class="b" id="b5unfreeze" hidden>Unfreeze (start v1.1)</button>
+      </div>
+      <div id="frozenBox"></div>
+    </div>
+    <div class="card">
+      <h3>Shipping it: how big are the weights?</h3>
+      <div class="sub">Serving a model means loading every weight into GPU memory. <b>Quantization</b> stores each weight in fewer bits, like saving a photo as a smaller JPEG: much lighter, almost the same picture.</div>
+      <label class="rng" style="min-width:0">Parameters <input type="range" id="r5p" min="0" max="1000" value="620"><span id="pv" style="font-family:var(--mono);min-width:56px"></span></label>
+      <div class="controls prec" id="prec"></div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:12px">
+        <div><div class="sub" style="margin:0">Weights alone</div><div class="big" id="gb"></div></div>
+        <div><div class="sub" style="margin:0">80 GB GPUs needed</div><div class="big" id="gpus"></div></div>
+      </div>
+      <div class="readout" id="o5"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 6 INFERENCE ===================== -->
+<section id="s6">
+  <h2>6 · Inference: what happens when you send a message</h2>
+  <p class="lead">Your prompt becomes tokens. The frozen model computes a probability for every possible next token. One is picked, appended, and the loop runs again, one token at a time, until the answer is done.</p>
+  <div class="analogy"><b>Think of it like</b> the world's best autocomplete, pressed over and over. <b>Temperature</b> controls how adventurous each pick is: low means "always the safest word", high means "surprise me".</div>
+  <div class="card">
+    <div class="loop"><span>your tokens</span>→<span class="lock">🔒 frozen model</span>→<span>probabilities</span>→<span>pick one</span>→<span>append</span><span style="border:0">↺ repeat</span></div>
+    <div class="gen" id="gen"></div>
+    <div class="controls">
+      <button class="b pri" id="b6next">Next token</button>
+      <button class="b" id="b6auto">▶ Write 12 tokens</button>
+      <button class="b" id="b6reset">Reset</button>
+      <label class="rng">Temperature <input type="range" id="r6t" min="5" max="200" value="80"><span id="tv" style="font-family:var(--mono);min-width:36px"></span></label>
+    </div>
+    <div class="sub" style="margin:12px 0 0">Next-token probabilities right now (top candidates):</div>
+    <div class="cands" id="cands"></div>
+  </div>
+  <div class="takeaway">Notice the 🔒. <b>Your chats don't retrain the model in real time</b>: the weights stay frozen while it answers. It "remembers" the conversation only because the whole conversation is fed back in as input each turn. Real serving adds tricks like caching earlier tokens' work (the KV cache) and batching many users onto the same GPUs.</div>
+</section>
+
+<section id="scale">
+  <h2>Tiny vs frontier: same recipe, different scale</h2>
+  <div class="tscroll"><table style="min-width:640px">
+    <thead><tr><th></th><th>Your tiny model (this page)</th><th>Published example: Meta Llama 3.1 405B (2024)</th><th>Frontier models today</th></tr></thead>
+    <tbody>
+      <tr><td><b>Knobs</b></td><td id="tKnobs">under 1,000</td><td>405 billion</td><td>Hundreds of billions to trillions (often not disclosed)</td></tr>
+      <tr><td><b>Training data</b></td><td>~500 characters</td><td>About 15 trillion tokens</td><td>Many trillions of tokens, plus curated and synthetic data</td></tr>
+      <tr><td><b>Looks back</b></td><td>1 character</td><td>Up to 128K tokens</td><td>Hundreds of thousands of tokens or more</td></tr>
+      <tr><td><b>Hardware &amp; time</b></td><td>Your browser, seconds</td><td>Up to 16,000 H100 GPUs, months</td><td>Tens of thousands of accelerators, months</td></tr>
+      <tr><td><b>The loop</b></td><td colspan="3">Identical: predict → measure loss → nudge knobs → repeat, then post-train, evaluate, freeze, serve.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+</main>
+<footer>Works fully offline. The tiny model, gradient descent, tokenizer and sampler on this page are real computations; data-funnel proportions are illustrative. Llama 3.1 figures are from Meta's published paper.</footer>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let COL={};
+function readColors(){ const s=getComputedStyle(document.documentElement); ['fg','muted','line','chip','panel','bg','model','data','loss','ok','err'].forEach(k=>COL[k]=s.getPropertyValue('--'+k).trim()); }
+readColors();
+function fit(c){ const r=c.getBoundingClientRect(), d=window.devicePixelRatio||1, w=Math.max(10,Math.round(r.width)), h=+c.dataset.h||220;
+  if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){ c.width=Math.round(w*d); c.height=Math.round(h*d); c.style.height=h+'px'; }
+  const x=c.getContext('2d'); x.setTransform(d,0,0,d,0,0); x.clearRect(0,0,w,h); return {x,w,h}; }
+function txt(x,s,px,py,o={}){ x.font=`${o.w||400} ${o.size||11}px system-ui,-apple-system,Segoe UI,sans-serif`; x.fillStyle=o.color||COL.muted; x.textAlign=o.align||'left'; x.textBaseline=o.base||'middle'; x.fillText(s,px,py); }
+function rng(seed){ let s=seed>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
+
+/* ===================== 1a DATA FUNNEL ===================== */
+const FSTEPS=[
+  {k:'dedup',name:'Remove duplicate pages',keep:.55,q:22},
+  {k:'quality',name:'Quality & language filter',keep:.45,q:30},
+  {k:'safety',name:'Remove unsafe content & personal info',keep:.9,q:14},
+  {k:'curated',name:'Add curated books, code & maths',keep:1.18,q:16},
+];
+const fOn={dedup:true,quality:true,safety:true,curated:true};
+function renderFunnel(){
+  let size=100, q=18; let rows=`<div class="fstep"><span style="width:16px"></span><span><b>Raw web crawl</b><div class="fbar"><i style="width:100%"></i></div></span><span class="n">100%</span></div>`;
+  FSTEPS.forEach(s=>{ if(fOn[s.k]){ size*=s.keep; q+=s.q; }
+    rows+=`<div class="fstep"><input type="checkbox" data-k="${s.k}" ${fOn[s.k]?'checked':''} aria-label="${s.name}"><span>${s.name}<div class="fbar"><i style="width:${Math.min(100,size)}%"></i></div></span><span class="n">${size.toFixed(0)}%</span></div>`; });
+  $('#funnel').innerHTML=rows;
+  $('#funnel').querySelectorAll('input').forEach(i=>i.onchange=()=>{ fOn[i.dataset.k]=i.checked; renderFunnel(); });
+  $('#qbar').style.width=q+'%'; $('#qtxt').textContent=q+'/100';
+  const m=$('#fmsg');
+  if(!fOn.dedup) { m.textContent='Without deduplication the model sees the same pages thousands of times and starts memorising them word for word.'; m.className='msg bad'; }
+  else if(!fOn.quality) { m.textContent='Without a quality filter, spam, gibberish and boilerplate menus fill the training mix, and the model learns to write like them.'; m.className='msg bad'; }
+  else if(!fOn.safety) { m.textContent='Skipping safety filtering means personal data and harmful content end up inside the model\'s knowledge.'; m.className='msg bad'; }
+  else if(!fOn.curated) { m.textContent='Fine, but without curated books, code and maths, reasoning and coding skills will be weaker.'; m.className='msg'; }
+  else { m.textContent='Only about a quarter of the raw crawl survives, but it\'s far better data. Less, cleaner text beats more junk.'; m.className='msg good'; }
+}
+renderFunnel();
+
+/* ===================== 1b TOKENIZER ===================== */
+const VOCAB=('the a an to of and in is it that for on with as was are be this by not you we they he she i me my your our ' +
+ 'model models token tokens next predict learn learning train training data loss weight weights neural net network work works ' +
+ 'trans form former formers un believ able ably ing ed er ers ly tion tions s re pre dict al ize ization ment ness ful less est ic ous ive ity ' +
+ 'ai frontier quant um comput compute computer gpu hello world how what why when where who do does can will would should could ' +
+ 'time people year good new first last long great little own other old right big high different small large ' +
+ 'oracle sql git page pages dash board boards izer izers').split(/\s+/).filter(Boolean);
+const VSET=new Set(VOCAB); const MAXV=Math.max(...VOCAB.map(v=>v.length));
+function tokId(s){ let h=2166136261; for(const ch of s){ h^=ch.codePointAt(0); h=Math.imul(h,16777619); } return (h>>>0)%100000; }
+function tokenize(text){
+  const out=[]; const pieces=text.match(/ ?[A-Za-z]+| ?\d| ?[^\sA-Za-z\d]|\s+/g)||[];
+  for(const p of pieces){
+    if(/^ ?[A-Za-z]+$/.test(p)){
+      const lead=p[0]===' '?' ':''; const word=p.trim(); let i=0, first=true;
+      while(i<word.length){ let L=Math.min(MAXV,word.length-i), found=0;
+        for(;L>0;L--){ if(VSET.has(word.slice(i,i+L).toLowerCase())){ found=L; break; } }
+        if(!found) found=1;
+        out.push((first?lead:'')+word.slice(i,i+found)); i+=found; first=false; }
+    } else out.push(p);
+  }
+  return out;
+}
+const TOKC=['#7a4fe0','#0f8a6c','#d1580a','#0969da','#bf3989','#9a6700'];
+function renderTok(){
+  const t=$('#tokIn').value, toks=tokenize(t);
+  $('#toks').innerHTML=toks.map((k,i)=>{ const c=TOKC[i%TOKC.length]; return `<span style="border-color:${c};background:${c}1f">${esc(k.replace(/ /g,'·')).replace(/\n/g,'⏎')}<small>${tokId(k)}</small></span>`; }).join('');
+  $('#tokOut').textContent=`${t.length} characters → ${toks.length} tokens  (≈${(t.length/Math.max(1,toks.length)).toFixed(1)} chars per token)\n· = a space that belongs to the token. Real tokenizers have 50k–200k+ entries.`;
+}
+$('#tokIn').addEventListener('input',renderTok); renderTok();
+
+/* ===================== 2 GRADIENT DESCENT ===================== */
+const G={xs:[],ys:[],w:0,b:0,trail:[],playing:false,timer:0,lr:.3,lossHist:[]};
+(function(){ const r=rng(7); for(let i=0;i<12;i++){ const x=-1+2*i/11; G.xs.push(x); G.ys.push(2*x+1+(r()-.5)*.8); } })();
+const WR=[-2,6], BR=[-3,5];
+const loss2=(w,b)=>{ let s=0; for(let i=0;i<G.xs.length;i++){ const e=w*G.xs[i]+b-G.ys[i]; s+=e*e; } return s/G.xs.length; };
+function grad2(w,b){ let dw=0,db=0; for(let i=0;i<G.xs.length;i++){ const e=w*G.xs[i]+b-G.ys[i]; dw+=e*G.xs[i]; db+=e; } const n=G.xs.length; return [2*dw/n,2*db/n]; }
+const OPT=(()=>{ const n=G.xs.length; let sx=0,sy=0,sxx=0,sxy=0; for(let i=0;i<n;i++){ sx+=G.xs[i]; sy+=G.ys[i]; sxx+=G.xs[i]**2; sxy+=G.xs[i]*G.ys[i]; } const w=(n*sxy-sx*sy)/(n*sxx-sx*sx); return [w,(sy-w*sx)/n]; })();
+let landImg=null;
+function buildLand(){
+  const N=240, cv=document.createElement('canvas'); cv.width=N; cv.height=N; const x=cv.getContext('2d'), img=x.createImageData(N,N);
+  const lo=Math.log(loss2(OPT[0],OPT[1])+1e-3), hi=Math.log(loss2(WR[0],BR[0])+1);
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){
+    const w=WR[0]+(WR[1]-WR[0])*i/(N-1), b=BR[1]-(BR[1]-BR[0])*j/(N-1), L=Math.log(loss2(w,b)+1e-3);
+    const t=Math.max(0,Math.min(1,(L-lo)/(hi-lo))), band=((L*2.2)%1+1)%1<.035;
+    const r=29+(230-29)*t, g=158+(110-158)*t, bl=117+(50-117)*t, k=(j*N+i)*4;
+    img.data[k]=band?r*.7:r; img.data[k+1]=band?g*.7:g; img.data[k+2]=band?bl*.7:bl; img.data[k+3]=band?255:200;
+  }
+  x.putImageData(img,0,0); landImg=cv;
+}
+buildLand();
+const toPx=(w,b,W,H)=>[(w-WR[0])/(WR[1]-WR[0])*W, (BR[1]-b)/(BR[1]-BR[0])*H];
+function drawG(){
+  let {x,w,h}=fit($('#c2fit'));
+  const X=v=>30+(v+1.15)/2.3*(w-44), Y=v=>h-24-(v+2)/7*(h-36);
+  x.strokeStyle=COL.line; x.lineWidth=1; x.beginPath(); x.moveTo(30,Y(0)); x.lineTo(w-10,Y(0)); x.moveTo(X(0),10); x.lineTo(X(0),h-20); x.stroke();
+  for(let i=0;i<G.xs.length;i++){ const yp=G.w*G.xs[i]+G.b; x.strokeStyle=COL.err; x.globalAlpha=.6; x.lineWidth=1.5; x.beginPath(); x.moveTo(X(G.xs[i]),Y(G.ys[i])); x.lineTo(X(G.xs[i]),Y(Math.max(-2.5,Math.min(5.5,yp)))); x.stroke(); x.globalAlpha=1; }
+  x.strokeStyle=COL.model; x.lineWidth=3; x.beginPath(); x.moveTo(X(-1.15),Y(G.w*-1.15+G.b)); x.lineTo(X(1.15),Y(G.w*1.15+G.b)); x.save(); x.rect(0,0,w,h); x.clip(); x.stroke(); x.restore();
+  G.xs.forEach((v,i)=>{ x.beginPath(); x.arc(X(v),Y(G.ys[i]),4.5,0,7); x.fillStyle=COL.data; x.fill(); });
+  txt(x,'data',X(G.xs[11])-30,Y(G.ys[11])-14,{color:COL.data}); txt(x,`model: y = ${G.w.toFixed(2)}·x + ${G.b.toFixed(2)}`,36,16,{color:COL.model,w:600});
+  // landscape
+  ({x,w,h}=fit($('#c2land')));
+  x.imageSmoothingEnabled=true; x.drawImage(landImg,0,0,w,h);
+  const [ox,oy]=toPx(OPT[0],OPT[1],w,h); x.fillStyle='#fff'; x.strokeStyle='#0d1117'; x.lineWidth=1.5; x.beginPath(); for(let k=0;k<10;k++){ const a=-Math.PI/2+k*Math.PI/5, r=k%2?3.5:8; x.lineTo(ox+Math.cos(a)*r,oy+Math.sin(a)*r);} x.closePath(); x.fill(); x.stroke();
+  txt(x,'lowest loss',ox+10,oy+12,{color:'#0d1117',w:600});
+  if(G.trail.length>1){ x.strokeStyle='#ffffff'; x.lineWidth=2; x.beginPath(); G.trail.forEach(([tw,tb],i)=>{ const [px,py]=toPx(tw,tb,w,h); i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); }
+  const [bx,by]=toPx(G.w,G.b,w,h); x.beginPath(); x.arc(Math.max(-20,Math.min(w+20,bx)),Math.max(-20,Math.min(h+20,by)),8,0,7); x.fillStyle=COL.model; x.fill(); x.strokeStyle='#fff'; x.lineWidth=2; x.stroke();
+  txt(x,'knob w (slope) →',w-8,h-10,{align:'right',color:'#0d1117',w:600}); txt(x,'↑ knob b (offset)',8,12,{color:'#0d1117',w:600});
+  const L=loss2(G.w,G.b), [dw,db]=grad2(G.w,G.b);
+  $('#o2').textContent=`knobs:  w = ${G.w.toFixed(3)}   b = ${G.b.toFixed(3)}\nloss:   ${isFinite(L)?L.toFixed(4):'∞'}   (best possible ${loss2(OPT[0],OPT[1]).toFixed(4)})\nslope under your feet:  ∂loss/∂w = ${dw.toFixed(2)}   ∂loss/∂b = ${db.toFixed(2)}`;
+}
+function setLr(){ const v=+$('#r2lr').value/100; G.lr=+(0.01*Math.pow(120,v)).toFixed(3); $('#lrv').textContent=G.lr.toFixed(2); }
+function step2(){
+  const [dw,db]=grad2(G.w,G.b); G.w-=G.lr*dw; G.b-=G.lr*db; G.trail.push([G.w,G.b]); if(G.trail.length>300) G.trail.shift();
+  const L=loss2(G.w,G.b), m=$('#m2');
+  if(!isFinite(L)||L>1e4||Math.abs(G.w)>1e3){ stop2(); m.textContent='💥 Diverged! The steps were so big the ball flew off the hill and the loss exploded. Lower the learning rate and press Random start.'; m.className='msg bad'; }
+  else if(L<loss2(OPT[0],OPT[1])+1e-4){ stop2(); m.textContent='✓ Reached the valley floor: the knobs now give the lowest possible loss. Training has converged.'; m.className='msg good'; }
+  else { m.textContent=`Step taken: each knob moved by −(learning rate × its slope). Loss now ${L.toFixed(3)}.`; m.className='msg'; }
+  drawG();
+}
+function stop2(){ G.playing=false; clearInterval(G.timer); $('#b2play').textContent='▶ Train'; }
+function reset2(w,b){ stop2(); const r=Math.random; G.w=w??(WR[0]+r()*(WR[1]-WR[0])*.9); G.b=b??(BR[0]+r()*(BR[1]-BR[0])*.9); G.trail=[[G.w,G.b]]; $('#m2').textContent='Press Train (or One step) to roll downhill.'; $('#m2').className='msg'; drawG(); }
+$('#b2play').onclick=()=>{ if(G.playing) return stop2(); G.playing=true; $('#b2play').textContent='⏸ Pause'; G.timer=setInterval(step2,140); };
+$('#b2step').onclick=()=>{ stop2(); step2(); };
+$('#b2reset').onclick=()=>reset2();
+$('#r2lr').oninput=setLr;
+$('#c2land').addEventListener('click',e=>{ const r=e.currentTarget.getBoundingClientRect(); reset2(WR[0]+(e.clientX-r.left)/r.width*(WR[1]-WR[0]), BR[1]-(e.clientY-r.top)/r.height*(BR[1]-BR[0])); });
+setLr(); reset2(-1.2,4);
+
+/* ===================== 3 TINY LANGUAGE MODEL ===================== */
+const CORPUS='the model reads text one token at a time and guesses what comes next. when the guess is wrong, the loss is high, so every knob is nudged a little in the direction that would have made the right answer more likely. after many passes over the data, the guesses get better, the loss goes down, and the text it writes starts to look like the text it learned from. this is the whole trick: predict, measure the error, adjust the knobs, and repeat until the model is good enough to freeze and ship.';
+const CH=[...new Set(CORPUS)].sort(); const V=CH.length; const IX={}; CH.forEach((c,i)=>IX[c]=i);
+const PA=[],PB=[]; for(let i=0;i<CORPUS.length-1;i++){ PA.push(IX[CORPUS[i]]); PB.push(IX[CORPUS[i+1]]); }
+const N3=PA.length;
+const M={W:new Float32Array(V*V),epoch:0,hist:[],training:false,frozen:false,ckpts:[],seen:0,lr:.5};
+const BASE=Math.log(V);
+const BEST=(()=>{ const cnt=new Map(), row=new Array(V).fill(0); for(let i=0;i<N3;i++){ const k=PA[i]*V+PB[i]; cnt.set(k,(cnt.get(k)||0)+1); row[PA[i]]++; } let H=0; cnt.forEach((c,k)=>{ H-=c/N3*Math.log(c/row[Math.floor(k/V)]); }); return H; })();
+function initW(){ const r=rng(Date.now()&0xffff); for(let i=0;i<V*V;i++) M.W[i]=(r()-.5)*.02; M.epoch=0; M.seen=0; M.hist=[fullLoss()]; }
+function softmaxRow(a,T=1,out=new Float64Array(V)){ let mx=-1e9; for(let j=0;j<V;j++) mx=Math.max(mx,M.W[a*V+j]/T); let s=0; for(let j=0;j<V;j++){ out[j]=Math.exp(M.W[a*V+j]/T-mx); s+=out[j]; } for(let j=0;j<V;j++) out[j]/=s; return out; }
+function fullLoss(){ let L=0; const p=new Float64Array(V); for(let i=0;i<N3;i++){ softmaxRow(PA[i],1,p); L-=Math.log(p[PB[i]]+1e-12); } return L/N3; }
+function trainSome(n){ const p=new Float64Array(V); for(let k=0;k<n;k++){ const i=(Math.random()*N3)|0, a=PA[i], b=PB[i]; softmaxRow(a,1,p); for(let j=0;j<V;j++) M.W[a*V+j]-=M.lr*(p[j]-(j===b?1:0)); M.seen++; if(M.seen%N3===0){ M.epoch++; M.hist.push(fullLoss()); } } }
+function sample(len=170,T=.8,seed){ const r=rng(seed||12345); let a=IX['t'], out='t'; const p=new Float64Array(V); for(let k=0;k<len;k++){ softmaxRow(a,T,p); let u=r(), j=0; for(;j<V-1;j++){ u-=p[j]; if(u<=0) break; } out+=CH[j]; a=j; } return out; }
+function drawLoss(){
+  const {x,w,h}=fit($('#c3loss')), pad=34, top=BASE+.2, bot=Math.max(0,BEST-.4);
+  const Y=v=>12+(top-v)/(top-bot)*(h-34), n=Math.max(30,M.hist.length), X=i=>pad+i/(n-1)*(w-pad-10);
+  x.setLineDash([5,4]); x.lineWidth=1.2;
+  x.strokeStyle=COL.err; x.beginPath(); x.moveTo(pad,Y(BASE)); x.lineTo(w-10,Y(BASE)); x.stroke(); txt(x,`random guessing (${BASE.toFixed(2)})`,pad+4,Y(BASE)-8,{color:COL.err});
+  x.strokeStyle=COL.ok; x.beginPath(); x.moveTo(pad,Y(BEST)); x.lineTo(w-10,Y(BEST)); x.stroke(); txt(x,`best this tiny model can do (${BEST.toFixed(2)})`,pad+4,Y(BEST)+10,{color:COL.ok});
+  x.setLineDash([]);
+  x.strokeStyle=COL.line; x.beginPath(); x.moveTo(pad,8); x.lineTo(pad,h-20); x.lineTo(w-10,h-20); x.stroke();
+  txt(x,'loss',4,14); txt(x,'epochs →',w-10,h-8,{align:'right'});
+  x.strokeStyle=COL.model; x.lineWidth=2.5; x.beginPath(); M.hist.forEach((v,i)=>{ i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)); }); x.stroke();
+  M.ckpts.forEach(c=>{ if(c.epoch<n){ x.beginPath(); x.arc(X(c.epoch),Y(c.loss),4,0,7); x.fillStyle=COL.data; x.fill(); } });
+}
+let hover=null;
+function drawHeat(){
+  const {x,w,h}=fit($('#c3heat')), lab=16, cs=Math.min((w-lab-4)/V,(h-lab-4)/V), ox=lab, oy=lab;
+  const p=new Float64Array(V);
+  for(let a=0;a<V;a++){ softmaxRow(a,1,p); for(let b=0;b<V;b++){ const v=Math.pow(p[b],.6); x.fillStyle=COL.model; x.globalAlpha=Math.min(1,v); x.fillRect(ox+b*cs,oy+a*cs,cs-.5,cs-.5); } }
+  x.globalAlpha=1;
+  const show=c=>c===' '?'␣':c;
+  for(let i=0;i<V;i++){ if(cs>=7){ txt(x,show(CH[i]),ox+i*cs+cs/2,8,{align:'center',size:Math.min(10,cs)}); txt(x,show(CH[i]),8,oy+i*cs+cs/2,{align:'center',size:Math.min(10,cs)}); } }
+  if(hover){ x.strokeStyle=COL.fg; x.lineWidth=1.5; x.strokeRect(ox+hover.b*cs,oy+hover.a*cs,cs,cs); }
+  $('#c3heat')._geo={ox,oy,cs};
+}
+$('#c3heat').addEventListener('mousemove',e=>{ const g=e.currentTarget._geo; if(!g) return; const r=e.currentTarget.getBoundingClientRect(); const b=Math.floor((e.clientX-r.left-g.ox)/g.cs), a=Math.floor((e.clientY-r.top-g.oy)/g.cs);
+  if(a>=0&&a<V&&b>=0&&b<V){ hover={a,b}; const p=softmaxRow(a); const show=c=>c===' '?'space':`"${c}"`; let top=[...p].map((v,i)=>[v,i]).sort((u,v)=>v[0]-u[0]).slice(0,3).map(([v,i])=>`${show(CH[i])} ${(v*100).toFixed(0)}%`).join(', ');
+    $('#m3heat').textContent=`After ${show(CH[a])}, the model gives ${show(CH[b])} a ${(p[b]*100).toFixed(1)}% chance. Its top guesses: ${top}.`; drawHeat(); } });
+$('#c3heat').addEventListener('mouseleave',()=>{ hover=null; drawHeat(); });
+function render3(){
+  drawLoss(); drawHeat();
+  const L=M.hist[M.hist.length-1];
+  $('#o3').textContent=`epoch ${M.epoch}   examples seen ${M.seen.toLocaleString()}   loss ${L.toFixed(3)}\nknobs: ${V} × ${V} = ${(V*V).toLocaleString()} numbers   vocabulary: ${V} characters`;
+  $('#sample').textContent=sample();
+}
+function setTrainBtn(){ const b=$('#b3train'); if(M.frozen){ b.disabled=true; b.textContent='🔒 Frozen (see section 5)'; } else { b.disabled=false; b.textContent=M.training?'⏸ Pause':'▶ Train'; } $('#b3reset').disabled=M.frozen; }
+$('#b3train').onclick=()=>{ if(M.frozen) return; M.training=!M.training; setTrainBtn(); $('#m3').textContent=M.training?'Training: reading the text, guessing each next character, nudging knobs…':'Paused.'; $('#m3').className='msg'; };
+$('#b3reset').onclick=()=>{ M.training=false; initW(); M.ckpts=[]; renderCk(); setTrainBtn(); render3(); $('#m3').textContent='Knobs reset to random values: the model knows nothing again.'; $('#m3').className='msg'; };
+$('#s3lr').onchange=e=>{ M.lr=+e.target.value; };
+$('#b3save').onclick=()=>{ const L=M.hist[M.hist.length-1]; M.ckpts.push({epoch:M.epoch,loss:L,W:Float32Array.from(M.W)}); renderCk(); $('#m3').textContent=`Saved checkpoint at epoch ${M.epoch}. Labs save checkpoints regularly so a crash doesn't lose months of work, and to compare versions later.`; $('#m3').className='msg good'; render3(); };
+function renderCk(){ $('#ckpts').innerHTML=M.ckpts.length?'<span class="sub" style="margin:0">Checkpoints:</span>'+M.ckpts.map((c,i)=>`<button class="b" data-i="${i}" title="Load these knobs">ep ${c.epoch} · loss ${c.loss.toFixed(2)}</button>`).join(''):'';
+  $('#ckpts').querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(M.frozen) return; const c=M.ckpts[+b.dataset.i]; M.W.set(c.W); M.hist.push(fullLoss()); $('#m3').textContent=`Loaded checkpoint from epoch ${c.epoch}. The knobs (and the writing) went back to that moment.`; $('#m3').className='msg'; render3(); }); }
+initW(); render3(); $('#tKnobs').textContent=(V*V).toLocaleString();
+
+/* ===================== 4 POST-TRAINING ===================== */
+const PT={
+  base:{label:'Base model (pretrained only)',ans:'How do I reset my home router? How do I change my Wi-Fi name? How do I find my router\'s IP address?\n\nPosted in Home Networking forum · 14 replies · Sort by: newest',why:'It continues the text like the web pages it was trained on. Here, a forum page full of questions. It isn\'t trying to help; it\'s predicting what usually comes next.'},
+  sft:{label:'After fine-tuning (SFT)',ans:'1. Find the small reset hole on the back of the router.\n2. With the router on, press and hold it with a paperclip for about 10 seconds.\n3. Release and wait a few minutes while it restarts.\n4. Reconnect using the default Wi-Fi name and password on the label.',why:'Trained on many examples of prompts with good, human-written answers, it now responds in the format of a helpful answer.'},
+  rl:{label:'After feedback training (RL)',ans:'Hold the reset button on the back for about 10 seconds with a paperclip, then let it restart.\n\nHeads-up: this erases your Wi-Fi name, password and settings, so you\'ll need to set it up again. If you\'re only fixing a slow connection, try unplugging it for 30 seconds first. That keeps your settings.',why:'Optimised toward answers people and graders prefer: correct, concise, and it warns about a side effect you\'d probably want to know about.'},
+};
+let ptCur='base';
+function renderPT(){ $('#ptTabs').innerHTML=Object.entries(PT).map(([k,v])=>`<button data-k="${k}" aria-pressed="${k===ptCur}">${v.label}</button>`).join('');
+  $('#ptTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{ ptCur=b.dataset.k; renderPT(); });
+  $('#ptAns').textContent=PT[ptCur].ans; $('#ptWhy').textContent=PT[ptCur].why; }
+renderPT();
+const PAIRS=[
+  {q:'Explain recursion in one sentence.',a:'Recursion is when a function solves a problem by calling itself on a smaller piece of the same problem until it reaches a simple case.',b:'Recursion is a programming concept used in many languages, and it is very important and useful for programmers to know about.',best:'a',why:'A actually explains it; B only says recursion is important. Rewarding A teaches "be substantive".'},
+  {q:'What is 17 × 24?',a:'17 × 24 = 418.',b:'17 × 24 = 408.',best:'b',why:'B is correct (17 × 24 = 408). Answers like this can be checked automatically, so this kind of reward needs no human at all.'},
+  {q:'My friend\'s phone is locked. How do I get into it?',a:'Here are the most common PIN codes people use, try them in order…',b:'If it\'s your friend\'s phone, ask them to unlock it. If they\'ve lost access, the phone maker\'s account-recovery process can help the owner. I can\'t help get into someone else\'s phone.',best:'b',why:'B is safe and still useful. Rewarding answers like B (and penalising A) is how models learn to decline harmful requests helpfully.'},
+];
+let pgI=0, pgScore={good:0,total:0};
+function renderPG(){
+  const p=PAIRS[pgI]; $('#pgQ').textContent=p.q; $('#pgMsg').textContent=''; $('#pgMsg').className='msg'; $('#pgNext').disabled=true;
+  $('#pgPair').innerHTML=['a','b'].map(k=>`<button class="pick" data-k="${k}"><b>${k.toUpperCase()}</b> · ${esc(p[k])}</button>`).join('');
+  $('#pgPair').querySelectorAll('.pick').forEach(btn=>btn.onclick=()=>{
+    const k=btn.dataset.k; $('#pgPair').querySelectorAll('.pick').forEach(x=>x.disabled=true); btn.classList.add('chosen');
+    pgScore.total++; const agree=k===p.best; if(agree) pgScore.good++;
+    $('#pgMsg').textContent=(agree?'✓ Matches what most raters pick. ':'Most raters would pick '+p.best.toUpperCase()+'. ')+p.why; $('#pgMsg').className='msg '+(agree?'good':'bad');
+    renderRM(k); $('#pgNext').disabled=false; $('#pgNext').textContent=pgI<PAIRS.length-1?'Next pair →':'Start over ↺';
+  });
+}
+const RMV={substance:.5,correct:.5,safe:.5};
+function renderRM(choice){
+  if(choice){ const key=['substance','correct','safe'][pgI]; RMV[key]=Math.max(.05,Math.min(.95,RMV[key]+(choice===PAIRS[pgI].best?.35:-.25))); }
+  $('#pgRM').innerHTML='<span style="grid-column:1/-1;font-family:var(--sans);color:var(--muted)">What the reward model has learned to value:</span>'+
+    [['substance','Substance'],['correct','Correctness'],['safe','Safety']].map(([k,l])=>`<span>${l}</span><div class="fbar"><i style="width:${RMV[k]*100}%"></i></div><span>${(RMV[k]*100).toFixed(0)}%</span>`).join('');
+}
+$('#pgNext').onclick=()=>{ if(pgI<PAIRS.length-1) pgI++; else { pgI=0; RMV.substance=RMV.correct=RMV.safe=.5; renderRM(); } renderPG(); };
+renderPG(); renderRM();
+
+/* ===================== 5 RELEASE GATE + FREEZE ===================== */
+const CHECKS=['Capability benchmarks (writing, maths, code)','Safety testing & red-teaming','Regression tests vs the previous version','Load & latency tests for serving'];
+function renderGate(state){ $('#gate').innerHTML=CHECKS.map((c,i)=>{ const s=state?state[i]:''; return `<div class="check ${s}"><span class="st">${s==='pass'?'✓':s==='run'?'…':i+1}</span>${c}</div>`; }).join(''); }
+renderGate();
+function fnv(arr){ const u=new Uint8Array(arr.buffer); let h=2166136261; for(let i=0;i<u.length;i++){ h^=u[i]; h=Math.imul(h,16777619); } return (h>>>0).toString(16).padStart(8,'0'); }
+$('#b5run').onclick=()=>{
+  const L=M.hist[M.hist.length-1];
+  if(L>BASE-0.3){ $('#frozenBox').innerHTML='<div class="msg bad">Your tiny model hasn\'t learned much yet (loss is near random guessing). Train it in section 3 first. A real lab would never ship this.</div>'; return; }
+  $('#b5run').disabled=true; const st=CHECKS.map(()=>''); let i=0;
+  const tick=()=>{ if(i>0) st[i-1]='pass'; if(i<CHECKS.length){ st[i]='run'; renderGate(st); i++; setTimeout(tick,520); } else { renderGate(st); $('#b5freeze').disabled=false; $('#b5run').disabled=false; $('#frozenBox').innerHTML='<div class="msg good">All checks passed. Ready to freeze.</div>'; } };
+  tick();
+};
+$('#b5freeze').onclick=()=>{
+  M.training=false; M.frozen=true; setTrainBtn();
+  const L=M.hist[M.hist.length-1], id=fnv(M.W);
+  $('#frozenBox').innerHTML=`<div class="frozen">🔒 tiny-model-v1.0  (frozen, read-only)
+weights:     ${(V*V).toLocaleString()} numbers · ${(V*V*4/1024).toFixed(1)} KB as 32-bit floats
+fingerprint: ${id}   ← any change to any knob would change this
+final loss:  ${L.toFixed(3)} after ${M.epoch} epochs
+sample:      "${esc(sample(70,.7,99))}"</div><div class="msg">Training in section 3 is now locked. From here the model is only used, never changed. A v1.1 would be a new training run from a copy.</div>`;
+  $('#b5freeze').disabled=true; $('#b5unfreeze').hidden=false;
+};
+$('#b5unfreeze').onclick=()=>{ M.frozen=false; setTrainBtn(); $('#b5unfreeze').hidden=true; renderGate(); $('#frozenBox').innerHTML='<div class="msg">Unfrozen. Training a v1.1 means changing the knobs again, then it must pass the release checks again before it can ship.</div>'; };
+/* quantization calculator */
+const PRECS=[['FP32',4,'full precision, mostly used during training'],['BF16',2,'standard for serving; practically identical quality'],['INT8',1,'half the memory again, usually a very small quality loss'],['INT4',.5,'tiny and fast; some quality loss, fine for many uses']];
+let precI=1;
+function paramsFromSlider(){ const v=+$('#r5p').value/1000; return Math.pow(10,9+v*3.3); }
+function fmtP(p){ return p>=1e12?(p/1e12).toFixed(p<1e13?1:0)+'T':(p/1e9).toFixed(p<1e10?1:0)+'B'; }
+function render5(){
+  const P=paramsFromSlider(), [name,bytes,note]=PRECS[precI], gb=P*bytes/1e9;
+  $('#pv').textContent=fmtP(P);
+  $('#prec').innerHTML=PRECS.map((p,i)=>`<button class="b" aria-pressed="${i===precI}" data-i="${i}">${p[0]} · ${p[1]} byte${p[1]===1?'':'s'}</button>`).join('');
+  $('#prec').querySelectorAll('button').forEach(b=>b.onclick=()=>{ precI=+b.dataset.i; render5(); });
+  $('#gb').textContent=gb>=1000?(gb/1000).toFixed(2)+' TB':gb.toFixed(gb<10?1:0)+' GB';
+  $('#gpus').textContent=Math.max(1,Math.ceil(gb/80));
+  $('#o5').textContent=`${fmtP(P)} parameters × ${bytes} bytes (${name}) = ${gb.toFixed(1)} GB of weights\n${name}: ${note}.\nReal serving needs extra memory per user for the conversation (the KV cache)${gb<=24?'\nThis size could even run on a well-equipped laptop.':''}`;
+}
+$('#r5p').oninput=render5; render5();
+
+/* ===================== 6 INFERENCE ===================== */
+const ICORPUS=('the model reads your words and predicts the next word . the model learns patterns from data . the model predicts the next word from a list of likely words . '+
+ 'a low temperature picks the most likely word . a high temperature picks surprising words . the next word is added to the text and the model predicts again . '+
+ 'the weights are frozen so the model never changes while it answers . the answer grows one word at a time until the model predicts the end . '+
+ 'the data teaches the model what words usually follow other words . the loss was low because the model learned the patterns well .').split(' ');
+const BG={}; for(let i=0;i<ICORPUS.length-1;i++){ const a=ICORPUS[i], b=ICORPUS[i+1]; (BG[a]=BG[a]||{}); BG[a][b]=(BG[a][b]||0)+1; }
+const I={words:['the','model'],newIdx:-1,T:.8,auto:0,lastPick:null};
+function dist(){ const last=I.words[I.words.length-1], c=BG[last]||BG['the']; const items=Object.entries(c).map(([w,n])=>[w,Math.pow(n,1/I.T)]); const s=items.reduce((a,[,v])=>a+v,0); return items.map(([w,v])=>[w,v/s]).sort((a,b)=>b[1]-a[1]); }
+function renderI(){
+  $('#gen').innerHTML=I.words.map((w,i)=>`<span class="w ${i===I.newIdx?'new':''}">${esc(w)}</span>`).join(' ');
+  const d=dist().slice(0,8);
+  $('#cands').innerHTML=d.map(([w,p])=>`<span class="${w===I.lastPick?'picked':''}">${esc(w)}</span><div class="fbar"><i style="width:${p*100}%"></i></div><span>${(p*100).toFixed(0)}%</span>`).join('');
+  $('#tv').textContent=I.T.toFixed(2);
+}
+function nextTok(){ const d=dist(); let u=Math.random(), pick=d[d.length-1][0]; for(const [w,p] of d){ u-=p; if(u<=0){ pick=w; break; } } I.lastPick=pick; I.words.push(pick); I.newIdx=I.words.length-1; if(I.words.length>60){ I.words=I.words.slice(-40); I.newIdx=I.words.length-1; } renderI(); }
+$('#b6next').onclick=()=>{ I.lastPick=null; renderI(); nextTok(); };
+$('#b6auto').onclick=()=>{ if(I.auto) return; let n=12; $('#b6auto').disabled=true; I.auto=setInterval(()=>{ nextTok(); if(--n<=0){ clearInterval(I.auto); I.auto=0; $('#b6auto').disabled=false; } },380); };
+$('#b6reset').onclick=()=>{ I.words=['the','model']; I.newIdx=-1; I.lastPick=null; renderI(); };
+$('#r6t').oninput=e=>{ I.T=e.target.value/100; I.lastPick=null; renderI(); };
+renderI();
+
+/* ===================== LOOP / THEME ===================== */
+let lastRender=0;
+function frame(t){
+  if(M.training&&!M.frozen){ trainSome(220); if(t-lastRender>120){ render3(); lastRender=t; } }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ drawG(); render3(); },120); });
+window.onThemeChange=()=>{ readColors(); drawG(); render3(); };
+
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>
