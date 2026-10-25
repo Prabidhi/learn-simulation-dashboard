@@ -98,6 +98,17 @@ select.btn{padding-right:8px}
 .sent-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
 .sent-n{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .sent-t{font-size:1.1rem}
+.sent-r{font-size:.95rem;color:var(--muted);font-style:italic;margin:-4px 0 10px;letter-spacing:.01em}
+.tile .tr{font-size:.78rem;color:var(--muted);font-style:italic;line-height:1.2;margin-top:1px}
+.tx-l{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.meanings{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:.86rem;margin:0 0 10px}
+.meanings .wm b{font-weight:600;margin-right:5px}
+.meanings .wm.unk{color:var(--muted)}
+.tx-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 6px}
+.tx-tools a.btn{text-decoration:none;color:var(--text)}
+.tx-h{font-size:.8rem}
+td.romc{color:var(--muted);white-space:nowrap}
+body.hide-rom .rom{display:none!important}
 .trans{display:block;min-height:1.6em;margin:0 0 12px;padding:6px 10px;border-radius:8px;border:1px dashed var(--border);color:var(--text);font-size:.92rem;outline:none}
 .trans:empty::before{content:attr(data-ph);color:var(--muted)}
 .trans:focus{border-style:solid;border-color:var(--accent);background:var(--surface-2)}
@@ -209,7 +220,7 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;margin-top:24px}
   </div>
 
   <section class="card" style="margin-top:18px" aria-labelledby="tvH">
-    <h2 id="tvH">Segment visualizer <span class="hint">Hover a tile to preview · click to pin its inspector</span></h2>
+    <h2 id="tvH">Segment visualizer <span style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><span class="hint">Hover a tile to preview · click to pin its inspector</span><label class="toggle"><input type="checkbox" id="romToggle" checked> Romanization</label></span></h2>
     <div id="tiles"><div class="empty">Paste Korean text and press <b>Analyze &amp; Parse</b>, or try <b>Load Sample</b>.</div></div>
   </section>
 
@@ -263,6 +274,83 @@ const withJong = (s, j) => { const c = lastCh(s); if (!isSyl(c)) return s; const
 const endsVowel = s => isSyl(lastCh(s)) && dec(lastCh(s)).jong === 0;
 const lastVowel = s => isSyl(lastCh(s)) ? dec(lastCh(s)).jung : -1;
 // jung indices: ㅏ0 ㅐ1 ㅑ2 ㅒ3 ㅓ4 ㅔ5 ㅕ6 ㅖ7 ㅗ8 ㅘ9 ㅙ10 ㅚ11 ㅛ12 ㅜ13 ㅝ14 ㅞ15 ㅟ16 ㅠ17 ㅡ18 ㅢ19 ㅣ20 ; cho ㅇ=11 ㅎ=18
+
+/* =====================================================================
+   ROMANIZATION — Revised Romanization of Korean (official South Korean system)
+   Applies the main standard-pronunciation sound changes inside each word:
+   liaison (연음), final-consonant neutralisation, nasalisation (비음화),
+   liquidisation (유음화), aspiration with ㅎ (격음화) and palatalisation (구개음화).
+   Tensing isn't written in RR, so it's ignored (as the official rules say).
+   ===================================================================== */
+const RR_CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const RR_JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const RR_I = {'ㄱ':'g','ㄲ':'kk','ㄴ':'n','ㄷ':'d','ㄸ':'tt','ㄹ':'r','ㅁ':'m','ㅂ':'b','ㅃ':'pp','ㅅ':'s','ㅆ':'ss','ㅇ':'','ㅈ':'j','ㅉ':'jj','ㅊ':'ch','ㅋ':'k','ㅌ':'t','ㅍ':'p','ㅎ':'h'};
+const RR_V = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+const RR_F = {'':'','ㄱ':'k','ㄴ':'n','ㄷ':'t','ㄹ':'l','ㅁ':'m','ㅂ':'p','ㅇ':'ng'};
+const RR_SPLIT = {'ㄳ':['ㄱ','ㅅ'],'ㄵ':['ㄴ','ㅈ'],'ㄶ':['ㄴ','ㅎ'],'ㄺ':['ㄹ','ㄱ'],'ㄻ':['ㄹ','ㅁ'],'ㄼ':['ㄹ','ㅂ'],'ㄽ':['ㄹ','ㅅ'],'ㄾ':['ㄹ','ㅌ'],'ㄿ':['ㄹ','ㅍ'],'ㅀ':['ㄹ','ㅎ'],'ㅄ':['ㅂ','ㅅ']};
+// sound a final consonant makes before another consonant or at the end of a word
+const RR_REP = {'ㄱ':'ㄱ','ㄲ':'ㄱ','ㅋ':'ㄱ','ㄳ':'ㄱ','ㄺ':'ㄱ','ㄴ':'ㄴ','ㄵ':'ㄴ','ㄶ':'ㄴ','ㄷ':'ㄷ','ㅅ':'ㄷ','ㅆ':'ㄷ','ㅈ':'ㄷ','ㅊ':'ㄷ','ㅌ':'ㄷ','ㅎ':'ㄷ',
+  'ㄹ':'ㄹ','ㄼ':'ㄹ','ㄽ':'ㄹ','ㄾ':'ㄹ','ㅀ':'ㄹ','ㅁ':'ㅁ','ㄻ':'ㅁ','ㅂ':'ㅂ','ㅍ':'ㅂ','ㅄ':'ㅂ','ㄿ':'ㅂ','ㅇ':'ㅇ'};
+const RR_ASP = {'ㄱ':'ㅋ','ㄷ':'ㅌ','ㅂ':'ㅍ','ㅈ':'ㅊ'};
+const RR_NASAL = {'ㄱ':'ㅇ','ㄷ':'ㄴ','ㅂ':'ㅁ'};
+
+function romanizeWord(word) {
+  const S = [...word].map(ch => {
+    const k = ch.charCodeAt(0);
+    if (k < 0xAC00 || k > 0xD7A3) return { other: ch };
+    const n = k - 0xAC00;
+    return { cho: RR_CHO[Math.floor(n / 588)], jung: Math.floor((n % 588) / 28), jong: RR_JONG[n % 28] };
+  });
+  for (let i = 0; i < S.length; i++) {
+    const s = S[i]; if (s.other) continue;
+    const nx = S[i + 1] && !S[i + 1].other ? S[i + 1] : null;
+    let f = s.jong;
+    if (!f) { s.fin = ''; continue; }
+    const split = RR_SPLIT[f], hasH = f === 'ㅎ' || f === 'ㄶ' || f === 'ㅀ';
+    if (!nx) { s.fin = RR_REP[f]; continue; }
+    const nc = nx.cho;
+    if (nc === 'ㅇ') {                                    // a vowel follows: the final consonant slides over (연음)
+      if (f === 'ㅇ') { s.fin = 'ㅇ'; continue; }
+      if (f === 'ㅎ') { s.fin = ''; continue; }           // 좋아 → joa
+      if (split) {
+        if (split[1] === 'ㅎ') { s.fin = ''; nx.cho = split[0]; }   // 많아 → 마나
+        else { s.fin = split[0]; nx.cho = split[1]; }                // 값이 → 갑시, 읽어 → 일거
+      } else { s.fin = ''; nx.cho = f; }
+      if (nx.jung === 20 && (nx.cho === 'ㄷ' || nx.cho === 'ㅌ')) nx.cho = nx.cho === 'ㄷ' ? 'ㅈ' : 'ㅊ';   // 같이 → 가치 (구개음화)
+      continue;
+    }
+    if (nc === 'ㅎ' && !hasH) {                           // ㄱㄷㅂㅈ + ㅎ → aspirated (격음화)
+      const keep = split ? split[0] : '', last = split ? split[1] : f;
+      const base = last === 'ㅈ' ? 'ㅈ' : RR_REP[last];
+      if (RR_ASP[base]) { s.fin = keep; nx.cho = RR_ASP[base]; continue; }
+    }
+    if (hasH) {                                           // ㅎ final before a consonant
+      const keep = split ? split[0] : '';
+      if (RR_ASP[nc]) { s.fin = keep; nx.cho = RR_ASP[nc]; continue; }      // 좋다 → 조타
+      if (nc === 'ㄴ') { s.fin = keep === 'ㄹ' ? 'ㄹ' : 'ㄴ'; if (keep === 'ㄹ') nx.cho = 'ㄹ'; continue; }   // 놓는 → 논는, 끓는 → 끌른
+      if (nc === 'ㅅ') { s.fin = keep; continue; }       // 좋습니다 → 조씀니다 (tensing not written)
+      s.fin = keep || 'ㄷ'; continue;
+    }
+    let rep = (f === 'ㄺ' && nc === 'ㄱ') ? 'ㄹ' : RR_REP[f];   // 맑게 → 말께
+    if (nc === 'ㄹ') {
+      if (rep === 'ㄴ' || rep === 'ㄹ') { rep = 'ㄹ'; }  // 신라 → 실라 (유음화)
+      else { nx.cho = 'ㄴ'; if (RR_NASAL[rep]) rep = RR_NASAL[rep]; }       // 종로 → 종노, 국립 → 궁닙
+    } else if (rep === 'ㄹ' && nc === 'ㄴ') { nx.cho = 'ㄹ'; }              // 설날 → 설랄
+    if ((nx.cho === 'ㄴ' || nx.cho === 'ㅁ') && RR_NASAL[rep]) rep = RR_NASAL[rep];   // 합니다 → 함니다 (비음화)
+    s.fin = rep;
+  }
+  let out = '';
+  for (let i = 0; i < S.length; i++) {
+    const s = S[i]; if (s.other) { out += s.other; continue; }
+    const prev = S[i - 1];
+    let ini = RR_I[s.cho];
+    if (s.cho === 'ㄹ' && prev && !prev.other && prev.fin === 'ㄹ') ini = 'l';   // ㄹㄹ → ll
+    out += ini + RR_V[s.jung] + RR_F[s.fin || ''];
+  }
+  return out;
+}
+function romanize(text) { return String(text || '').split(/(\s+)/).map(w => /\s/.test(w) ? w : romanizeWord(w)).join(''); }
+
 
 /* =====================================================================
    2. CATEGORIES (colour system) — with analogies for learning
@@ -800,7 +888,7 @@ const SAMPLES = [
 ];
 const LS_KEY = 'korean-breakdown-tool.v1';
 const FIELDS = ['stem', 'affixes', 'role', 'tense', 'notes'];
-let state = { text: '', overrides: {}, dict: {}, sentenceNotes: {}, editing: true, theme: '' };
+let state = { text: '', overrides: {}, dict: {}, sentenceNotes: {}, editing: true, theme: '', showRoman: true };
 let parsed = [];
 let tokIndex = {};
 let selKey = null;
@@ -909,6 +997,7 @@ function inspectorHTML(t) {
   const aff = affOver ? esc(eff(t, 'affixes'))
     : (t.affixes.length ? `<div class="aff">${t.affixes.map(a => `<div><span class="chip cat-${a.cat}">${esc(a.f)}</span><span>${esc(a.label)}</span><span class="muted">${esc(a.en)}</span></div>`).join('')}</div>` : '<span class="muted">none</span>');
   return `<div class="eq ko">${eq}</div><dl>
+    <dt>Say it</dt><dd><i>${esc(romanize(t.core))}</i></dd>
     <dt>Root stem</dt><dd class="ko">${esc(eff(t, 'stem'))}${t.gloss && source(t, 'stem') === 'default' ? ` <span class="muted">— ${esc(t.gloss)}</span>` : ''}</dd>
     <dt>Class</dt><dd>${esc(t.pos)}</dd>
     <dt>Affixes</dt><dd>${aff}</dd>
@@ -922,15 +1011,42 @@ function tileHTML(t) {
   return `<div class="tile cat-${t.mainCat}${t.conf < 0.6 && !hasDict ? ' low' : ''}${t.key === selKey ? ' sel open' : ''}" data-key="${esc(t.key)}" tabindex="0" role="button" aria-expanded="${t.key === selKey}">
     ${hasDict || hasOv ? '<span class="dot" title="Has your edits"></span>' : ''}
     <div class="tw ko">${t.pre ? `<span class="punct">${esc(t.pre)}</span>` : ''}${esc(t.core)}${t.post ? `<span class="punct">${esc(t.post)}</span>` : ''}</div>
+    <div class="tr rom">${esc(romanize(t.core))}</div>
     <div class="tm">${stemChip}${t.affixes.map(a => `<span class="chip cat-${a.cat}">${esc(a.f)}</span>`).join('')}</div>
     <div class="insp">${inspectorHTML(t)}</div></div>`;
+}
+/* Everyday expressions, used when a word isn't in the grammar word lists above. */
+const COMMON = {
+  '안녕하세요':'hello','안녕하십니까':'hello (formal)','안녕':'hi; bye','안녕히':'in peace; 안녕히 가세요/계세요 = goodbye',
+  '감사합니다':'thank you','감사해요':'thank you','고맙습니다':'thank you','고마워요':'thank you','고마워':'thanks',
+  '죄송합니다':'I\'m sorry (formal)','미안해요':'I\'m sorry','미안해':'sorry','괜찮아요':'it\'s okay','괜찮아':'it\'s okay',
+  '네':'yes','예':'yes','아니요':'no','아니':'no','잠깐만요':'just a moment','실례합니다':'excuse me',
+  '반갑습니다':'nice to meet you','반가워요':'nice to meet you','처음':'first time','뵙겠습니다':'will meet (humble); 처음 뵙겠습니다 = nice to meet you',
+  '축하합니다':'congratulations','축하해요':'congratulations','사랑해요':'I love you','사랑해':'I love you',
+  '주세요':'please give me','알겠습니다':'understood','몰라요':'I don\'t know','맛있어요':'it\'s delicious','얼마예요':'how much is it?',
+  '어디':'where','언제':'when','누구':'who','무엇':'what','뭐':'what','왜':'why','어떻게':'how','오늘':'today','내일':'tomorrow','어제':'yesterday',
+  '저':'I (humble)','저는':'I (topic)','제':'my (humble)','우리':'we; our','공부하고':'study and; studying'
+};
+function meaningsHTML(s) {
+  const words = s.tokens.filter(t => t.pos !== 'Punctuation');
+  if (!words.length) return '';
+  return `<div class="meanings"><span class="tx-l">Word meanings</span>${words.map(t => {
+    const g = (t.gloss || COMMON[t.core] || '').split(/[;(]/)[0].trim();
+    return `<span class="wm${g ? '' : ' unk'}"><b class="ko">${esc(t.core)}</b>${g ? esc(g) : '?'}</span>`;
+  }).join('')}</div>`;
 }
 function renderTiles() {
   if (!parsed.length) { $('tiles').innerHTML = '<div class="empty">Paste Korean text and press <b>Analyze &amp; Parse</b>, or try <b>Load Sample</b>.</div>'; return; }
   $('tiles').innerHTML = parsed.map((s, si) => `
     <div class="sent">
       <div class="sent-h"><span class="sent-n">Sentence ${si + 1}</span><span class="sent-t ko">${esc(s.text)}</span></div>
-      <div class="trans" contenteditable="true" spellcheck="true" data-sent="${esc(s.text)}" data-ph="Add a translation or notes for this sentence…">${esc(state.sentenceNotes[s.text] || '')}</div>
+      <div class="sent-r rom" title="Revised Romanization (with standard sound changes)">${esc(romanize(s.text))}</div>
+      ${meaningsHTML(s)}
+      <div class="tx-tools"><span class="tx-l">Translation</span>
+        <a class="btn small" href="https://papago.naver.com/?sk=ko&amp;tk=en&amp;st=${encodeURIComponent(s.text)}" target="_blank" rel="noopener" title="Opens Papago in a new tab (needs internet)">Papago ↗</a>
+        <a class="btn small" href="https://translate.google.com/?sl=ko&amp;tl=en&amp;op=translate&amp;text=${encodeURIComponent(s.text)}" target="_blank" rel="noopener" title="Opens Google Translate in a new tab (needs internet)">Google ↗</a>
+        <span class="muted tx-h">open one, then paste or write your translation below</span></div>
+      <div class="trans" contenteditable="true" spellcheck="true" data-sent="${esc(s.text)}" data-ph="Your translation: type it, or paste one from Papago / Google…">${esc(state.sentenceNotes[s.text] || '')}</div>
       <div class="clauses">${s.clauses.map(c => { const [lbl, cls] = CLAUSE_LABEL[c.type]; return `<div class="clause"><span class="clause-l ${cls}">${lbl}</span><div class="tiles">${c.words.map(tileHTML).join('')}</div></div>`; }).join('')}</div>
     </div>`).join('');
 }
@@ -943,14 +1059,14 @@ function renderTable() {
   if (!parsed.length) { $('tableWrap').innerHTML = '<div class="empty">The breakdown table appears here after analysis.</div>'; return; }
   let n = 0;
   const rows = parsed.map((s, si) => {
-    const head = `<tr class="grp"><td colspan="8"><span class="muted">Sentence ${si + 1} ·</span> <span class="ko">${esc(s.text)}</span></td></tr>`;
+    const head = `<tr class="grp"><td colspan="9"><span class="muted">Sentence ${si + 1} ·</span> <span class="ko">${esc(s.text)}</span> <span class="muted rom"><i>${esc(romanize(s.text))}</i></span></td></tr>`;
     return head + s.tokens.map(t => {
       n++;
       const tds = FIELDS.map(f => { const src = source(t, f); return `<td class="ed${f === 'stem' ? ' ko' : ''}${f === 'notes' ? ' notes' : ''}${src === 'override' ? ' edited' : src === 'dict' ? ' fromdict' : ''}" data-field="${f}" ${state.editing ? 'contenteditable="true"' : ''} spellcheck="false" title="${src === 'override' ? 'Edited by you' : src === 'dict' ? 'From your dictionary' : 'Built-in analysis'}">${cellHTML(t, f)}</td>`; }).join('');
-      return `<tr class="row${t.key === selKey ? ' sel' : ''}" data-key="${esc(t.key)}"><td class="idx">${n}</td><td class="seg ko">${esc(t.raw)}</td>${tds}<td class="act"><button class="btn small" data-act="dict" type="button" title="Save this row to your dictionary">＋Dict</button><button class="btn small ghost" data-act="reset" type="button" title="Reset this row to the built-in analysis">Reset</button></td></tr>`;
+      return `<tr class="row${t.key === selKey ? ' sel' : ''}" data-key="${esc(t.key)}"><td class="idx">${n}</td><td class="seg ko">${esc(t.raw)}</td><td class="romc rom"><i>${esc(romanize(t.core))}</i></td>${tds}<td class="act"><button class="btn small" data-act="dict" type="button" title="Save this row to your dictionary">＋Dict</button><button class="btn small ghost" data-act="reset" type="button" title="Reset this row to the built-in analysis">Reset</button></td></tr>`;
     }).join('');
   }).join('');
-  $('tableWrap').innerHTML = `<table class="bd${state.editing ? ' editing' : ''}"><thead><tr><th>#</th><th>Clause / word segment</th><th>Stem / base word</th><th>Particles &amp; affixes</th><th>Grammatical function / role</th><th>Tense / mood</th><th>Meaning / notes</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  $('tableWrap').innerHTML = `<table class="bd${state.editing ? ' editing' : ''}"><thead><tr><th>#</th><th>Clause / word segment</th><th class="rom">Romanization</th><th>Stem / base word</th><th>Particles &amp; affixes</th><th>Grammatical function / role</th><th>Tense / mood</th><th>Meaning / notes</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function renderDict() {
   const keys = Object.keys(state.dict).sort((a, b) => a.localeCompare(b, 'ko'));
@@ -983,11 +1099,11 @@ function toMarkdown() {
   if (!parsed.length) return '';
   let md = '# Korean Sentence Breakdown\n\n';
   parsed.forEach((s, si) => {
-    md += `## Sentence ${si + 1}\n\n> ${s.text}\n\n`;
+    md += `## Sentence ${si + 1}\n\n> ${s.text}\n>\n> *${romanize(s.text)}*\n\n`;
     if (state.sentenceNotes[s.text]) md += `*Translation / notes:* ${state.sentenceNotes[s.text]}\n\n`;
     md += '**Clauses:** ' + s.clauses.map(c => `[${CLAUSE_LABEL[c.type][0]}] ${c.words.map(w => w.raw).join(' ')}`).join(' · ') + '\n\n';
-    md += '| Clause / Word Segment | Stem / Base Word | Particles & Affixes | Grammatical Function / Role | Tense / Mood | Meaning / Notes |\n|---|---|---|---|---|---|\n';
-    s.tokens.forEach(t => { md += `| ${mdCell(t.raw)} | ${mdCell(eff(t, 'stem'))} | ${mdCell(eff(t, 'affixes'))} | ${mdCell(eff(t, 'role'))} | ${mdCell(eff(t, 'tense'))} | ${mdCell(eff(t, 'notes'))} |\n`; });
+    md += '| Clause / Word Segment | Romanization | Stem / Base Word | Particles & Affixes | Grammatical Function / Role | Tense / Mood | Meaning / Notes |\n|---|---|---|---|---|---|---|\n';
+    s.tokens.forEach(t => { md += `| ${mdCell(t.raw)} | ${mdCell(romanize(t.core))} | ${mdCell(eff(t, 'stem'))} | ${mdCell(eff(t, 'affixes'))} | ${mdCell(eff(t, 'role'))} | ${mdCell(eff(t, 'tense'))} | ${mdCell(eff(t, 'notes'))} |\n`; });
     md += '\n';
   });
   return md;
@@ -1054,6 +1170,9 @@ function bind() {
   $('importFile').onchange = e => { if (e.target.files[0]) importJSON(e.target.files[0]); e.target.value = ''; };
   $('input').addEventListener('input', () => { state.text = $('input').value; schedule(); });
   $('input').addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); analyze(); } });
+  const applyRoman = () => { document.body.classList.toggle('hide-rom', state.showRoman === false); $('romToggle').checked = state.showRoman !== false; };
+  $('romToggle').onchange = e => { state.showRoman = e.target.checked; applyRoman(); schedule(); };
+  applyRoman();
   $('editToggle').checked = state.editing;
   $('editToggle').onchange = e => { state.editing = e.target.checked; renderTable(); schedule(); };
 
