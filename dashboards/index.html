@@ -10,7 +10,7 @@
 :root{
   --bg:#f5f3ef;--bg2:#ece8e1;--panel:#fffdf9;--fg:#1c1a17;--muted:#6b665d;--line:#ddd7cc;
   --grid:rgba(28,26,23,.05);--shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px -12px rgba(28,26,23,.18);
-  --git:#e5532d;--quantum:#7a4fe0;--ai:#0f8a6c;--oracle:#c74634;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
+  --git:#e5532d;--quantum:#7a4fe0;--ai:#0f8a6c;--korean:#c2410c;--oracle:#c74634;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Charter,"Book Antiqua",Georgia,serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -19,19 +19,19 @@
 :root[data-theme="dark"]{
   --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
   --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-  --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
+  --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
 }
 :root[data-theme="twilight"]{
   --bg:#231f38;--bg2:#332c50;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;
   --grid:rgba(246,235,230,.05);--shadow:0 1px 2px rgba(10,6,25,.35),0 14px 34px -14px rgba(10,6,25,.75);
-  --git:#ff9b6e;--quantum:#c7aaff;--ai:#7ee2c0;--oracle:#ff8f86;--default:#ffc47d;--on-c:#211b33;
+  --git:#ff9b6e;--quantum:#c7aaff;--ai:#7ee2c0;--korean:#ffb08a;--oracle:#ff8f86;--default:#ffc47d;--on-c:#211b33;
   --sky:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme]){
     --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
     --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-    --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
+    --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--default:#4fc1a6;--on-c:#14161c;
   }
 }
 *{box-sizing:border-box}
@@ -81,6 +81,18 @@ button{font:inherit;color:inherit}
 .navlink .dot{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
 .navlink .t{flex:1;min-width:0}
 .navlink .new{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:var(--on-c);padding:1px 6px;border-radius:999px}
+.navsec{margin:12px 0 2px}
+.navsec summary{list-style:none;display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 10px;border-radius:8px;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.navsec summary::-webkit-details-marker{display:none}
+.navsec summary:hover{background:var(--bg2);color:var(--fg)}
+.navsec summary .sl{flex:1}
+.navsec .chev{display:grid;place-items:center;transition:transform .2s}
+.navsec .chev svg{width:13px;height:13px}
+.navsec[open] .chev{transform:rotate(90deg)}
+.navsub{margin-left:12px;padding-left:8px;border-left:1px solid var(--line)}
+.navsub h5{display:flex;align-items:center;gap:7px;margin:8px 10px 2px;font-size:.78rem;font-weight:600;color:var(--fg)}
+.navsub h5 i{width:7px;height:7px;border-radius:50%}
+.navsub h5 span{margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--muted);font-weight:400}
 .navgroup h4{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 10px 4px;font-weight:500;display:flex;justify-content:space-between}
 .navempty{color:var(--muted);font-size:.85rem;padding:10px}
 .navfoot{border-top:1px solid var(--line);padding:10px 16px;font-size:.75rem;color:var(--muted)}
@@ -235,8 +247,20 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
    PAGES — the only thing you edit when you add something new to learn.
    1. Put the HTML file in dashboards/ (e.g. dashboards/plsql/bulk-collect.html)
    2. Copy one entry below and change it. href is the path from this file.
+      Optional section: 'Languages' nests the topic under a parent heading,
+      e.g. Languages → Korean, Languages → Nepali.
    ===================================================================== */
 const DASHBOARDS = [
+  {
+    title: 'Korean Grammar Breakdown',
+    href: 'languages/korean/korean-grammar-breakdown.html',
+    section: 'Languages',               // optional: nests the topic under a parent heading
+    topic: 'korean',
+    added: '2026-10-25',
+    desc: '한국어 문장 분석기: paste Korean sentences, book excerpts or poems and see every word split into stems, particles and endings, colour-coded by grammar role.',
+    points: ['Colour-coded segment visualizer', 'Grammatical breakdown table', 'Your own dictionary, Markdown & JSON export'],
+    tags: ['korean', 'grammar', 'particles', '한국어']
+  },
   {
     title: 'AI Meets Quantum',
     href: 'quantum/ai-meets-quantum.html',
@@ -281,12 +305,18 @@ DASHBOARDS.sort((a, b) => (b.added || '').localeCompare(a.added || '') || a.titl
 const TOPICS = {
   ai:      { label: 'AI',      color: 'var(--ai)' },
   git:     { label: 'Git',     color: 'var(--git)' },
+  korean:  { label: 'Korean',  color: 'var(--korean)' },
   quantum: { label: 'Quantum', color: 'var(--quantum)' },
   oracle:  { label: 'Oracle',  color: 'var(--oracle)' },
 };
 
 /* ---------- card illustrations ---------- */
 const ART = {
+  korean: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <text x="170" y="82" text-anchor="middle" font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif" font-size="46" font-weight="700" fill="${c}">한국어</text>
+    ${[['문장',38,'.9'],['을',118,'.55'],['분석',160,'.9'],['합니다',228,'.55']].map(([t,x,o])=>`<g opacity="${o}"><rect x="${x}" y="104" width="${t.length*20+16}" height="30" rx="8" fill="${c}" fill-opacity=".14" stroke="${c}" stroke-width="1.5"/><text x="${x+8+t.length*10}" y="125" text-anchor="middle" font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif" font-size="17" fill="${c}">${t}</text></g>`).join('')}
+    <path class="flow" d="M30 150 H310" stroke="${c}" stroke-width="2" opacity=".35"/>
+  </svg>`,
   ai: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     ${(()=>{ const L=[[70,[45,85,125]],[150,[30,65,105,140]],[230,[30,65,105,140]],[300,[85]]]; let e='',n='';
       for(let i=0;i<L.length-1;i++) L[i][1].forEach((y1,a)=>L[i+1][1].forEach((y2,b)=>{ e+=`<line x1="${L[i][0]}" y1="${y1}" x2="${L[i+1][0]}" y2="${y2}" stroke="${c}" stroke-width="${(a+b)%3===0?2:1}" opacity="${(a+b)%3===0?.6:.2}"/>`; }));
@@ -332,7 +362,15 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 const isNew = d => d.added && (Date.now() - new Date(d.added)) / 864e5 <= 14;
 const topicOf = d => TOPICS[d.topic] || { label: d.topic ? d.topic[0].toUpperCase() + d.topic.slice(1) : 'Other', color: 'var(--default)' };
 const routeOf = d => '#/' + d.href;
-const matches = (d, q) => !q || [d.title, d.desc, ...(d.points||[]), ...(d.tags||[]), topicOf(d).label].join(' ').toLowerCase().includes(q);
+const matches = (d, q) => !q || [d.title, d.desc, d.section || '', ...(d.points||[]), ...(d.tags||[]), topicOf(d).label].join(' ').toLowerCase().includes(q);
+/* Top-level group: a section (e.g. "Languages") or, without one, the topic itself. */
+const groupKey = d => d.section ? 'sec:' + d.section : d.topic;
+const groupLabel = k => k.startsWith('sec:') ? k.slice(4) : topicOf({topic:k}).label;
+const groupColor = k => k.startsWith('sec:') ? (topicOf(DASHBOARDS.find(d => groupKey(d) === k) || {}).color) : topicOf({topic:k}).color;
+const navLink = (d, color) => `<a class="navlink ${current === d ? 'active' : ''}" href="${esc(routeOf(d))}" style="--c:${color}"><span class="dot"></span><span class="t">${esc(d.title)}</span>${isNew(d) ? '<span class="new">New</span>' : ''}</a>`;
+const SEC_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+let openSecs = {};
+try { openSecs = JSON.parse(localStorage.getItem('lab-nav-sections') || '{}') || {}; } catch (e) { openSecs = {}; }
 const mobile = () => matchMedia('(max-width:960px)').matches;
 let topic = 'all', current = null;
 
@@ -347,19 +385,20 @@ function renderStats(){
     `<div class="stat"><b>${when}</b><span>last added</span></div>`;
 }
 function renderChips(){
-  const counts = {}; DASHBOARDS.forEach(d => counts[d.topic] = (counts[d.topic] || 0) + 1);
-  const list = [['all', 'All', 'var(--fg)', DASHBOARDS.length], ...Object.keys(counts).map(k => [k, topicOf({topic:k}).label, topicOf({topic:k}).color, counts[k]])];
+  const counts = {}; DASHBOARDS.forEach(d => counts[groupKey(d)] = (counts[groupKey(d)] || 0) + 1);
+  const keys = Object.keys(counts).sort((a,b) => groupLabel(a).localeCompare(groupLabel(b)));
+  const list = [['all', 'All', 'var(--fg)', DASHBOARDS.length], ...keys.map(k => [k, groupLabel(k), groupColor(k), counts[k]])];
   $('#chips').innerHTML = list.map(([k, l, c, n]) =>
     `<button class="chip" data-k="${esc(k)}" aria-pressed="${k === topic}">${k === 'all' ? '' : `<i style="background:${c}"></i>`}${esc(l)} <span class="n">${n}</span></button>`).join('');
   $('#chips').querySelectorAll('.chip').forEach(b => b.onclick = () => { topic = b.dataset.k; renderChips(); renderGrid(); });
 }
 function renderGrid(){
   const q = $('#q').value.trim().toLowerCase();
-  const items = DASHBOARDS.filter(d => (topic === 'all' || d.topic === topic) && matches(d, q));
+  const items = DASHBOARDS.filter(d => (topic === 'all' || groupKey(d) === topic) && matches(d, q));
   $('#grid').innerHTML = items.length ? items.map((d, i) => {
     const t = topicOf(d), art = (ART[d.art] || ART[d.topic] || ART.generic)(t.color, d.title);
     return `<a class="card" href="${esc(routeOf(d))}" style="--c:${t.color};animation-delay:${i * 70}ms">
-      <div class="art">${art}<span class="badge"><i></i>${esc(t.label)}</span>${isNew(d) ? '<span class="new">New</span>' : ''}</div>
+      <div class="art">${art}<span class="badge"><i></i>${d.section ? esc(d.section) + ' · ' : ''}${esc(t.label)}</span>${isNew(d) ? '<span class="new">New</span>' : ''}</div>
       <div class="body">
         <h3>${esc(d.title)}</h3>
         <p>${esc(d.desc)}</p>
@@ -377,18 +416,36 @@ function renderGrid(){
 const HOME_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>';
 function renderNav(){
   const q = $('#navq').value.trim().toLowerCase();
+  const list = DASHBOARDS.filter(d => matches(d, q));
   const groups = {};
-  DASHBOARDS.filter(d => matches(d, q)).forEach(d => (groups[d.topic] = groups[d.topic] || []).push(d));
+  list.forEach(d => (groups[groupKey(d)] = groups[groupKey(d)] || []).push(d));
   let html = q ? '' : `<a class="navlink ${current ? '' : 'active'}" href="#/" style="--c:var(--fg)">${HOME_ICON}<span class="t">Home</span></a>`;
-  Object.keys(groups).sort((a,b) => topicOf({topic:a}).label.localeCompare(topicOf({topic:b}).label)).forEach(k => {
-    const t = topicOf({topic:k});
-    html += `<div class="navgroup"><h4><span>${esc(t.label)}</span><span>${groups[k].length}</span></h4>` +
-      groups[k].map(d => `<a class="navlink ${current === d ? 'active' : ''}" href="${esc(routeOf(d))}" style="--c:${t.color}"><span class="dot"></span><span class="t">${esc(d.title)}</span>${isNew(d) ? '<span class="new">New</span>' : ''}</a>`).join('') +
-      `</div>`;
+  Object.keys(groups).sort((a,b) => groupLabel(a).localeCompare(groupLabel(b))).forEach(k => {
+    const items = groups[k];
+    if (!k.startsWith('sec:')) {
+      const t = topicOf({topic:k});
+      html += `<div class="navgroup"><h4><span>${esc(t.label)}</span><span>${items.length}</span></h4>` + items.map(d => navLink(d, t.color)).join('') + `</div>`;
+      return;
+    }
+    // section → topics → pages
+    const sec = k.slice(4), byTopic = {};
+    items.forEach(d => (byTopic[d.topic] = byTopic[d.topic] || []).push(d));
+    const hasActive = items.includes(current);
+    const open = q || hasActive || openSecs[sec] !== false;
+    html += `<details class="navsec" data-sec="${esc(sec)}" ${open ? 'open' : ''}><summary><span class="chev">${SEC_ICON}</span><span class="sl">${esc(sec)}</span><span class="n">${items.length}</span></summary>` +
+      Object.keys(byTopic).sort((a,b) => topicOf({topic:a}).label.localeCompare(topicOf({topic:b}).label)).map(tk => {
+        const t = topicOf({topic:tk});
+        return `<div class="navsub"><h5><i style="background:${t.color}"></i>${esc(t.label)}<span>${byTopic[tk].length}</span></h5>` + byTopic[tk].map(d => navLink(d, t.color)).join('') + `</div>`;
+      }).join('') + `</details>`;
   });
-  if (q && !Object.keys(groups).length) html = `<div class="navempty">No dashboard matches “${esc(q)}”.</div>`;
+  if (q && !list.length) html = `<div class="navempty">No dashboard matches “${esc(q)}”.</div>`;
   if (!DASHBOARDS.length) html += `<div class="navempty">No dashboards yet.</div>`;
   $('#navlist').innerHTML = html;
+  $('#navlist').querySelectorAll('details.navsec').forEach(el => el.addEventListener('toggle', () => {
+    if ($('#navq').value.trim()) return;
+    openSecs[el.dataset.sec] = el.open;
+    try { localStorage.setItem('lab-nav-sections', JSON.stringify(openSecs)); } catch (e) {}
+  }));
   $('#navfoot').textContent = `${DASHBOARDS.length} dashboard${DASHBOARDS.length === 1 ? '' : 's'} · ${new Set(DASHBOARDS.map(d => d.topic)).size} topics`;
 }
 function setNav(open){
@@ -405,7 +462,7 @@ try { if (localStorage.getItem('lab-nav') === 'closed') document.body.classList.
 function crumbs(d){
   if (!d) { $('#crumbs').innerHTML = `<span class="page">Home</span>`; return; }
   const t = topicOf(d);
-  $('#crumbs').innerHTML = `<span class="sep">/</span><span class="topic"><i style="background:${t.color}"></i>${esc(t.label)}</span><span class="sep">/</span><span class="page" title="${esc(d.title)}">${esc(d.title)}</span>`;
+  $('#crumbs').innerHTML = (d.section ? `<span class="sep">/</span><span class="topic">${esc(d.section)}</span>` : '') + `<span class="sep">/</span><span class="topic"><i style="background:${t.color}"></i>${esc(t.label)}</span><span class="sep">/</span><span class="page" title="${esc(d.title)}">${esc(d.title)}</span>`;
 }
 function route(){
   const path = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
