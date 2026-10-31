@@ -19,12 +19,19 @@ Every merge to `main` runs the `pages` job in `.gitlab-ci.yml`:
 2. Give the page a meaningful `<title>`.
 3. Add an entry to the `DASHBOARDS` list in `dashboards/index.html`.
    Without one the page still deploys, but the home page won't link to it.
-4. Open a merge request and merge it to `main`.
-5. When the pipeline finishes, the page is live.
+4. Run `python3 scripts/update_csp.py` to add or refresh the security policies.
+5. Open a merge request and merge it to `main`.
+6. When the pipeline finishes, the page is live.
 
 ## Rules for dashboard files
 
-- Keep them self-contained, or keep assets next to them and use **relative paths**.
+- Keep them self-contained: put all CSS and JS inline and draw with inline SVG or canvas.
+  The Content-Security-Policy blocks separate files, images, fonts and network calls.
+- Run `python3 scripts/update_csp.py` after editing any inline `<script>`, including
+  the `DASHBOARDS` list. A page's scripts stop running if its policy is out of date,
+  and the `csp-check` pipeline job blocks the deploy until it is fixed.
+- A page that needs more can have its policy edited by hand; the script only
+  refreshes the hashes.
 - Never start links with `/`; the site lives under `/<project-name>/`.
 
 ## Site URL

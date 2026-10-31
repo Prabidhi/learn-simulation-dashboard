@@ -19,6 +19,13 @@ sast:
 secret_detection:
   stage: secret-detection
 
+# A stale hash stops a page's scripts running, so fail before it can deploy.
+csp-check:
+  stage: test
+  image: python:3.13-alpine
+  script:
+    - python3 scripts/update_csp.py --check
+
 pages:
   stage: deploy
   image: alpine:latest
