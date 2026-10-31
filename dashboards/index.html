@@ -88,11 +88,10 @@ button{font:inherit;color:inherit}
 .navsec summary .sl{flex:1}
 .navsec .chev{display:grid;place-items:center;transition:transform .2s}
 .navsec .chev svg{width:13px;height:13px}
-.navsec[open] .chev{transform:rotate(90deg)}
+.navsec[open]>summary .chev,.navsub[open]>summary .chev{transform:rotate(90deg)}
 .navsub{margin-left:12px;padding-left:8px;border-left:1px solid var(--line)}
-.navsub h5{display:flex;align-items:center;gap:7px;margin:8px 10px 2px;font-size:.78rem;font-weight:600;color:var(--fg)}
-.navsub h5 i{width:7px;height:7px;border-radius:50%}
-.navsub h5 span{margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--muted);font-weight:400}
+.navsec .navsub summary{margin-top:6px;padding:4px 10px;font-family:var(--sans);font-size:.78rem;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg)}
+.navsub summary .n{font-family:var(--mono);font-size:.68rem;font-weight:400;color:var(--muted)}
 .navgroup h4{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 10px 4px;font-weight:500;display:flex;justify-content:space-between}
 .navempty{color:var(--muted);font-size:.85rem;padding:10px}
 .navfoot{border-top:1px solid var(--line);padding:10px 16px;font-size:.75rem;color:var(--muted)}
@@ -252,6 +251,16 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
    ===================================================================== */
 const DASHBOARDS = [
   {
+    title: 'GitLab Pages and CI',
+    href: 'gitlab/gitlab-pages-ci.html',
+    section: 'DevOps',
+    topic: 'gitlab',
+    added: '2026-10-31',
+    desc: 'From git push to a live page on self-hosted GitLab EE: the recipe, the cook, the counter.',
+    points: ['Read a .gitlab-ci.yml line by line', 'Build a pipeline and run it', 'Break a deploy on purpose'],
+    tags: ['pages', 'pipelines', 'runners', 'ci/cd']
+  },
+  {
     title: 'Korean Grammar Breakdown',
     href: 'languages/korean/korean-grammar-breakdown.html',
     section: 'Languages',               // optional: nests the topic under a parent heading
@@ -282,6 +291,7 @@ const DASHBOARDS = [
   {
     title: 'Git Cheat Sheet & Simulator',
     href: 'git/git-simulator.html',
+    section: 'DevOps',
     topic: 'git',
     added: '2026-10-24',
     desc: 'A safe sandbox repo with a live commit graph. Type real git commands and watch branches move.',
@@ -305,6 +315,7 @@ DASHBOARDS.sort((a, b) => (b.added || '').localeCompare(a.added || '') || a.titl
 const TOPICS = {
   ai:      { label: 'AI',      color: 'var(--ai)' },
   git:     { label: 'Git',     color: 'var(--git)' },
+  gitlab:  { label: 'GitLab',  color: 'var(--git)' },
   korean:  { label: 'Korean',  color: 'var(--korean)' },
   quantum: { label: 'Quantum', color: 'var(--quantum)' },
   oracle:  { label: 'Oracle',  color: 'var(--oracle)' },
@@ -434,14 +445,15 @@ function renderNav(){
     const open = q || hasActive || openSecs[sec] !== false;
     html += `<details class="navsec" data-sec="${esc(sec)}" ${open ? 'open' : ''}><summary><span class="chev">${SEC_ICON}</span><span class="sl">${esc(sec)}</span><span class="n">${items.length}</span></summary>` +
       Object.keys(byTopic).sort((a,b) => topicOf({topic:a}).label.localeCompare(topicOf({topic:b}).label)).map(tk => {
-        const t = topicOf({topic:tk});
-        return `<div class="navsub"><h5><i style="background:${t.color}"></i>${esc(t.label)}<span>${byTopic[tk].length}</span></h5>` + byTopic[tk].map(d => navLink(d, t.color)).join('') + `</div>`;
+        const t = topicOf({topic:tk}), subKey = sec + '/' + tk;
+        const subOpen = q || byTopic[tk].includes(current) || openSecs[subKey] !== false;
+        return `<details class="navsub" data-sec="${esc(subKey)}" ${subOpen ? 'open' : ''}><summary><span class="chev">${SEC_ICON}</span><span class="sl">${esc(t.label)}</span><span class="n">${byTopic[tk].length}</span></summary>` + byTopic[tk].map(d => navLink(d, t.color)).join('') + `</details>`;
       }).join('') + `</details>`;
   });
   if (q && !list.length) html = `<div class="navempty">No dashboard matches “${esc(q)}”.</div>`;
   if (!DASHBOARDS.length) html += `<div class="navempty">No dashboards yet.</div>`;
   $('#navlist').innerHTML = html;
-  $('#navlist').querySelectorAll('details.navsec').forEach(el => el.addEventListener('toggle', () => {
+  $('#navlist').querySelectorAll('details.navsec, details.navsub').forEach(el => el.addEventListener('toggle', () => {
     if ($('#navq').value.trim()) return;
     openSecs[el.dataset.sec] = el.open;
     try { localStorage.setItem('lab-nav-sections', JSON.stringify(openSecs)); } catch (e) {}
