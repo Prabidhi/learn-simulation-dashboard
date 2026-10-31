@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-uAb3+XArj1kbF3LIkVqkb5wPfPxNoNAu+R3FNhRpRL0='; style-src 'sha256-fDYRDoIXY5Viiw4YeEX1qldTOiIKCZlWRV/S0Cz4JLc='; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>GitLab Pages and CI</title>
+<style>
+  :root, [data-theme="day"] {
+    --bg:#f6f6f2; --surface:#ffffff; --surface2:#f0f2f6; --text:#1d2330; --muted:#5b6475;
+    --border:#dde1e8; --accent:#2f6fde; --accent-soft:#e3ecfc; --ok:#1d9a5f; --ok-soft:#ddf3e8;
+    --bad:#cf4040; --bad-soft:#fbe4e4; --warn:#a26b06; --warn-soft:#fbf0d9; --pkt:#e8590c; --on-accent:#ffffff;
+  }
+  [data-theme="twilight"] {
+    --bg:#22263f; --surface:#2c3152; --surface2:#353b62; --text:#ecedf6; --muted:#b3b8d4;
+    --border:#4a5185; --accent:#93abff; --accent-soft:#3a4378; --ok:#5fd69b; --ok-soft:#2c4d4a;
+    --bad:#ff8a8a; --bad-soft:#553148; --warn:#f2c46b; --warn-soft:#4d4434; --pkt:#ffad5c; --on-accent:#1a1d33;
+  }
+  [data-theme="dark"] {
+    --bg:#0f1115; --surface:#181b21; --surface2:#20242c; --text:#e6e8ec; --muted:#a0a9b8;
+    --border:#2f3540; --accent:#5b9cff; --accent-soft:#1d2b45; --ok:#4cc98a; --ok-soft:#173327;
+    --bad:#ff7373; --bad-soft:#3b1d1d; --warn:#e6b34f; --warn-soft:#3a2f17; --pkt:#ff9a4d; --on-accent:#0f1115;
+  }
+  * { box-sizing:border-box; }
+  html, body { overflow-x:hidden; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .hidden { display:none !important; }
+  header { padding:20px 16px 8px; max-width:1040px; margin:0 auto; display:flex; gap:12px;
+    align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+  h1 { margin:0; font-size:1.5rem; }
+  .sub { color:var(--muted); margin:4px 0 0; }
+  .theme-switch { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .theme-switch button { background:var(--surface); color:var(--muted); border:0; padding:6px 10px; cursor:pointer; font-size:.85rem; }
+  .theme-switch button.on { background:var(--accent); color:var(--on-accent); }
+  nav { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--border); }
+  nav .inner { max-width:1040px; margin:0 auto; padding:0 16px; display:flex; gap:2px; overflow-x:auto; }
+  nav button { background:none; border:0; color:var(--muted); padding:12px 9px; cursor:pointer;
+    white-space:nowrap; font-size:.9rem; border-bottom:3px solid transparent; }
+  nav button.on { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  main { max-width:1040px; margin:0 auto; padding:16px; }
+  section { display:none; }
+  section.on { display:block; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .card h2 { margin:0 0 6px; font-size:1.15rem; }
+  .card h3 { margin:0 0 6px; font-size:1rem; }
+  .muted { color:var(--muted); }
+  .small { font-size:.86rem; }
+  .mt { margin-top:12px; }
+  .m0 { margin:0; }
+  .analogy { background:var(--warn-soft); border-left:4px solid var(--warn); padding:10px 12px; border-radius:8px; margin-top:12px; }
+  .analogy b:first-child { color:var(--warn); }
+  .btn { background:var(--accent); color:var(--on-accent); border:0; padding:9px 14px; border-radius:8px; cursor:pointer; font-size:.9rem; font-weight:600; }
+  .btn.ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .btn.danger { background:var(--bad-soft); color:var(--bad); border:1px solid var(--bad); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:760px){ .grid2, .grid3 { grid-template-columns:1fr; } }
+  code, pre, .mono { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.85rem; }
+  pre { background:var(--surface2); border:1px solid var(--border); padding:10px 12px; border-radius:8px; overflow-x:auto; margin:8px 0 0; }
+  code { background:var(--surface2); padding:1px 5px; border-radius:4px; }
+  label.opt { display:flex; gap:8px; align-items:center; padding:5px 0; cursor:pointer; }
+  select, input[type="text"] { background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:.9rem; }
+  input[type="text"] { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-width:0; width:100%; }
+  .msg { margin-top:10px; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); }
+  .msg.ok { background:var(--ok-soft); border-color:var(--ok); }
+  .msg.fail { background:var(--bad-soft); border-color:var(--bad); }
+  .msg.warn { background:var(--warn-soft); border-color:var(--warn); }
+  .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:.82rem; color:var(--muted); margin-top:8px; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+  .legend .l-on::before { background:var(--ok); }
+  .legend .l-tmp::before { border:2px dashed var(--muted); border-radius:3px; }
+  .legend .l-pkt::before { background:var(--pkt); }
+
+  /* Diagram */
+  .svg-wrap { overflow-x:auto; }
+  .svg-wrap svg { width:100%; min-width:640px; display:block; }
+  .node rect { fill:var(--surface2); stroke:var(--border); stroke-width:1.5; transition:all .25s; cursor:pointer; }
+  .node text { fill:var(--text); font-size:13px; text-anchor:middle; pointer-events:none; }
+  .node text.s { fill:var(--muted); font-size:11px; }
+  .node:hover rect { stroke:var(--accent); }
+  .node.sel rect { stroke:var(--accent); stroke-width:3; fill:var(--accent-soft); }
+  .node.hot rect { stroke:var(--pkt); stroke-width:3; }
+  .node.temp rect { stroke-dasharray:6 4; }
+  .node.temp.idle { opacity:.4; }
+  .node.temp.alive rect { stroke:var(--accent); fill:var(--accent-soft); }
+  .edge { stroke:var(--muted); stroke-width:1.6; fill:none; opacity:.55; }
+  .edge.dash { stroke-dasharray:5 4; }
+  .edge.dot { stroke-dasharray:2 4; }
+  .elabel { fill:var(--muted); font-size:10.5px; text-anchor:middle; }
+  .pulse { fill:var(--ok); }
+  .poll { fill:var(--accent); }
+  #packet { fill:var(--pkt); }
+  .log { list-style:none; padding:0; margin:8px 0 0; font-size:.88rem; }
+  .log li { padding:5px 8px; border-left:3px solid var(--border); margin-bottom:4px; background:var(--surface2); border-radius:0 6px 6px 0; }
+  .log li.cur { border-left-color:var(--pkt); }
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .seg button { background:var(--surface2); color:var(--muted); border:0; padding:6px 12px; cursor:pointer; font-size:.86rem; }
+  .seg button.on { background:var(--accent); color:var(--on-accent); }
+
+  /* YAML annotated */
+  .yaml { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 0; overflow-x:auto; }
+  .yl { white-space:pre; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.86rem; padding:2px 12px; cursor:pointer; border-left:3px solid transparent; }
+  .yl:hover { background:var(--accent-soft); }
+  .yl.sel { background:var(--accent-soft); border-left-color:var(--accent); }
+  .yl .k { color:var(--accent); font-weight:600; }
+  .yl .c { color:var(--muted); }
+
+  /* Steps */
+  .steps { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+  .step { flex:1 1 110px; border:1px solid var(--border); border-radius:10px; padding:8px; background:var(--surface2); font-size:.82rem; transition:all .25s; }
+  .step b { display:block; font-size:.88rem; }
+  .step.run { border-color:var(--accent); background:var(--accent-soft); }
+  .step.ok { border-color:var(--ok); background:var(--ok-soft); }
+  .step.fail { border-color:var(--bad); background:var(--bad-soft); }
+  .step.skip { opacity:.4; }
+
+  /* Mock browser */
+  .browser { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--surface); }
+  .browser .bar { background:var(--surface2); padding:7px 10px; font-size:.78rem; color:var(--muted); display:flex; gap:6px; align-items:center; border-bottom:1px solid var(--border); }
+  .browser .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--border); margin-right:3px; }
+  .browser .url { background:var(--surface); border-radius:5px; padding:2px 8px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .browser .page { padding:16px; min-height:110px; text-align:center; display:flex; flex-direction:column; justify-content:center; }
+  .browser .big { font-size:1.45rem; font-weight:700; }
+  .browser .big.dim { color:var(--muted); }
+  .flash { animation:flash 1s ease; }
+  @keyframes flash { 0%{background:var(--ok-soft);} 100%{background:transparent;} }
+
+  /* Runner lane */
+  .lane { margin-top:12px; }
+  .lane .lbl { font-size:.85rem; margin-bottom:4px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .track { position:relative; height:30px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .track .fill { position:absolute; inset:0; background:var(--ok); opacity:.7; }
+  .track .beat { position:absolute; top:0; bottom:0; width:40px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent); animation:beat 1.5s linear infinite; }
+  @keyframes beat { from{left:-40px;} to{left:100%;} }
+  .ctr { height:30px; border:2px dashed var(--border); border-radius:6px; display:flex; align-items:center; padding:0 10px; font-size:.82rem; color:var(--muted); transition:all .3s; }
+  .ctr.alive { border-color:var(--accent); background:var(--accent-soft); color:var(--text); }
+  .ctr.gone { border-color:var(--bad); color:var(--bad); }
+  .badge { font-size:.75rem; padding:1px 8px; border-radius:20px; border:1px solid var(--border); color:var(--muted); white-space:nowrap; }
+  .badge.on { background:var(--ok-soft); color:var(--ok); border-color:var(--ok); }
+  .badge.off { background:var(--bad-soft); color:var(--bad); border-color:var(--bad); }
+  .badge.acc { background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
+  .reasons { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
+  .reason { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--surface2); cursor:pointer; }
+  .reason p { margin:4px 0 0; font-size:.85rem; color:var(--muted); display:none; }
+  .reason.open p { display:block; }
+  .reason.open { border-color:var(--accent); }
+
+  /* Pipeline */
+  .pipe { display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; margin-top:12px; }
+  .stage { flex:1 1 200px; border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--surface2); }
+  .stage h4 { margin:0 0 8px; font-size:.82rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .job { border:1px solid var(--border); border-radius:20px; padding:6px 12px; margin-bottom:6px; font-size:.86rem; background:var(--surface); display:flex; justify-content:space-between; gap:8px; }
+  .job.run { border-color:var(--accent); background:var(--accent-soft); }
+  .job.ok { border-color:var(--ok); background:var(--ok-soft); }
+  .job.fail { border-color:var(--bad); background:var(--bad-soft); }
+  .job.skip { opacity:.45; }
+  .arrow { align-self:center; color:var(--muted); font-size:1.4rem; }
+  .pstatus { margin-top:10px; font-weight:600; }
+
+  /* Projects */
+  .proj { border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--surface2); }
+  .proj h3 { margin:0 0 6px; }
+  .meanings { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  @media (max-width:760px){ .meanings { grid-template-columns:1fr; } }
+  .meaning { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--surface2); cursor:pointer; text-align:center; }
+  .meaning .ico { font-size:1.6rem; }
+  .meaning.sel { border-color:var(--accent); background:var(--accent-soft); }
+  .counts { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .count { flex:1 1 120px; border:1px solid var(--border); border-radius:10px; padding:10px; text-align:center; background:var(--surface2); }
+  .count b { display:block; font-size:1.5rem; }
+  .count.fixed b { color:var(--ok); }
+  input[type="range"] { width:100%; accent-color:var(--accent); }
+
+  /* Lifecycle */
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  td.good { color:var(--ok); font-weight:600; }
+  td.bad { color:var(--bad); font-weight:600; }
+  td.meh { color:var(--warn); font-weight:600; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; }
+
+  /* Quiz */
+  .q { margin-bottom:14px; }
+  .q .opts { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .q button { text-align:left; background:var(--surface2); color:var(--text); border:1px solid var(--border); padding:8px 10px; border-radius:8px; cursor:pointer; font-size:.9rem; }
+  .q button.right { border-color:var(--ok); background:var(--ok-soft); }
+  .q button.wrong { border-color:var(--bad); background:var(--bad-soft); }
+  .q .why { font-size:.85rem; margin-top:6px; display:none; }
+  .q.answered .why { display:block; }
+  footer { max-width:1040px; margin:0 auto; padding:0 16px 24px; color:var(--muted); font-size:.8rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>GitLab Pages and CI, Explained</h1>
+    <p class="sub">From <code>git push</code> to a live page on self-hosted GitLab EE: the recipe, the cook, the counter</p>
+  </div>
+  <div class="theme-switch" id="themeSwitch">
+    <button data-t="day">Day</button><button data-t="twilight">Twilight</button><button data-t="dark">Dark</button>
+  </div>
+</header>
+
+<nav><div class="inner" id="tabs">
+  <button data-s="big" class="on">1. Big picture</button>
+  <button data-s="recipe">2. .gitlab-ci.yml</button>
+  <button data-s="runner">3. Runner &amp; image</button>
+  <button data-s="pipeline">4. Pipeline vs job</button>
+  <button data-s="deploy">5. Push → live</button>
+  <button data-s="projects">6. Projects &amp; "pages"</button>
+  <button data-s="remove">7. Remove a site</button>
+  <button data-s="quiz">8. Quiz</button>
+</div></nav>
+
+<main>
+
+<!-- 1. BIG PICTURE -->
+<section id="big" class="on">
+  <div class="card">
+    <h2>Everything on one map</h2>
+    <p class="muted m0">The top row publishes your site, and the bottom row serves it. Tap any box to learn what it does, or trace a flow with the buttons.</p>
+    <div class="svg-wrap mt">
+    <svg viewBox="0 0 770 350" id="map" role="img" aria-label="GitLab Pages and CI architecture">
+      <text class="elabel" x="385" y="22">PUBLISH (only when something triggers a pipeline)</text>
+      <text class="elabel" x="385" y="342">SERVE (every time someone opens the URL)</text>
+
+      <path class="edge" d="M150 80 L235 80"/>
+      <path class="edge" id="pollPath" d="M365 80 L450 80"/>
+      <text class="elabel" x="407" y="70">polls</text>
+      <path class="edge dash" d="M580 80 L625 80"/>
+      <path class="edge dash" d="M690 108 L690 252"/>
+      <text class="elabel" x="730" y="184">artifact</text>
+      <text class="elabel" x="730" y="197">upload</text>
+      <path class="edge" d="M150 280 L235 280"/>
+      <path class="edge" d="M365 280 L450 280"/>
+      <path class="edge" d="M580 280 L625 280"/>
+      <path class="edge dot" d="M505 252 L320 108"/>
+      <text class="elabel" x="380" y="190">API check</text>
+
+      <circle class="poll" r="4"><animateMotion dur="1.6s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.5;1" calcMode="linear" path="M365 80 L450 80"/></circle>
+
+      <g class="node" data-n="dev"><rect x="20" y="52" width="130" height="56" rx="10"/><text x="85" y="76">You</text><text class="s" x="85" y="93">git push to main</text></g>
+      <g class="node" data-n="gitlab"><rect x="235" y="52" width="130" height="56" rx="10"/><text x="300" y="76">GitLab</text><text class="s" x="300" y="93">reads .gitlab-ci.yml</text></g>
+      <g class="node" data-n="runner"><rect x="450" y="52" width="130" height="56" rx="10"/><text x="515" y="76">GitLab Runner</text><text class="s" x="515" y="93">always on, asks for jobs</text></g>
+      <g class="node temp idle" data-n="container" id="ctrNode"><rect x="625" y="52" width="130" height="56" rx="10"/><text x="690" y="76">alpine container</text><text class="s" x="690" y="93" id="ctrSub">exists only during a job</text></g>
+
+      <g class="node" data-n="browser"><rect x="20" y="252" width="130" height="56" rx="10"/><text x="85" y="276">Visitor browser</text><text class="s" x="85" y="293">renders the page</text></g>
+      <g class="node" data-n="nginx"><rect x="235" y="252" width="130" height="56" rx="10"/><text x="300" y="276">NGINX</text><text class="s" x="300" y="293">front door + TLS</text></g>
+      <g class="node" data-n="pages"><rect x="450" y="252" width="130" height="56" rx="10"/><text x="515" y="276">gitlab-pages</text><text class="s" x="515" y="293">always-on web server</text></g>
+      <g class="node" data-n="storage"><rect x="625" y="252" width="130" height="56" rx="10"/><text x="690" y="276">Storage</text><text class="s" x="690" y="293" id="storSub">EBS disk on EC2</text></g>
+
+      <circle class="pulse" cx="358" cy="60" r="5"><animate attributeName="opacity" values="1;.2;1" dur="1.6s" repeatCount="indefinite"/></circle>
+      <circle class="pulse" cx="573" cy="60" r="5"><animate attributeName="opacity" values="1;.2;1" dur="1.6s" repeatCount="indefinite"/></circle>
+      <circle class="pulse" cx="358" cy="260" r="5"><animate attributeName="opacity" values="1;.2;1" dur="1.6s" repeatCount="indefinite"/></circle>
+      <circle class="pulse" cx="573" cy="260" r="5"><animate attributeName="opacity" values="1;.2;1" dur="1.6s" repeatCount="indefinite"/></circle>
+
+      <circle id="packet" r="8" cx="-30" cy="-30"/>
+    </svg>
+    </div>
+    <div class="legend"><span class="l-on">always running</span><span class="l-tmp">temporary, only during a job</span><span class="l-pkt">the request or the files moving</span></div>
+    <div class="row mt">
+      <button class="btn" id="traceDeploy">Trace a deploy</button>
+      <button class="btn ghost" id="traceVisit">Trace a visit</button>
+      <span class="small muted">Artifacts stored on:</span>
+      <div class="seg" id="storSeg"><button data-v="ebs" class="on">EC2 disk (EBS)</button><button data-v="s3">S3 bucket</button></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card" id="nodeInfo">
+      <h3>Tap a box</h3>
+      <p class="muted m0">Each piece gets a plain description and its role in the restaurant analogy used throughout this page.</p>
+    </div>
+    <div class="card">
+      <h3>What just happened</h3>
+      <ul class="log" id="mapLog"><li class="muted">Press a trace button to follow the flow.</li></ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3>The cast (one restaurant analogy for the whole page)</h3>
+    <table>
+      <tr><th>Real thing</th><th>Restaurant role</th><th>Always on?</th></tr>
+      <tr><td><code>.gitlab-ci.yml</code></td><td>Recipe card</td><td class="muted">It's a file, so it doesn't run</td></tr>
+      <tr><td>GitLab</td><td>Head chef: reads orders and puts tickets on the rail</td><td class="good">Yes</td></tr>
+      <tr><td>GitLab Runner</td><td>Line cook who keeps checking the rail</td><td class="good">Yes</td></tr>
+      <tr><td>Image / container</td><td>A clean workstation set up for each ticket</td><td class="meh">Only during a job</td></tr>
+      <tr><td>Artifact (<code>public/</code>)</td><td>The tray handed through the window</td><td class="muted">It's stored files</td></tr>
+      <tr><td>Storage (EBS / S3)</td><td>Stockroom or rented storage unit</td><td class="muted">It's storage</td></tr>
+      <tr><td><code>gitlab-pages</code></td><td>Counter clerk serving customers</td><td class="good">Yes</td></tr>
+      <tr><td>Browser</td><td>Customer who unwraps and uses it (renders)</td><td class="muted">Visitor's side</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 2. RECIPE -->
+<section id="recipe">
+  <div class="card">
+    <h2>Will GitLab find your recipe card?</h2>
+    <p class="muted m0">GitLab only starts a pipeline if it finds the file. Type a file name and choose where it is.</p>
+    <div class="grid2 mt">
+      <div>
+        <label class="small muted" for="fname">File name</label>
+        <input type="text" id="fname" value="ci.yaml" spellcheck="false" autocomplete="off">
+      </div>
+      <div>
+        <label class="small muted" for="floc">Location in the repo</label><br>
+        <select id="floc"><option value="root">Repo root</option><option value="sub">Inside a folder (e.g. config/)</option></select>
+      </div>
+    </div>
+    <div class="row mt">
+      <button class="btn ghost" data-try="ci.yaml">ci.yaml</button>
+      <button class="btn ghost" data-try="gitlab-ci.yml">gitlab-ci.yml</button>
+      <button class="btn ghost" data-try=".gitlab-ci.yaml">.gitlab-ci.yaml</button>
+      <button class="btn ghost" data-try=".gitlab-ci.yml">.gitlab-ci.yml</button>
+    </div>
+    <div class="msg" id="fnameOut"></div>
+    <p class="small muted">A maintainer can point GitLab to a different file under <b>Settings → CI/CD → General pipelines → CI/CD configuration file</b>. Unless someone changed that, the exact name and location above are required.</p>
+  </div>
+
+  <div class="card">
+    <h2>Read the recipe line by line</h2>
+    <p class="muted m0">This is the full file for your dashboards repo. Tap any line to see what it does.</p>
+    <div class="grid2 mt">
+      <div class="yaml" id="yaml"></div>
+      <div class="msg" id="yamlOut"><b>Tap a line</b> to see what it does.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Having the file isn't enough. Something has to trigger it</h3>
+    <div class="grid3">
+      <div class="msg"><b>git push</b><br><span class="small muted">The usual trigger. GitLab reads the file on every push.</span></div>
+      <div class="msg"><b>Merge request, schedule, Run pipeline button, API</b><br><span class="small muted">Other ways to start a pipeline.</span></div>
+      <div class="msg"><b><code>rules:</code></b><br><span class="small muted">Decides which jobs are created. Your <code>pages</code> job only runs for <code>main</code>.</span></div>
+    </div>
+    <div class="analogy"><b>Analogy:</b> the recipe card must be in the right slot with the right name, or the head chef never sees it. Even then, nothing is cooked until an order comes in, and the card can say "only cook this for the main dining room," which is what <code>rules:</code> does.</div>
+  </div>
+</section>
+
+<!-- 3. RUNNER & IMAGE -->
+<section id="runner">
+  <div class="card">
+    <h2>The runner is always on; the workstation is not</h2>
+    <p class="muted m0">The runner service keeps asking GitLab "any jobs for me?" A container exists only while a job runs.</p>
+    <div class="row mt">
+      <span class="small muted">Executor:</span>
+      <div class="seg" id="execSeg"><button data-v="docker" class="on">Docker (container per job)</button><button data-v="shell">Shell (directly on host)</button></div>
+      <button class="btn" id="queueJob">Push → queue a job</button>
+    </div>
+    <div class="lane">
+      <div class="lbl"><span><b>gitlab-runner service</b></span><span class="badge on" id="pollBadge">polling: 0 checks</span></div>
+      <div class="track"><div class="fill"></div><div class="beat"></div></div>
+    </div>
+    <div class="lane">
+      <div class="lbl"><span><b>Job workspace</b></span><span class="badge" id="queueBadge">jobs waiting: 0</span></div>
+      <div class="ctr" id="ctrLane">No job is running, so there's no container.</div>
+    </div>
+    <div class="analogy"><b>Analogy:</b> the line cook stays in the kitchen all shift, checking the order rail every few seconds. When a ticket shows up, they set up a clean station, cook, hand off the tray and clear the station. Nobody has to wake the cook up.</div>
+  </div>
+
+  <div class="card">
+    <h2>Which image will my job use?</h2>
+    <p class="muted m0">Change the settings to see which image wins. The image provides the shell and tools (<code>mkdir</code>, <code>cp</code>) that your script needs.</p>
+    <div class="grid2 mt">
+      <div>
+        <label class="opt">Top-level <code>default: image:</code>
+          <select id="imgTop"><option value="">not set</option><option>alpine:latest</option><option>node:22</option></select></label>
+        <label class="opt">Inside the <code>pages</code> job
+          <select id="imgJob"><option value="">not set</option><option selected>alpine:latest</option><option>node:22</option></select></label>
+        <label class="opt">Runner default (admin's <code>config.toml</code>)
+          <select id="imgRunner"><option value="">not set</option><option selected>ubuntu:22.04</option></select></label>
+        <label class="opt">Runner executor
+          <select id="imgExec"><option value="docker">Docker</option><option value="shell">Shell</option></select></label>
+      </div>
+      <div>
+        <div class="msg" id="imgOut"></div>
+        <pre id="imgYaml"></pre>
+      </div>
+    </div>
+    <p class="small muted">Order of precedence: the job's own <code>image</code>, then the file's <code>default: image</code>, then the runner admin's default. The top-level default applies only to jobs <b>in this one file and project</b>. The runner default is the only setting that reaches across projects.</p>
+  </div>
+
+  <div class="card">
+    <h3>Why not just run on the runner machine itself? Tap each reason.</h3>
+    <div class="reasons" id="reasons">
+      <div class="reason"><b>No leftovers</b><p>Each job starts from a clean state, so files from earlier jobs can't leak in, and a pass or fail means the same thing every time.</p></div>
+      <div class="reason"><b>No tool conflicts</b><p>One project needs Node 18 and another needs Node 22, or Java 11 versus Java 21. Each container brings its own.</p></div>
+      <div class="reason"><b>Security</b><p>A job runs whatever a <code>.gitlab-ci.yml</code> says. A throwaway container limits what it can read or damage. FedRAMP/FISMA-style environments usually expect this.</p></div>
+      <div class="reason"><b>Parallel jobs</b><p>Several jobs can run at once without stepping on each other.</p></div>
+      <div class="reason"><b>Reproducible</b><p>"It ran in alpine:latest" is precise. "It ran on that one box with whatever was installed" isn't.</p></div>
+      <div class="reason"><b>When shell is fine</b><p>A dedicated runner for one trusted project, or a job that needs something only that host has. You then have to keep that machine clean yourself.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. PIPELINE VS JOB -->
+<section id="pipeline">
+  <div class="card">
+    <h2>Pipeline, stage, job</h2>
+    <div class="grid3">
+      <div class="msg"><b>Job</b><br><span class="small">One task with its own <code>script:</code>. One runner runs it in one container. It passes or fails on its own.</span></div>
+      <div class="msg"><b>Stage</b><br><span class="small">A group of jobs that run side by side. The next stage starts only if every job in this one passes.</span></div>
+      <div class="msg"><b>Pipeline</b><br><span class="small">All the jobs created by <b>one</b> trigger, such as one push. It has one overall status.</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Build a pipeline and run it</h2>
+    <div class="row">
+      <label class="opt"><input type="checkbox" id="pValidate"> Add a <code>validate-html</code> job (test stage)</label>
+      <label class="opt"><input type="checkbox" id="pBroken"> One HTML file is broken (missing <code>&lt;/html&gt;</code>)</label>
+      <button class="btn" id="pRun">Run pipeline</button>
+    </div>
+    <div class="pipe" id="pipeViz"></div>
+    <div class="pstatus" id="pStatus"></div>
+    <div class="grid2 mt">
+      <div><h3>The .gitlab-ci.yml for this pipeline</h3><pre id="pYaml"></pre></div>
+      <div>
+        <h3>Notes</h3>
+        <p class="small m0">Job names are mostly up to you: <code>validate-html</code>, <code>check-links</code>, anything. Only <b><code>pages</code></b> has a special meaning: its <code>public/</code> artifact becomes your site.</p>
+        <p class="small">With only the <code>pages</code> job, a pipeline and a job look like the same thing. They separate once you add more jobs.</p>
+        <div class="analogy"><b>Analogy:</b> a pipeline is a whole dinner order for one table. Each job is one dish. Appetizers (the test stage) come out together, and the main course (the deploy stage) comes out only after them. A taste-tester (<code>validate-html</code>) can stop a bad dish before it reaches the counter.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. PUSH -> LIVE -->
+<section id="deploy">
+  <div class="card">
+    <h2>Push → live: break it on purpose</h2>
+    <p class="muted m0">Turn conditions on or off, then push. Most failures here are silent: the live site just doesn't change.</p>
+    <div class="grid2 mt">
+      <div>
+        <label class="opt"><input type="checkbox" id="dYml" checked> <code>.gitlab-ci.yml</code> exists at the repo root</label>
+        <label class="opt"><input type="checkbox" id="dJob" checked> It has a job named <code>pages</code></label>
+        <label class="opt"><input type="checkbox" id="dArt" checked> The job has <code>artifacts: paths: [public]</code></label>
+        <label class="opt"><input type="checkbox" id="dRunner" checked> A runner is available</label>
+        <label class="opt"><input type="checkbox" id="dEnabled" checked> Admin enabled Pages on the instance</label>
+        <label class="opt">Branch <select id="dBranch"><option value="main">main (default)</option><option value="feature">feature/new-chart</option></select></label>
+        <div class="row mt"><button class="btn" id="dPush">git push</button><span class="small muted">Pushes: <b id="dCount">0</b></span></div>
+      </div>
+      <div class="browser">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">https://team.pages.company.com/learn-dashboards/</span></div>
+        <div class="page" id="dLive"><div class="big dim">404</div><div class="muted">Nothing deployed yet</div></div>
+      </div>
+    </div>
+    <div class="steps" id="dSteps">
+      <div class="step" data-k="push"><b>1. Push</b>commit lands</div>
+      <div class="step" data-k="pipeline"><b>2. Pipeline</b>GitLab reads the file</div>
+      <div class="step" data-k="runner"><b>3. Runner</b>picks up the job</div>
+      <div class="step" data-k="script"><b>4. Script</b>fills <code>public/</code></div>
+      <div class="step" data-k="upload"><b>5. Artifact</b><code>public/</code> uploaded</div>
+      <div class="step" data-k="deploy"><b>6. Deploy</b>stored as current site</div>
+      <div class="step" data-k="live"><b>7. Live</b>gitlab-pages serves it</div>
+    </div>
+    <div class="msg hidden" id="dResult"></div>
+  </div>
+  <div class="card">
+    <h3>Order matters: fill the tray, then hand it over</h3>
+    <p class="small m0"><b>1.</b> <code>script:</code> creates <code>public/</code> <b>inside the container</b> and copies your HTML into it. <b>2.</b> <code>artifacts:</code> uploads that folder to GitLab. <b>3.</b> GitLab stores it as the Pages deployment (on EBS or S3). <b>4.</b> The container is thrown away, and only the uploaded artifact remains.</p>
+    <div class="analogy"><b>Analogy:</b> the cook plates the food on a tray (the script), then passes the tray through the window (<code>artifacts:</code>). If the cook plates it but never passes it through, it gets thrown out when the station is cleared.</div>
+  </div>
+</section>
+
+<!-- 6. PROJECTS & PAGES -->
+<section id="projects">
+  <div class="card">
+    <h2>Each project only publishes itself</h2>
+    <p class="muted m0">A <code>.gitlab-ci.yml</code> belongs to the project it's in. Push to one project and watch the other.</p>
+    <div class="grid2 mt" id="projGrid"></div>
+    <p class="small muted">To bring project2's files into project1's site, project1's job must fetch them on purpose: clone project2 with the job token, add it as a submodule, or download its artifacts. Using <code>include:</code> from another project shares the <b>pipeline configuration</b>, not the other project's files.</p>
+    <div class="analogy"><b>Analogy:</b> each project is its own restaurant, with its own recipe book, pantry and shop window. project1's cook only uses project1's pantry.</div>
+  </div>
+
+  <div class="card">
+    <h2>One project = one site, however many files</h2>
+    <label class="small muted" for="fileCount">Number of HTML files in the repo: <b id="fileCountVal">5</b></label>
+    <input type="range" id="fileCount" min="1" max="30" value="5">
+    <div class="counts">
+      <div class="count"><b id="cPages">5</b><span class="small muted">web pages</span></div>
+      <div class="count fixed"><b>1</b><span class="small muted">Pages site</span></div>
+      <div class="count fixed"><b>1</b><span class="small muted"><code>pages</code> job</span></div>
+      <div class="count fixed"><b>1</b><span class="small muted"><code>image:</code> line</span></div>
+    </div>
+    <p class="small muted">The site can also include CSS, JS, images and PDFs. HTML files are what open as web pages. <code>*.html</code> only matches the top level, so add folders explicitly, for example <code>cp -r *.html dashboards public/</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2>The word "pages" means three things</h2>
+    <p class="muted m0">Tap each one. Only one of them is like NGINX.</p>
+    <div class="meanings mt" id="meanings">
+      <div class="meaning" data-m="job"><div class="ico">🖨️</div><b>The <code>pages</code> job</b><div class="small muted">the print run</div></div>
+      <div class="meaning" data-m="site"><div class="ico">📰</div><b>The Pages site</b><div class="small muted">the newspaper</div></div>
+      <div class="meaning" data-m="server"><div class="ico">🏪</div><b><code>gitlab-pages</code> server</b><div class="small muted">the newsstand</div></div>
+    </div>
+    <div class="msg" id="meaningOut">Choose one above.</div>
+  </div>
+</section>
+
+<!-- 7. REMOVE -->
+<section id="remove">
+  <div class="card">
+    <h2>What happens when you stop deploying, and how to take a site down</h2>
+    <p class="muted m0">Start with a live site, then try each action in any order. Watch the URL and the state table.</p>
+    <div class="grid2 mt">
+      <div class="browser">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">https://team.pages.company.com/learn-dashboards/</span></div>
+        <div class="page" id="rLive"></div>
+      </div>
+      <table id="rTable"></table>
+    </div>
+    <div class="btns mt">
+      <button class="btn ghost" id="rDelYml">Delete .gitlab-ci.yml and commit</button>
+      <button class="btn ghost" id="rRestoreYml">Restore .gitlab-ci.yml</button>
+      <button class="btn ghost" id="rPush">Push a new commit</button>
+      <button class="btn ghost" id="rTime">Fast-forward 30+ days</button>
+    </div>
+    <div class="btns mt">
+      <button class="btn ghost" id="rDisable">Settings: turn Pages off</button>
+      <button class="btn ghost" id="rEnable">Settings: turn Pages on</button>
+      <button class="btn danger" id="rRemove">Deploy → Pages → Remove pages</button>
+      <button class="btn ghost" id="rReset">Reset</button>
+    </div>
+    <ul class="log" id="rLog"></ul>
+  </div>
+  <div class="card">
+    <h3>The three ways to take a site down</h3>
+    <table>
+      <tr><th>Option</th><th>Where</th><th>Effect</th></tr>
+      <tr><td>Remove pages</td><td><b>Deploy → Pages → Remove pages</b></td><td>Deletes the deployment. The URL returns 404 until a <code>pages</code> job runs again.</td></tr>
+      <tr><td>Turn off without deleting</td><td><b>Settings → General → Visibility, project features, permissions → Pages</b></td><td>Stops serving the site. Turn it back on later and the same site returns.</td></tr>
+      <tr><td>API, for scripts</td><td><code>DELETE /api/v4/projects/:id/pages</code></td><td>Same as Remove pages.</td></tr>
+    </table>
+    <p class="small muted">Deleting the whole project also removes its site. The main Pages deployment doesn't expire by itself. The job's own artifact copy may expire under your instance's retention policy, but that doesn't affect the live site.</p>
+    <div class="analogy"><b>Analogy:</b> deleting <code>.gitlab-ci.yml</code> cancels future deliveries. The last stock stays on the shelf, and the clerk keeps selling it. To empty the shelf, you have to clear it yourself with <b>Remove pages</b>.</div>
+  </div>
+</section>
+
+<!-- 8. QUIZ -->
+<section id="quiz">
+  <div class="card">
+    <h2>Check yourself</h2>
+    <p class="muted">Score: <b id="score">0</b> / <span id="qTotal"></span></p>
+    <div id="quizBox"></div>
+    <button class="btn ghost" id="quizReset">Reset quiz</button>
+  </div>
+</section>
+
+</main>
+<footer>Standalone and offline. A strict Content Security Policy blocks all network requests and allows only this page's own inline style and script.</footer>
+
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  function $$(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+  function el(tag, cls, html){ var e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
+  function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+
+  /* ---------- Theme (shares the "theme" key with the home page) ---------- */
+  var THEME_KEY='theme';
+  function setTheme(t){
+    if(['day','twilight','dark'].indexOf(t)<0) t='day';
+    document.documentElement.setAttribute('data-theme',t);
+    $$('#themeSwitch button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); });
+  }
+  var qp=null; try{ qp=new URLSearchParams(location.search).get('theme'); }catch(e){}
+  setTheme(qp || store(THEME_KEY) || 'day');
+  $$('#themeSwitch button').forEach(function(b){ b.addEventListener('click', function(){ setTheme(b.dataset.t); store(THEME_KEY,b.dataset.t); }); });
+  window.addEventListener('storage', function(e){ if(e.key===THEME_KEY && e.newValue) setTheme(e.newValue); });
+
+  /* ---------- Tabs ---------- */
+  function showTab(s){
+    if(!$(s)) s='big';
+    $$('#tabs button').forEach(function(x){ x.classList.toggle('on', x.dataset.s===s); });
+    $$('main section').forEach(function(x){ x.classList.toggle('on', x.id===s); });
+  }
+  $$('#tabs button').forEach(function(b){ b.addEventListener('click', function(){ showTab(b.dataset.s); store('gpci-tab', b.dataset.s); window.scrollTo(0,0); }); });
+  showTab(store('gpci-tab') || 'big');
+
+  function seg(id, cb){
+    $$('#'+id+' button').forEach(function(b){ b.addEventListener('click', function(){
+      $$('#'+id+' button').forEach(function(x){ x.classList.toggle('on', x===b); }); cb(b.dataset.v);
+    }); });
+  }
+
+  /* ---------- 1. Big picture ---------- */
+  var storageMode='ebs';
+  var centers={dev:[85,80],gitlab:[300,80],runner:[515,80],container:[690,80],browser:[85,280],nginx:[300,280],pages:[515,280],storage:[690,280]};
+  function storText(){ return storageMode==='ebs' ? 'the GitLab EC2 instance\'s disk (EBS volume), typically under /var/opt/gitlab/gitlab-rails/shared/pages' : 'an S3 bucket configured as GitLab object storage'; }
+  var info={
+    dev:{t:'You (git push)', d:'You commit and push to main. That push, not the Pages server, is what starts a new deploy.', a:'Placing an order.'},
+    gitlab:{t:'GitLab', d:'On each push, GitLab looks for .gitlab-ci.yml at the repo root, turns it into a pipeline of jobs and queues them. It records pass or fail and stores uploaded artifacts. It also answers gitlab-pages when asked which deployment is current and whether a visitor may view it.', a:'The head chef, who reads the order and puts tickets on the rail.'},
+    runner:{t:'GitLab Runner', d:'A separate always-on service, often on its own machine. It checks in with GitLab every few seconds asking for jobs. GitLab never wakes it up; the runner keeps asking.', a:'The line cook, who stays in the kitchen all shift and keeps checking the rail.'},
+    container:{t:'Job container (alpine:latest)', d:'With the Docker executor, every job gets a fresh container from the image named in .gitlab-ci.yml. It provides the shell and tools (mkdir, cp) the script needs. It\'s destroyed when the job ends. Only the uploaded artifact survives.', a:'A clean workstation set up for one ticket, then cleared.'},
+    browser:{t:'Visitor browser', d:'Requests the URL, receives the files unchanged and renders them. All drawing and JavaScript happen here, not on the server.', a:'The customer who unwraps the order and uses it.'},
+    nginx:{t:'NGINX (bundled with GitLab)', d:'The front door. Wildcard DNS (*.pages.company.com) sends visitors here. NGINX handles HTTPS and passes Pages hostnames to gitlab-pages.', a:'The building\'s front door and receptionist.'},
+    pages:{t:'gitlab-pages (the web server)', d:'A small Go application shipped with GitLab EE, switched on by an admin with pages_external_url. Once enabled, it runs 24/7, finds which project a URL belongs to and serves that project\'s current files. It serves static files only: no PL/SQL, Java or server-side code.', a:'The counter clerk, always on duty.'},
+    storage:{t:'Storage', d:'', a:'The stockroom (EBS) or a rented storage unit down the road (S3).'}
+  };
+  var nodes=$$('#map .node');
+  function selectNode(n){
+    nodes.forEach(function(g){ g.classList.toggle('sel', g.dataset.n===n); });
+    var i=info[n]; var d=(n==='storage') ? 'Where published public/ folders live. In this setup: '+storText()+'. gitlab-pages reads from here on each request (with a short cache).' : i.d;
+    var box=$('nodeInfo'); box.innerHTML='';
+    box.appendChild(el('h3',null,'')).textContent=i.t;
+    box.appendChild(el('p','m0','')).textContent=d;
+    var an=el('div','analogy','<b>Analogy:</b> '); an.appendChild(document.createTextNode(i.a)); box.appendChild(an);
+  }
+  nodes.forEach(function(g){ g.addEventListener('click', function(){ selectNode(g.dataset.n); }); });
+  seg('storSeg', function(v){ storageMode=v; $('storSub').textContent = v==='ebs' ? 'EBS disk on EC2' : 'S3 bucket'; if($$('#map .node.sel').length && $$('#map .node.sel')[0].dataset.n==='storage') selectNode('storage'); });
+
+  var pkt=$('packet'), busy=false, ctrNode=$('ctrNode');
+  function hot(n){ nodes.forEach(function(g){ g.classList.toggle('hot', g.dataset.n===n); }); }
+  function animate(hops){
+    var log=$('mapLog'); log.innerHTML=''; var i=0;
+    function next(){
+      if(i>=hops.length-1){ hot(null); pkt.setAttribute('cx',-30); pkt.setAttribute('cy',-30); busy=false; return; }
+      var h=hops[i+1], a=centers[hops[i].n], b=centers[h.n], t0=null, dur=600;
+      $$('li',log).forEach(function(x){ x.classList.remove('cur'); });
+      var li=el('li','cur'); li.textContent=typeof h.msg==='function'?h.msg():h.msg; log.appendChild(li);
+      hot(h.n); if(h.on) h.on();
+      function step(ts){
+        if(t0===null) t0=ts; var p=Math.min((ts-t0)/dur,1); var e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+        pkt.setAttribute('cx', a[0]+(b[0]-a[0])*e); pkt.setAttribute('cy', a[1]+(b[1]-a[1])*e);
+        if(p<1) requestAnimationFrame(step); else { i++; setTimeout(next, 650); }
+      }
+      requestAnimationFrame(step);
+    }
+    next();
+  }
+  function ctr(state){ ctrNode.classList.toggle('idle', state!=='alive'); ctrNode.classList.toggle('alive', state==='alive');
+    $('ctrSub').textContent = state==='alive' ? 'running the pages job' : (state==='gone' ? 'destroyed after the job' : 'exists only during a job'); }
+  $('traceDeploy').addEventListener('click', function(){
+    if(busy) return; busy=true; ctr('idle');
+    animate([
+      {n:'dev'},
+      {n:'gitlab', msg:'You push to main. GitLab finds .gitlab-ci.yml, creates a pipeline with the pages job and queues it.'},
+      {n:'runner', msg:'The always-on runner\'s next check picks up the queued job.'},
+      {n:'container', msg:'The runner starts a fresh alpine:latest container. The script creates public/ and copies the HTML into it.', on:function(){ ctr('alive'); }},
+      {n:'storage', msg:function(){ return 'artifacts: uploads public/ to GitLab, which stores it as the current Pages deployment on '+(storageMode==='ebs'?'the EBS disk':'S3')+'. The container is destroyed.'; }, on:function(){ setTimeout(function(){ ctr('gone'); }, 500); }},
+      {n:'pages', msg:'gitlab-pages, already running, serves the new version on the next request. No restart is needed.', on:function(){ setTimeout(function(){ ctr('idle'); }, 1600); }}
+    ]);
+  });
+  $('traceVisit').addEventListener('click', function(){
+    if(busy) return; busy=true;
+    animate([
+      {n:'browser'},
+      {n:'nginx', msg:'The browser opens team.pages.company.com/learn-dashboards/. Wildcard DNS points it to NGINX, which handles HTTPS.'},
+      {n:'pages', msg:'NGINX passes the request to gitlab-pages, which is already running and waiting.'},
+      {n:'gitlab', msg:'gitlab-pages asks GitLab which deployment is current and whether this visitor is allowed to see it (access control).'},
+      {n:'pages', msg:'GitLab answers: here\'s the current deployment, and yes, this visitor is a project member.'},
+      {n:'storage', msg:function(){ return 'gitlab-pages reads index.html from '+(storageMode==='ebs'?'the EBS disk':'S3')+'.'; }},
+      {n:'pages', msg:'The files come back unchanged. No code runs on the server.'},
+      {n:'nginx', msg:'The response goes back out through NGINX.'},
+      {n:'browser', msg:'The browser renders the page. Served by gitlab-pages, rendered by the browser.'}
+    ]);
+  });
+
+  /* ---------- 2. Recipe ---------- */
+  function checkName(){
+    var n=$('fname').value.trim(), loc=$('floc').value, out=$('fnameOut'), cls='fail', m;
+    if(n==='.gitlab-ci.yml' && loc==='root'){ cls='ok'; m='<b>Found.</b> GitLab reads this file on every push and creates a pipeline from it.'; }
+    else if(n==='.gitlab-ci.yml'){ cls='warn'; m='<b>Right name, wrong place.</b> GitLab looks at the repo root by default. Inside a folder, it\'s ignored unless a maintainer sets a custom CI/CD configuration file path.'; }
+    else if(n==='gitlab-ci.yml'){ m='<b>Not found: missing the leading dot.</b> It must be <code>.gitlab-ci.yml</code>.'; }
+    else if(/\.yaml$/i.test(n)){ m='<b>Not found: <code>.yaml</code> isn\'t <code>.yml</code>.</b> GitLab won\'t pick up this name by default. Rename it to <code>.gitlab-ci.yml</code>.'; }
+    else if(n===''){ m='<b>No file, no pipeline.</b> Nothing runs on push.'; }
+    else { m='<b>Not found.</b> GitLab doesn\'t look for this name, so no pipeline starts and nothing is published. Use <code>.gitlab-ci.yml</code> at the repo root.'; }
+    out.className='msg '+cls; out.innerHTML=m;
+  }
+  $('fname').addEventListener('input', checkName); $('floc').addEventListener('change', checkName);
+  $$('[data-try]').forEach(function(b){ b.addEventListener('click', function(){ $('fname').value=b.dataset.try; checkName(); }); });
+  checkName();
+
+  var yamlLines=[
+    {t:'<span class="k">pages:</span>', k:'pages'},
+    {t:'  <span class="k">image:</span> alpine:latest', k:'image'},
+    {t:'  <span class="k">script:</span>', k:'script'},
+    {t:'    - mkdir -p public &amp;&amp; cp -r *.html public/', k:'cmd'},
+    {t:'  <span class="k">artifacts:</span>', k:'artifacts'},
+    {t:'    <span class="k">paths:</span> [public]', k:'artifacts'},
+    {t:'  <span class="k">rules:</span>', k:'rules'},
+    {t:'    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH', k:'rules'}
+  ];
+  var yamlInfo={
+    pages:'<b>The job name.</b> You can name other jobs anything, but GitLab treats a job called <code>pages</code> as the one that publishes your site. One project has one <code>pages</code> job, however many HTML files you have.',
+    image:'<b>Which workstation to use.</b> The runner starts this image as a fresh container for this job only. Alpine is tiny (about 5 MB) and has the shell, <code>mkdir</code> and <code>cp</code>. Set it inside the job: with one job, you don\'t need a top-level <code>default:</code>.',
+    script:'<b>The commands to run</b>, in order, inside the container.',
+    cmd:'<b>Fill the tray.</b> Creates <code>public/</code> inside the container and copies every top-level <code>.html</code> file into it. Subfolders need adding, for example <code>cp -r *.html dashboards public/</code>. Your <code>index.html</code> becomes the site\'s home page.',
+    artifacts:'<b>Pass the tray through the window.</b> When the script finishes, the runner uploads <code>public/</code> to GitLab. Without this, the container and everything in it is thrown away, and nothing is published.',
+    rules:'<b>Only for main.</b> The job is created only when the push is to the default branch. A push to a feature branch leaves the live site unchanged.'
+  };
+  var ybox=$('yaml');
+  yamlLines.forEach(function(l){
+    var d=el('div','yl',l.t); d.dataset.k=l.k;
+    d.addEventListener('click', function(){ $$('.yl',ybox).forEach(function(x){ x.classList.toggle('sel', x.dataset.k===l.k); }); $('yamlOut').innerHTML=yamlInfo[l.k]; });
+    ybox.appendChild(d);
+  });
+
+  /* ---------- 3. Runner & image ---------- */
+  var executor='docker', polls=0, waiting=0, jobNo=0, working=false;
+  seg('execSeg', function(v){ executor=v; });
+  function updQueue(){ $('queueBadge').textContent='jobs waiting: '+waiting; $('queueBadge').className='badge'+(waiting?' acc':''); }
+  $('queueJob').addEventListener('click', function(){ waiting++; updQueue(); });
+  setInterval(function(){
+    polls++; $('pollBadge').textContent='polling: '+polls+' checks';
+    if(waiting>0 && !working){
+      waiting--; jobNo++; working=true; updQueue();
+      var lane=$('ctrLane'), n=jobNo;
+      lane.className='ctr alive';
+      lane.textContent = executor==='docker'
+        ? 'Job #'+n+': started a fresh alpine:latest container, running the script…'
+        : 'Job #'+n+': running directly on the runner host\'s own OS (no container, no image)…';
+      setTimeout(function(){
+        lane.className='ctr gone';
+        lane.textContent = executor==='docker' ? 'Job #'+n+': uploaded public/ and destroyed the container.' : 'Job #'+n+': done. Any files it left stay on the host until someone cleans up.';
+        setTimeout(function(){ working=false; lane.className='ctr'; lane.textContent='No job is running, so there\'s no container.'; }, 1800);
+      }, 2600);
+    }
+  }, 1500);
+
+  $$('#reasons .reason').forEach(function(r){ r.addEventListener('click', function(){ r.classList.toggle('open'); }); });
+
+  function resolveImage(){
+    var top=$('imgTop').value, job=$('imgJob').value, run=$('imgRunner').value, ex=$('imgExec').value, out=$('imgOut'), cls, m;
+    if(ex==='shell'){ cls='warn'; m='<b>No image is used.</b> The shell executor ignores <code>image:</code> and runs commands directly on the runner machine, with whatever tools are installed there.'; }
+    else if(job){ cls='ok'; m='<b>Uses '+job+'</b>, from inside the <code>pages</code> job. A job\'s own setting always wins.'; }
+    else if(top){ cls='ok'; m='<b>Uses '+top+'</b>, from the top-level <code>default:</code>. It applies to every job in this file that doesn\'t set its own.'; }
+    else if(run){ cls='warn'; m='<b>Uses '+run+'</b>, the runner admin\'s default. It works, but the admin can change it at any time, and your job could suddenly be missing a tool. Name the image yourself.'; }
+    else { cls='fail'; m='<b>The job fails.</b> No image is set anywhere, so the Docker executor has nothing to start.'; }
+    out.className='msg '+cls; out.innerHTML=m;
+    var y=''; if(top) y+='default:\n  image: '+top+'\n\n';
+    y+='pages:\n'; if(job) y+='  image: '+job+'\n';
+    y+='  script:\n    - mkdir -p public && cp -r *.html public/\n  artifacts:\n    paths: [public]';
+    $('imgYaml').textContent=y;
+  }
+  ['imgTop','imgJob','imgRunner','imgExec'].forEach(function(id){ $(id).addEventListener('change', resolveImage); });
+  resolveImage();
+
+  /* ---------- 4. Pipeline ---------- */
+  var pRunning=false;
+  function pYaml(){
+    var v=$('pValidate').checked, y='';
+    if(v){ y+='stages: [test, deploy]\n\nvalidate-html:\n  stage: test\n  image: alpine:latest\n  script:\n    - test -f index.html\n    - for f in *.html; do grep -qi "</html>" "$f" || { echo "Broken: $f"; exit 1; }; done\n\n'; }
+    y+='pages:\n'; if(v) y+='  stage: deploy\n';
+    y+='  image: alpine:latest\n  script:\n    - mkdir -p public && cp -r *.html public/\n  artifacts:\n    paths: [public]\n  rules:\n    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH';
+    $('pYaml').textContent=y;
+  }
+  function pBuild(){
+    var v=$('pValidate').checked, viz=$('pipeViz'); viz.innerHTML='';
+    if(v){ var s1=el('div','stage','<h4>Stage: test</h4>'); s1.appendChild(jobPill('validate-html')); viz.appendChild(s1); viz.appendChild(el('div','arrow','→')); }
+    var s2=el('div','stage','<h4>Stage: '+(v?'deploy':'(default)')+'</h4>'); s2.appendChild(jobPill('pages')); viz.appendChild(s2);
+    $('pStatus').textContent = v ? 'Pipeline: 2 jobs in 2 stages' : 'Pipeline: 1 job';
+    pYaml();
+  }
+  function jobPill(name){ var j=el('div','job'); j.dataset.j=name; var a=el('span'); a.textContent=name; var b=el('span','small muted'); b.textContent='created'; j.appendChild(a); j.appendChild(b); return j; }
+  function setJob(name, st, label){ var j=$$('#pipeViz .job').filter(function(x){ return x.dataset.j===name; })[0]; if(!j) return; j.className='job '+st; j.lastChild.textContent=label; }
+  $('pValidate').addEventListener('change', function(){ if(!pRunning) pBuild(); });
+  $('pBroken').addEventListener('change', function(){ if(!pRunning) pBuild(); });
+  $('pRun').addEventListener('click', function(){
+    if(pRunning) return; pRunning=true; pBuild(); var btn=this; btn.disabled=true;
+    var v=$('pValidate').checked, broken=$('pBroken').checked, st=$('pStatus');
+    function finish(){ pRunning=false; btn.disabled=false; }
+    function runPages(){
+      setJob('pages','run','running');
+      setTimeout(function(){
+        setJob('pages','ok','passed');
+        st.textContent = broken ? '✓ Pipeline passed, but the broken page went live. Without a test job, nothing checked it.' : '✓ Pipeline passed. The new site is live.';
+        finish();
+      }, 1300);
+    }
+    if(v){
+      setJob('validate-html','run','running');
+      setTimeout(function(){
+        if(broken){ setJob('validate-html','fail','failed'); setJob('pages','skip','skipped');
+          st.textContent='✗ Pipeline failed. validate-html caught the broken file, so pages never ran. The live site keeps its previous version.'; finish(); }
+        else { setJob('validate-html','ok','passed'); runPages(); }
+      }, 1300);
+    } else runPages();
+  });
+  pBuild();
+
+  /* ---------- 5. Push -> live ---------- */
+  var dVer=0, dPushes=0, dRunning=false;
+  var dOrder=['push','pipeline','runner','script','upload','deploy','live'];
+  function dStep(k){ return $$('#dSteps .step').filter(function(s){ return s.dataset.k===k; })[0]; }
+  function dFail(o){
+    if(!o.yml) return {at:'pipeline', m:'<b>No pipeline.</b> GitLab found no <code>.gitlab-ci.yml</code>, so nothing ran. Your HTML just sits in the repo like any other code.'};
+    if(!o.job) return {at:'pipeline', m:'<b>Nothing to publish.</b> The file has no job named <code>pages</code>, so GitLab never deploys a site.'};
+    if(o.branch!=='main') return {at:'pipeline', m:'<b>The pages job wasn\'t created.</b> Its <code>rules:</code> only allow the default branch. The live site is unchanged.'};
+    if(!o.runner) return {at:'runner', m:'<b>Stuck in pending.</b> No runner is available to pick up the job. The ticket waits on the rail.'};
+    if(!o.art) return {at:'upload', m:'<b>Deploy fails: missing public/ artifact.</b> The script filled <code>public/</code> inside the container, but without <code>artifacts: paths: [public]</code> nothing was handed back. The container was thrown away.'};
+    if(!o.en) return {at:'deploy', m:'<b>Pages is disabled on this instance.</b> There\'s no Pages server to publish to or serve from. An admin must set <code>pages_external_url</code>.'};
+    return null;
+  }
+  $('dPush').addEventListener('click', function(){
+    if(dRunning) return; dRunning=true; var btn=this; btn.disabled=true;
+    dPushes++; $('dCount').textContent=dPushes;
+    var o={yml:$('dYml').checked, job:$('dJob').checked, art:$('dArt').checked, runner:$('dRunner').checked, en:$('dEnabled').checked, branch:$('dBranch').value};
+    var f=dFail(o), res=$('dResult'); res.className='msg hidden';
+    dOrder.forEach(function(k){ dStep(k).className='step'; });
+    var i=0;
+    function tick(){
+      var k=dOrder[i];
+      if(f && k===f.at){
+        dStep(k).className='step fail';
+        for(var j=i+1;j<dOrder.length;j++) dStep(dOrder[j]).className='step skip';
+        res.className='msg fail'; res.innerHTML=f.m+(dVer?' <span class="muted">The site still shows v'+dVer+'.</span>':'');
+        dRunning=false; btn.disabled=false; return;
+      }
+      dStep(k).className='step run';
+      setTimeout(function(){
+        dStep(k).className='step ok'; i++;
+        if(i<dOrder.length) tick();
+        else {
+          dVer++; var lp=$('dLive'); lp.innerHTML='';
+          var b=el('div','big'); b.textContent='Dashboards v'+dVer; lp.appendChild(b);
+          var s=el('div','muted small'); s.textContent='deployed '+new Date().toLocaleTimeString()+' · served by gitlab-pages · rendered by your browser'; lp.appendChild(s);
+          lp.classList.remove('flash'); void lp.offsetWidth; lp.classList.add('flash');
+          res.className='msg ok'; res.innerHTML='<b>Published v'+dVer+'.</b> The always-running gitlab-pages server serves it right away. No restart is needed.';
+          dRunning=false; btn.disabled=false;
+        }
+      }, 480);
+    }
+    tick();
+  });
+
+  /* ---------- 6. Projects ---------- */
+  var projects=[{name:'project1', yml:true, ver:0},{name:'project2', yml:false, ver:0}];
+  function renderProjects(){
+    var g=$('projGrid'); g.innerHTML='';
+    projects.forEach(function(p, idx){
+      var c=el('div','proj');
+      var h=el('h3'); h.textContent=p.name; c.appendChild(h);
+      var lab=el('label','opt'); var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=p.yml;
+      cb.addEventListener('change', function(){ p.yml=cb.checked; });
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(' has its own .gitlab-ci.yml with a pages job')); c.appendChild(lab);
+      var btn=el('button','btn mt'); btn.textContent='Push to '+p.name+' main';
+      btn.addEventListener('click', function(){
+        if(p.yml){ p.ver++; p.flash=true; p.note=p.name+' rebuilt from its own files only.'; }
+        else p.note='No .gitlab-ci.yml in '+p.name+', so no pipeline ran.';
+        projects.forEach(function(o){ if(o!==p){ o.note='Not touched by the push to '+p.name+'.'; o.flash=false; } });
+        renderProjects();
+      });
+      c.appendChild(btn);
+      var br=el('div','browser mt');
+      var bar=el('div','bar','<span class="dots"><i></i><i></i><i></i></span>'); var u=el('span','url'); u.textContent='https://team.pages.company.com/'+p.name+'/'; bar.appendChild(u); br.appendChild(bar);
+      var pg=el('div','page'+(p.flash?' flash':''));
+      var big=el('div','big'+(p.ver?'':' dim')); big.textContent = p.ver ? p.name+' site v'+p.ver : '404'; pg.appendChild(big);
+      var nt=el('div','small muted'); nt.textContent=p.note || (p.ver?'':'Nothing deployed yet'); pg.appendChild(nt);
+      br.appendChild(pg); c.appendChild(br);
+      g.appendChild(c); p.flash=false;
+    });
+  }
+  renderProjects();
+  $('fileCount').addEventListener('input', function(){ $('fileCountVal').textContent=this.value; $('cPages').textContent=this.value; });
+  var meanings={
+    job:'<b>The <code>pages</code> job is the print run.</b> A CI job that runs on a runner, in a container, only when triggered. It fills <code>public/</code> and hands it over as the artifact. It\'s not a server.',
+    site:'<b>The Pages site is the newspaper.</b> The published content: all your HTML, CSS, JS and images. One project has one site, like one newspaper with many pages.',
+    server:'<b>The <code>gitlab-pages</code> server is the newsstand. This is the NGINX-like part.</b> An always-on application that answers HTTP requests and hands out whichever site a URL belongs to. Like NGINX, it serves static files. Unlike NGINX, it finds sites automatically and can check GitLab permissions.'
+  };
+  $$('#meanings .meaning').forEach(function(m){ m.addEventListener('click', function(){
+    $$('#meanings .meaning').forEach(function(x){ x.classList.toggle('sel', x===m); }); $('meaningOut').innerHTML=meanings[m.dataset.m];
+  }); });
+
+  /* ---------- 7. Remove ---------- */
+  var R;
+  function rReset(){ R={yml:true, ver:3, artifact:'present', deployment:'live', enabled:true}; $('rLog').innerHTML=''; rLog('Starting point: site v3 is live, deployed by the last pipeline.'); rRender(); }
+  function rLog(t){ var li=el('li'); li.textContent=t; var l=$('rLog'); $$('li',l).forEach(function(x){ x.classList.remove('cur'); }); li.className='cur'; l.insertBefore(li, l.firstChild); }
+  function rRender(){
+    var serving = R.enabled && R.deployment==='live';
+    var lp=$('rLive'); lp.innerHTML='';
+    var b=el('div','big'+(serving?'':' dim')); b.textContent = serving ? 'Dashboards v'+R.ver : '404'; lp.appendChild(b);
+    var s=el('div','small muted'); s.textContent = serving ? 'Still being served by gitlab-pages' : (R.enabled ? 'Deployment removed' : 'Pages turned off for this project (deployment kept)'); lp.appendChild(s);
+    var rows=[
+      ['.gitlab-ci.yml', R.yml?'present':'deleted', R.yml?'good':'meh'],
+      ['Future pushes', R.yml?'run a pipeline':'no pipeline', R.yml?'good':'meh'],
+      ['Old job artifact', R.artifact, R.artifact==='present'?'good':'meh'],
+      ['Pages deployment', R.deployment==='live'?'v'+R.ver+' stored':'removed', R.deployment==='live'?'good':'bad'],
+      ['Pages setting', R.enabled?'on':'off', R.enabled?'good':'bad'],
+      ['URL', serving?'200, site loads':'404', serving?'good':'bad']
+    ];
+    var t=$('rTable'); t.innerHTML='<tr><th>Thing</th><th>State</th></tr>';
+    rows.forEach(function(r){ var tr=el('tr'); var a=el('td'); a.textContent=r[0]; var c=el('td',r[2]); c.textContent=r[1]; tr.appendChild(a); tr.appendChild(c); t.appendChild(tr); });
+  }
+  $('rDelYml').addEventListener('click', function(){ if(!R.yml){ rLog('The file is already deleted.'); return; } R.yml=false; rLog('Deleted .gitlab-ci.yml and committed. No pipeline ran, and the live site is unchanged: v'+R.ver+' is still served.'); rRender(); });
+  $('rRestoreYml').addEventListener('click', function(){ if(R.yml){ rLog('The file is already there.'); return; } R.yml=true; rLog('Restored .gitlab-ci.yml. Committing it starts a pipeline.'); rPushAction(); });
+  function rPushAction(){
+    if(!R.yml){ rLog('Pushed a commit. There\'s no .gitlab-ci.yml, so no pipeline ran and nothing changed.'); rRender(); return; }
+    R.ver++; R.artifact='present'; R.deployment='live';
+    rLog('Pipeline ran and the pages job published v'+R.ver+'.'+(R.enabled?' It\'s live.':' It\'s stored, but Pages is turned off, so the URL still returns 404.'));
+    rRender();
+  }
+  $('rPush').addEventListener('click', rPushAction);
+  $('rTime').addEventListener('click', function(){
+    if(R.artifact==='present'){ R.artifact='expired (retention policy)'; rLog('30+ days later: the old job\'s artifact copy expired. The Pages deployment is kept separately, so the site is unaffected.'); }
+    else rLog('More time passes. Nothing else changes, and the main Pages deployment never expires by itself.');
+    rRender();
+  });
+  $('rDisable').addEventListener('click', function(){ R.enabled=false; rLog('Turned Pages off in project settings. The URL returns 404, but the deployment is kept.'); rRender(); });
+  $('rEnable').addEventListener('click', function(){ R.enabled=true; rLog('Turned Pages back on.'+(R.deployment==='live'?' The same v'+R.ver+' site is back.':' There\'s no deployment yet, so it still returns 404 until a pages job runs.')); rRender(); });
+  $('rRemove').addEventListener('click', function(){ if(R.deployment!=='live'){ rLog('There\'s nothing left to remove.'); return; } R.deployment='removed'; rLog('Remove pages: the deployment was deleted, and the URL returns 404. The next successful pages job would publish again.'); rRender(); });
+  $('rReset').addEventListener('click', rReset);
+  rReset();
+
+  /* ---------- 8. Quiz ---------- */
+  var qs=[
+    {q:'Which file name makes GitLab start a pipeline by default?', o:['ci.yaml','gitlab-ci.yml','.gitlab-ci.yml at the repo root','.gitlab-ci.yaml in any folder'], a:2, w:'It needs the leading dot, the .yml extension and the repo root, unless a maintainer changes the CI/CD configuration file setting.'},
+    {q:'Is the GitLab Runner only started when you push?', o:['Yes, GitLab wakes it up','No, the service is always on and keeps asking GitLab for jobs. Containers are created per job.'], a:1, w:'The runner polls every few seconds. Only the job workspace is temporary.'},
+    {q:'Why does a job need an image like alpine:latest?', o:['To serve the website','To provide a clean, isolated environment with the shell and tools the script needs','Because GitLab Pages requires Alpine'], a:1, w:'The image is the workstation. The Pages server is a separate thing.'},
+    {q:'Docker executor, no image in the file, and no runner default. What happens?', o:['Alpine is used automatically','The job fails','It runs on the host'], a:1, w:'With nothing to start, the Docker executor fails the job. Running on the host only happens with the shell executor.'},
+    {q:'You have one pages job and ten HTML files. Where should image: go?', o:['Top-level default:, because there are many files','Inside the pages job is enough','In both places'], a:1, w:'image: relates to jobs, not files. A top-level default only helps when there are several jobs.'},
+    {q:'Does project1\'s .gitlab-ci.yml publish HTML from project2?', o:['Yes, automatically','No, only project1\'s files, unless its job fetches project2 on purpose'], a:1, w:'Each project has its own pipeline, site and URL.'},
+    {q:'What is a pipeline?', o:['Another name for a job','All the jobs created by one trigger, grouped into stages','The gitlab-pages server'], a:1, w:'A job is one task. A pipeline is the whole order.'},
+    {q:'In the pages job, what is the correct order?', o:['The artifact is published, then the script fills public/','The script fills public/, then artifacts: uploads it, then GitLab deploys it'], a:1, w:'Fill the tray, then pass it through the window.'},
+    {q:'You delete .gitlab-ci.yml and push. What happens to the live site?', o:['It goes down immediately','It stays live with the last version','It expires after 30 days'], a:1, w:'No pipeline means no new version, but the existing deployment keeps being served.'},
+    {q:'How do you take the site down but keep the option to bring it back unchanged?', o:['Delete .gitlab-ci.yml','Turn Pages off in project settings','Remove pages'], a:1, w:'Remove pages deletes the deployment. Turning Pages off only stops serving it.'},
+    {q:'Which "pages" is the NGINX-like part?', o:['The pages job','The Pages site','The gitlab-pages server'], a:2, w:'The server is the always-on newsstand. The job is the print run, and the site is the newspaper.'},
+    {q:'Who renders the page?', o:['gitlab-pages','NGINX','The visitor\'s browser'], a:2, w:'Servers serve. Browsers render.'}
+  ];
+  var score=0; $('qTotal').textContent=qs.length;
+  function buildQuiz(){
+    var box=$('quizBox'); box.innerHTML=''; score=0; $('score').textContent=0;
+    qs.forEach(function(it,qi){
+      var d=el('div','q'); var t=el('b'); t.textContent=(qi+1)+'. '+it.q; d.appendChild(t);
+      var opts=el('div','opts'); d.appendChild(opts); var why=el('div','why muted'); d.appendChild(why);
+      it.o.forEach(function(txt,oi){
+        var b=el('button'); b.textContent=txt;
+        b.addEventListener('click', function(){
+          if(d.classList.contains('answered')) return; d.classList.add('answered');
+          b.classList.add(oi===it.a?'right':'wrong'); opts.children[it.a].classList.add('right');
+          if(oi===it.a){ score++; $('score').textContent=score; }
+          why.textContent=it.w;
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(d);
+    });
+  }
+  $('quizReset').addEventListener('click', buildQuiz);
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
