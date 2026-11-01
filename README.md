@@ -14,8 +14,8 @@ Every merge to `main` runs the `pages` job in `.gitlab-ci.yml`:
 
 ## Adding a dashboard
 
-1. Create a branch and add your `.html` file under `dashboards/`
-   (subfolders are fine).
+1. Create a branch and add your `.html` file under `dashboards/`, in folders
+   that match its place in the side menu (e.g. `dashboards/devops/git/`).
 2. Give the page a meaningful `<title>`.
 3. Add an entry to the `DASHBOARDS` list in `dashboards/index.html`.
    Without one the page still deploys, but the home page won't link to it.
