@@ -142,7 +142,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--muted);fon
 <header>
   <h1>CSP, explained: the rule that keeps these pages offline</h1>
   <p>Every dashboard on this site carries a Content Security Policy. This page shows what it does, using your browser's real behaviour, and why one small tag needs a script and a pipeline check to stay correct.</p>
-  <div class="thesis">Key idea: <b>the meta tag does the protecting, but it can go out of date.</b> It lists the exact fingerprint of each script. Change a script and its fingerprint changes, so the browser refuses to run it. <code>update_csp.py</code> keeps the list correct, and the pipeline check catches you if you forget.</div>
+  <div class="thesis">Key idea: <b>the meta tag does the protecting, but it stops matching when a script changes.</b> It lists the exact fingerprint of each script. Change a script and its fingerprint changes, so the browser refuses to run it. There's no expiry date: an unedited page keeps working indefinitely. <code>update_csp.py</code> keeps the list correct, and the pipeline check catches you if you forget.</div>
 </header>
 <nav><div>
   <a href="#s1">1 · Three ideas</a>
