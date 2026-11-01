@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-fOoVmk9vj7gwkRQ1aScmUGY32b7pd3DbRT952bA3FRk='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Pareto Rule</title>
+<meta name="description" content="Why a few causes often drive most results, how to find them in your own list, and when the 80/20 rule misleads you.">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --m:#b0307a;--m-soft:#fbe6f1;--rest:#848e9b;--warn:#b4530a;--warn-soft:#fdf0e2;
+  --ok:#1a7f37;--ok-soft:#e3f5e8;--err:#cf222e;--err-soft:#fde8e8;--on-accent:#ffffff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --m:#e86aae;--m-soft:#3a1730;--rest:#6e7681;--warn:#ff9b5c;--warn-soft:#3a2312;--ok:#3fb950;--ok-soft:#10301b;--err:#f85149;--err-soft:#3d1518;--on-accent:#0d1117;}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --m:#e86aae;--m-soft:#3a1730;--rest:#6e7681;--warn:#ff9b5c;--warn-soft:#3a2312;--ok:#3fb950;--ok-soft:#10301b;--err:#f85149;--err-soft:#3d1518;--on-accent:#0d1117;}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
+  --m:#ec74b6;--m-soft:#4a2850;--rest:#7f7599;--warn:#ffab7a;--warn-soft:#4a3040;--ok:#7ee2a8;--ok-soft:#24394a;--err:#ff8f86;--err-soft:#4a2b3f;--on-accent:#211b33;}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 14px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
+header p{margin:0;color:var(--muted);max-width:800px}
+.thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:900px;color:var(--fg)}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+:root[data-theme="twilight"] nav{background:#2a2444}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--m)}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
+section{margin:30px 0 8px;scroll-margin-top:60px}
+section>h2{font-size:1.28rem;margin:0 0 4px}
+section>p.lead{margin:0 0 12px;color:var(--muted);max-width:860px}
+.analogy{border-left:3px solid var(--m);background:var(--m-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:900px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.wide{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0;margin-bottom:14px}
+.three>.card,.two>.card,.wide>.card{margin-bottom:0}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card .sub{color:var(--muted);font-size:.84rem;margin:0 0 10px}
+.card p{margin:6px 0;font-size:.9rem}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+button.b{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.b:hover{border-color:var(--fg)}
+button.b[aria-pressed="true"]{background:var(--m-soft);border-color:var(--m);font-weight:600}
+button.pri{background:var(--m);border-color:var(--m);color:var(--on-accent);font-weight:600}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.field{display:flex;flex-direction:column;gap:2px;font-size:.84rem;flex:1 1 240px;min-width:0}
+.field .top{display:flex;justify-content:space-between;gap:10px}
+.field b{font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--m)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+.tile{background:var(--chip);border-radius:10px;padding:8px 12px;min-width:0}
+.tile span{display:block;font-size:.78rem;color:var(--muted)}
+.tile b{display:block;font-size:1.45rem;font-weight:600;line-height:1.25}
+.readout{font-size:.9rem;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--chip);overflow-wrap:anywhere}
+.readout.ok{background:var(--ok-soft)}
+.readout.warn{background:var(--warn-soft)}
+.note{font-size:.78rem;color:var(--muted);margin:6px 0 0}
+.chart{position:relative;margin-top:8px;min-width:0}
+.chart svg{display:block;width:100%;overflow:visible;touch-action:pan-y}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .base{stroke:var(--muted);stroke-width:1}
+.chart text{font-family:var(--sans);font-size:11px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.chart text.lab{font-size:12px;font-weight:600;fill:var(--fg)}
+.chart .goal{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4}
+.chart .vital{fill:var(--m)}
+.chart .other{fill:var(--rest)}
+.chart .run{fill:none;stroke:var(--fg);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .dot{fill:var(--fg);stroke:var(--panel);stroke-width:2}
+.chart .guide{fill:var(--chip)}
+.chart .hit{fill:transparent;cursor:crosshair}
+.chart .hit:focus{outline:none}
+.chart .hit:focus-visible{stroke:var(--fg);stroke-width:1}
+.chart svg.anim g.b{transition:transform .55s ease}
+.tip{position:absolute;top:6px;left:0;max-width:220px;background:var(--fg);color:var(--bg);font-size:.78rem;line-height:1.35;padding:6px 9px;border-radius:7px;pointer-events:none;z-index:2}
+.tip b{display:block;overflow-wrap:anywhere}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px}
+.legend i.vital{background:var(--m)}
+.legend i.other{background:var(--rest)}
+.legend i.ln{height:2px;width:14px;border-radius:1px;background:var(--fg)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td.name{white-space:normal;min-width:110px}
+td.name i{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--rest);margin-right:6px}
+tr.vital td.name i{background:var(--m)}
+tr.vital td{font-weight:600}
+details{margin-top:10px;font-size:.86rem}
+summary{cursor:pointer;color:var(--muted)}
+textarea{width:100%;min-height:210px;font-family:var(--mono);font-size:.84rem;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);resize:vertical}
+h3.first-h{margin:14px 0 0}
+ol.first{margin:8px 0 0;padding-left:22px;font-size:.9rem}
+ol.first li{overflow-wrap:anywhere}
+.scen{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:.9rem}
+.scen:first-of-type{border-top:0}
+.scen .pick{display:flex;gap:6px;flex-wrap:wrap}
+.scen .why{grid-column:1/-1;padding:6px 10px;border-radius:8px;font-size:.84rem}
+.scen .why.ok{background:var(--ok-soft)}
+.scen .why.no{background:var(--warn-soft)}
+.q{padding:10px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.q>b{display:block;font-size:.93rem;margin-bottom:6px}
+.q .opts{display:flex;flex-direction:column;gap:6px}
+.q .opts button{font:inherit;font-size:.87rem;text-align:left;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.q .opts button:disabled{cursor:default;color:var(--fg)}
+.q .opts button.right{background:var(--ok-soft);border-color:var(--ok)}
+.q .opts button.wrong{background:var(--err-soft);border-color:var(--err)}
+.q .why{font-size:.84rem;margin:6px 0 0;color:var(--muted)}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);font-size:.8rem}
+@media (max-width:900px){.three,.two,.wide{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}.tiles{grid-template-columns:minmax(0,1fr)}.scen{grid-template-columns:minmax(0,1fr)}table{font-size:.8rem}th,td{padding:5px 4px}td.name{min-width:84px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.chart svg.anim g.b{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>The Pareto Rule</h1>
+  <p>Also called the 80/20 rule: a small share of causes often produces most of the results.</p>
+  <div class="thesis">The rule won't tell you the exact numbers. It tells you to <b>measure first and sort second</b>, because the few things that matter most are rarely obvious until the list is in order.</div>
+</header>
+<nav><div>
+  <a href="#idea">1. The idea</a>
+  <a href="#skew">2. How uneven?</a>
+  <a href="#sort">3. Sort it</a>
+  <a href="#yours">4. Your list</a>
+  <a href="#limits">5. When it misleads</a>
+  <a href="#quiz">6. Quiz</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+<main>
+
+<section id="idea">
+  <h2>1. The idea</h2>
+  <p class="lead">Effort and results are rarely shared out evenly. Often a few causes do most of the work, and the rest add a little each.</p>
+  <div class="analogy"><b>Analogy:</b> look at your wardrobe. You probably reach for a few favourite pieces most days, while the rest of the rail waits for a special occasion.</div>
+  <div class="three">
+    <div class="card"><h3>What it says</h3><p>Roughly 20% of the inputs produce roughly 80% of the outputs. The numbers vary from one situation to the next. The uneven shape is the point.</p></div>
+    <div class="card"><h3>Where it came from</h3><p>Economist Vilfredo Pareto found that about 80% of Italy's land belonged to about 20% of the people. Quality expert Joseph Juran later applied the idea widely and called it the "vital few and trivial many".</p></div>
+    <div class="card"><h3>How to use it</h3><p>List the items, measure each one, sort biggest first, and add up a running total. Start with the items that get you to your goal.</p></div>
+  </div>
+</section>
+
+<section id="skew">
+  <h2>2. How uneven is your world?</h2>
+  <p class="lead">Here are 100 items, so one item is also 1% of the list. Drag the slider to change how unevenly the results are shared.</p>
+  <div class="card">
+    <div class="controls">
+      <div class="field"><div class="top"><label for="sk">Unevenness</label><b id="skV"></b></div><input type="range" id="sk" min="0" max="3" step="0.01"></div>
+    </div>
+    <div class="controls" id="skP">
+      <button class="b" data-top="0" data-goal="0">Even</button>
+      <button class="b" data-top="20" data-goal="80">80/20</button>
+      <button class="b" data-top="10" data-goal="90">90/10</button>
+      <button class="b" data-top="5" data-goal="95">95/5</button>
+      <button class="b" id="skN" aria-pressed="false">Real-world noise</button>
+      <button class="b" id="skR" hidden>Redraw</button>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span>Top 20 items produce</span><b id="t20"></b></div>
+      <div class="tile"><span>Items needed to reach 80%</span><b id="tNeed"></b></div>
+      <div class="tile"><span>Bottom 50 items produce</span><b id="tLow"></b></div>
+    </div>
+    <div class="chart" id="skC"></div>
+    <div class="legend"></div>
+    <p class="note">Each bar is one item's share of the total, and the line adds the shares up. Hover or tap to read a value.</p>
+    <div class="readout" id="skO" aria-live="polite"></div>
+    <details><summary>Show the numbers</summary><div class="tablewrap"><table><thead><tr><th>Group</th><th class="n">Share of results</th></tr></thead><tbody id="skT"></tbody></table></div></details>
+  </div>
+</section>
+
+<section id="sort">
+  <h2>3. Sort it and watch the shortcut appear</h2>
+  <p class="lead">A messy list hides the pattern. Pick a list, then sort it. Compare how many items it takes to reach 80% before and after.</p>
+  <div class="wide">
+    <div class="card">
+      <div class="controls" id="dsP"></div>
+      <div class="controls"><button class="b pri" id="srt">Sort biggest first</button></div>
+      <div class="chart" id="srC"></div>
+      <div class="legend"></div>
+      <div class="readout" id="srO" aria-live="polite"></div>
+      <p class="note">This sample data was invented for this page.</p>
+    </div>
+    <div class="card">
+      <h3 id="srH"></h3>
+      <p class="sub">Row numbers match the bars on the chart.</p>
+      <div class="tablewrap"><table><thead><tr><th class="n">#</th><th>Item</th><th class="n" id="srU"></th><th class="n">Share</th><th class="n">Running</th></tr></thead><tbody id="srT"></tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<section id="yours">
+  <h2>4. Try your own list</h2>
+  <p class="lead">Put one item on each line with its number, such as hours, cost, tickets or sales. Your list stays in this browser.</p>
+  <div class="wide">
+    <div class="card">
+      <div class="chart" id="yC"></div>
+      <div class="legend"></div>
+      <div class="readout" id="yO" aria-live="polite"></div>
+      <h3 class="first-h" id="yH"></h3>
+      <ol class="first" id="yL"></ol>
+    </div>
+    <div class="card">
+      <label for="yI"><b>Your items</b></label>
+      <p class="sub">Format: name, number</p>
+      <textarea id="yI" spellcheck="false" aria-describedby="yE"></textarea>
+      <p class="note" id="yE" aria-live="polite"></p>
+      <div class="controls">
+        <div class="field"><div class="top"><label for="yG">Target</label><b id="yGV"></b></div><input type="range" id="yG" min="50" max="95" step="5" value="80"></div>
+      </div>
+      <div class="controls"><button class="b" id="yX">Load the example</button><button class="b" id="yZ">Clear</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="limits">
+  <h2>5. When it misleads</h2>
+  <p class="lead">The rule is a good way to choose where to start. It can be a poor reason to stop.</p>
+  <div class="two">
+    <div class="card">
+      <h3>Check what you're counting</h3>
+      <p class="sub">The same seven bugs, ranked two ways.</p>
+      <div class="controls" id="msP"><button class="b" data-m="often" aria-pressed="true">How often it happens</button><button class="b" data-m="harm" aria-pressed="false">Hours of work lost</button></div>
+      <div class="chart" id="msC"></div>
+      <div class="legend"></div>
+      <div class="readout" id="msO" aria-live="polite"></div>
+      <details><summary>Show the numbers</summary><div class="tablewrap"><table><thead><tr><th>Bug</th><th class="n">Times a week</th><th class="n">Hours lost</th></tr></thead><tbody id="msT"></tbody></table></div></details>
+    </div>
+    <div class="card">
+      <h3>Does 80/20 fit?</h3>
+      <p class="sub">Pick an answer for each situation.</p>
+      <div id="scen"></div>
+    </div>
+  </div>
+  <div class="three" style="margin-top:14px">
+    <div class="card"><h3>It's a pattern, not a law</h3><p>Real lists might split 70/30 or 95/5, and some lists are nearly even. Use your measured numbers instead of assuming 80/20.</p></div>
+    <div class="card"><h3>The tail can change</h3><p>Today's small customer or rare bug can become tomorrow's big one. A ranking describes a moment, so measure again from time to time.</p></div>
+    <div class="card"><h3>Sorted isn't finished</h3><p>The ranking sets the order of work. Whether you can stop early depends on what the remaining items would cost you.</p></div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>6. Quiz</h2>
+  <p class="lead" id="qS"></p>
+  <div class="card"><div id="qB"></div><div class="controls"><button class="b" id="qR">Reset quiz</button></div></div>
+</section>
+</main>
+<footer>This page follows the Lab's rules: one file and no network calls. Sample lists were invented for teaching.</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => Number(v).toLocaleString('en-US', {maximumFractionDigits:2});
+const pc = (v, d = 0) => v.toFixed(d) + '%';
+$('main').querySelectorAll('.legend').forEach(l => l.innerHTML = '<span><i class="vital"></i>Vital few</span><span><i class="other"></i>Everything else</span><span><i class="ln"></i>Running total</span>');
+function pressed(box, on){ box.querySelectorAll('button').forEach(b => { if (b.hasAttribute('aria-pressed') && b.id !== 'skN') b.setAttribute('aria-pressed', b === on); }); }
+
+/* =============== SHARED MATHS =============== */
+/* items: [{name, v}] in any order. The vital few are the biggest items needed to reach the target. */
+function vitalFew(items, target){
+  const total = items.reduce((a, d) => a + d.v, 0), set = new Set(); let sum = 0;
+  for (const d of [...items].sort((a, b) => b.v - a.v)) {
+    if (total && sum / total * 100 >= target - 1e-9) break;
+    sum += d.v; set.add(d);
+  }
+  return {set, total, share: total ? sum / total * 100 : 0};
+}
+function reachIn(items, target){
+  const total = items.reduce((a, d) => a + d.v, 0); let sum = 0;
+  for (let i = 0; i < items.length; i++) { sum += items[i].v; if (sum / total * 100 >= target - 1e-9) return i + 1; }
+  return items.length;
+}
+
+/* =============== CHART: bars and running total share one 0–100% axis =============== */
+function chart(el, items, o = {}){
+  const target = o.target ?? 80, W = Math.max(260, el.clientWidth || 640), H = W < 520 ? 240 : 290;
+  const m = {l:36, r:6, t:12, b:22}, pw = W - m.l - m.r, ph = H - m.t - m.b, n = items.length;
+  const {set, total} = vitalFew(items, target);
+  const band = pw / n, gap = band >= 6 ? 2 : 1, bw = Math.min(24, Math.max(1, band - gap));
+  const yOf = p => m.t + ph * (1 - p / 100), key = d => d.name;
+  let sum = 0; const run = items.map(d => (sum += d.v) / total * 100);
+  const cx = i => m.l + band * (i + .5);
+  let s = '';
+  for (let p = 0; p <= 100; p += 20) s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${yOf(p)}" y2="${yOf(p)}"/><text x="${m.l - 6}" y="${yOf(p) + 4}" text-anchor="end">${p}%</text>`;
+  s += `<rect class="guide" y="${m.t}" height="${ph}" width="${Math.max(band, 2)}" x="-99" opacity="0"/>`;
+  const pos = {};
+  items.forEach((d, i) => {
+    const h = Math.max(1, d.v / total * 100 / 100 * ph), x = cx(i) - bw / 2, y = m.t + ph - h, r = Math.min(4, bw / 2, h);
+    pos[key(d)] = cx(i);
+    s += `<g class="b" data-i="${i}"><path class="${set.has(d) ? 'vital' : 'other'}" d="M${x} ${m.t + ph}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + bw - r}Q${x + bw} ${y} ${x + bw} ${y + r}V${m.t + ph}Z"/></g>`;
+  });
+  s += `<line class="base" x1="${m.l}" x2="${W - m.r}" y1="${m.t + ph}" y2="${m.t + ph}"/>`;
+  const every = n <= 20 ? 1 : 20;
+  items.forEach((d, i) => { const r = i + 1; if (n <= 20 || r === 1 || r % every === 0) s += `<text x="${cx(i)}" y="${H - 6}" text-anchor="middle">${r}</text>`; });
+  s += `<line class="goal" x1="${m.l}" x2="${W - m.r}" y1="${yOf(target)}" y2="${yOf(target)}"/><text x="${W - m.r}" y="${yOf(target) + 13}" text-anchor="end">${W < 520 ? target + '%' : target + '% target'}</text>`;
+  s += `<polyline class="run" points="${run.map((r, i) => cx(i) + ',' + yOf(r)).join(' ')}"/>`;
+  if (n <= 24) run.forEach((r, i) => s += `<circle class="dot" cx="${cx(i)}" cy="${yOf(r)}" r="4"/>`);
+  /* Keep the label clear of the target line and its text. */
+  const c = reachIn(items, target), lx = cx(c - 1), ly = yOf(run[c - 1]), right = lx > W * .6;
+  const label = `${c} of ${n} reach ${pc(run[c - 1])}`, room = W - m.r - (W < 520 ? 34 : 72) - label.length * 6.8;
+  s += `<text class="lab" x="${right ? lx - 8 : Math.min(lx + 8, room)}" y="${right ? ly - 10 : Math.max(ly + 18, yOf(target) + 17)}" text-anchor="${right ? 'end' : 'start'}">${label}</text>`;
+  s += `<rect class="hit" x="${m.l}" y="${m.t}" width="${pw}" height="${ph}" tabindex="0" aria-label="Chart data. Use the left and right arrow keys to read each item."/>`;
+  const old = el._pos || {};
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="group"><title>${esc(o.title || 'Share of total by item, with a running total')}</title>${s}</svg><div class="tip" hidden></div>`;
+  el._pos = pos; el._w = el.clientWidth;
+  el._draw = () => chart(el, items, {...o, animate:false});
+  const svg = el.querySelector('svg');
+  if (o.animate) {
+    const gs = [...svg.querySelectorAll('g.b')];
+    gs.forEach(g => { const d = items[+g.dataset.i], dx = (old[key(d)] ?? pos[key(d)]) - pos[key(d)]; if (dx) g.style.transform = `translateX(${dx}px)`; });
+    svg.getBoundingClientRect(); svg.classList.add('anim');
+    gs.forEach(g => g.style.transform = '');
+  }
+  const tip = el.querySelector('.tip'), guide = svg.querySelector('.guide'), hit = svg.querySelector('.hit');
+  let at = -1;
+  function show(i){
+    at = Math.min(n - 1, Math.max(0, i));
+    const d = items[at], fmt = o.fmt || num;
+    guide.setAttribute('x', m.l + band * at); guide.setAttribute('opacity', 1);
+    tip.hidden = false; tip.textContent = '';
+    const b = document.createElement('b'); b.textContent = `${at + 1}. ${d.name}`;
+    tip.append(b, `${fmt(d.v)} · ${pc(d.v / total * 100, 1)} of total`, document.createElement('br'), `Running total ${pc(run[at], 1)}`);
+    const tw = tip.offsetWidth, scale = el.clientWidth / W;
+    tip.style.left = Math.min(el.clientWidth - tw, Math.max(0, cx(at) * scale - tw / 2)) + 'px';
+  }
+  function hide(){ tip.hidden = true; guide.setAttribute('opacity', 0); at = -1; }
+  const fromEvent = e => { const r = svg.getBoundingClientRect(); return Math.floor(((e.clientX - r.left) * W / r.width - m.l) / band); };
+  hit.addEventListener('pointermove', e => show(fromEvent(e)));
+  hit.addEventListener('pointerdown', e => show(fromEvent(e)));
+  hit.addEventListener('pointerleave', hide);
+  hit.addEventListener('blur', hide);
+  hit.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault(); show(at < 0 ? 0 : at + (e.key === 'ArrowRight' ? 1 : -1));
+  });
+}
+const watched = new ResizeObserver(es => es.forEach(e => { const el = e.target; if (el._draw && el.clientWidth !== el._w) el._draw(); }));
+document.querySelectorAll('.chart').forEach(el => watched.observe(el));
+
+/* =============== 2. SKEW =============== */
+const N = 100, skew = {s:0, noise:false, seed:7};
+const ideal = s => Array.from({length:N}, (_, i) => 1 / Math.pow(i + 1, s));
+const topShare = (vals, k) => vals.slice(0, k).reduce((a, b) => a + b, 0) / vals.reduce((a, b) => a + b, 0) * 100;
+function findSkew(k, goal){ let lo = 0, hi = 3; for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (topShare(ideal(mid), k) < goal) lo = mid; else hi = mid; } return (lo + hi) / 2; }
+function rng(seed){ return () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function skewValues(){
+  const v = ideal(skew.s);
+  if (!skew.noise) return v;
+  const r = rng(skew.seed);
+  return v.map(x => x * Math.exp(.4 * Math.sqrt(-2 * Math.log(r() || 1e-9)) * Math.cos(2 * Math.PI * r()))).sort((a, b) => b - a);
+}
+function drawSkew(){
+  const v = skewValues(), items = v.map((x, i) => ({name:`Item ${i + 1}`, v:x}));
+  const top = topShare(v, 20), need = reachIn(items, 80), low = 100 - topShare(v, 50);
+  $('#skV').textContent = skew.s.toFixed(2);
+  $('#t20').textContent = pc(top); $('#tNeed').textContent = need; $('#tLow').textContent = pc(low, low < 10 ? 1 : 0);
+  chart($('#skC'), items, {title:'Share of results for 100 items, largest first', fmt:x => pc(x / v.reduce((a, b) => a + b, 0) * 100, 2) + ' of results'});
+  const o = $('#skO');
+  if (need >= 70) { o.className = 'readout warn'; o.textContent = `This list is close to even. You need ${need} items to reach 80%, so there's no real shortcut.`; }
+  else if (need <= 20) { o.className = 'readout ok'; o.textContent = `Top-heavy: ${need} items produce 80% of the results.` + (need < 20 ? ` That's an 80/${need} split. The two numbers measure different things, so they don't have to add up to 100.` : ''); }
+  else { o.className = 'readout'; o.textContent = `Somewhere in between: ${need} items produce 80% of the results. That's a useful shortcut, even though it isn't 80/20.`; }
+  if (skew.noise) o.textContent += ' With noise on, every redraw gives a slightly different split, as real data does.';
+  $('#skT').innerHTML = [1, 5, 10, 20, 50].map(k => `<tr><td>Top ${k} item${k > 1 ? 's' : ''}</td><td class="n">${pc(topShare(v, k), 1)}</td></tr>`).join('') + `<tr><td>Bottom 50 items</td><td class="n">${pc(low, 1)}</td></tr>`;
+}
+$('#sk').addEventListener('input', e => { skew.s = +e.target.value; drawSkew(); });
+$('#skP').querySelectorAll('[data-top]').forEach(b => b.addEventListener('click', () => {
+  skew.s = +b.dataset.top ? findSkew(+b.dataset.top, +b.dataset.goal) : 0; $('#sk').value = skew.s; drawSkew();
+}));
+$('#skN').addEventListener('click', e => { skew.noise = !skew.noise; e.currentTarget.setAttribute('aria-pressed', skew.noise); $('#skR').hidden = !skew.noise; drawSkew(); });
+$('#skR').addEventListener('click', () => { skew.seed++; drawSkew(); });
+
+/* =============== 3. SORT =============== */
+const SETS = {
+  bugs:{label:'Crash causes', head:'Crashes in one week', unit:'Crashes', fmt:v => num(v) + ' crashes', noun:'causes', rows:[['Image upload',18],['Login timeout',420],['Search index',36],['Payment retry',210],['Email queue',9],['Session expiry',155],['Date parsing',14],['Cache miss',42],['PDF export',61],['Theme toggle',5]]},
+  sales:{label:'Customers', head:'Yearly revenue by customer', unit:'Revenue', fmt:v => '$' + num(v) + 'K', noun:'customers', rows:[['Customer A',12],['Customer B',860],['Customer C',30],['Customer D',18],['Customer E',340],['Customer F',22],['Customer G',9],['Customer H',110],['Customer I',45],['Customer J',14]]},
+  clothes:{label:'Wardrobe', head:'Days worn in one year', unit:'Days', fmt:v => num(v) + ' days', noun:'pieces', rows:[['Rain coat',6],['Black jeans',120],['Blue shirt',90],['Sneakers',150],['Suit',3],['Hoodie',70],['Dress shoes',4],['Green sweater',12],['Belt',20],['Scarf',8]]}
+};
+const sorter = {ds:'bugs', sorted:false};
+$('#dsP').innerHTML = Object.entries(SETS).map(([k, s]) => `<button class="b" data-ds="${k}" aria-pressed="${k === sorter.ds}">${esc(s.label)}</button>`).join('');
+function drawSort(animate){
+  const S = SETS[sorter.ds], raw = S.rows.map(([name, v]) => ({name, v})), items = sorter.sorted ? [...raw].sort((a, b) => b.v - a.v) : raw;
+  const {set, total, share} = vitalFew(items, 80), n = reachIn(items, 80);
+  chart($('#srC'), items, {animate, fmt:S.fmt, title:S.head});
+  $('#srt').textContent = sorter.sorted ? 'Back to the original order' : 'Sort biggest first';
+  const o = $('#srO');
+  if (sorter.sorted) { o.className = 'readout ok'; o.textContent = `Biggest first, ${n} of ${items.length} ${S.noun} reach ${pc(share)}. ` + (n / items.length === .2 ? 'This list happens to land close to 80/20.' : `That's ${pc(n / items.length * 100)} of the list, so this one isn't quite 80/20.`); }
+  else { o.className = 'readout'; o.textContent = `In this order, you'd go through ${n} of ${items.length} ${S.noun} before reaching 80%. Sort the list to see if there's a shorter way.`; }
+  $('#srH').textContent = S.head; $('#srU').textContent = S.unit;
+  let sum = 0;
+  $('#srT').innerHTML = items.map((d, i) => { sum += d.v; return `<tr class="${set.has(d) ? 'vital' : ''}"><td class="n">${i + 1}</td><td class="name"><i></i>${esc(d.name)}</td><td class="n">${esc(S.fmt(d.v).replace(/ .*/, ''))}</td><td class="n">${pc(d.v / total * 100, 1)}</td><td class="n">${pc(sum / total * 100, 1)}</td></tr>`; }).join('');
+}
+$('#dsP').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; sorter.ds = b.dataset.ds; sorter.sorted = false; $('#srC')._pos = null; pressed($('#dsP'), b); drawSort(false); });
+$('#srt').addEventListener('click', () => { sorter.sorted = !sorter.sorted; drawSort(true); });
+
+/* =============== 4. YOUR LIST =============== */
+const EXAMPLE = 'Password resets, 340\nBilling questions, 210\nSlow reports, 95\nExport errors, 40\nLogin on mobile, 35\nFeature requests, 30\nBroken links, 18\nDark mode bugs, 12';
+const LINE = /^(.*?)[\s,:;=-]+\$?(\d[\d,]*(?:\.\d+)?|\.\d+)\s*(?:%|[a-zA-Z]{0,5})$/;
+function parseList(text){
+  const items = [], bad = []; const seen = {};
+  text.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+    const hit = l.match(LINE), v = hit ? parseFloat(hit[2].replace(/,/g, '')) : NaN;
+    if (!hit || !hit[1] || !(v > 0)) { bad.push(l); return; }
+    let name = hit[1].trim(); seen[name] = (seen[name] || 0) + 1; if (seen[name] > 1) name += ` (${seen[name]})`;
+    items.push({name, v});
+  });
+  return {items:items.slice(0, 200), bad, cut:items.length > 200};
+}
+function drawYours(){
+  const text = $('#yI').value, target = +$('#yG').value, {items, bad, cut} = parseList(text);
+  $('#yGV').textContent = target + '%';
+  try { localStorage.setItem('pareto-list', text); } catch (e) {}
+  $('#yE').textContent = (bad.length ? `Skipped ${bad.length} line${bad.length > 1 ? 's' : ''} without a name and a number above zero: ${bad.slice(0, 3).join(' | ')}${bad.length > 3 ? ' …' : ''}` : '') + (cut ? ' Only the first 200 items are used.' : '');
+  const o = $('#yO'), list = $('#yL'), head = $('#yH'), c = $('#yC');
+  list.textContent = ''; head.textContent = '';
+  if (items.length < 2) { c._draw = null; c.textContent = ''; c.nextElementSibling.hidden = true; o.className = 'readout'; o.textContent = 'Add at least two items to see a chart.'; return; }
+  c.nextElementSibling.hidden = false;
+  const sorted = [...items].sort((a, b) => b.v - a.v), {set, share} = vitalFew(sorted, target), n = set.size, ratio = n / items.length;
+  chart(c, sorted, {target, title:'Your items, largest first'});
+  if (items.length < 5) { o.className = 'readout'; o.textContent = `${n} of ${items.length} items reach ${pc(share)}, but a list this short can't show much of a pattern. Add more items if you can.`; }
+  else if (ratio <= .4) { o.className = 'readout ok'; o.textContent = `Good news: ${n} of ${items.length} items (${pc(ratio * 100)}) produce ${pc(share)} of the total. Start with these.`; }
+  else if (ratio <= .6) { o.className = 'readout'; o.textContent = `A mild pattern: ${n} of ${items.length} items (${pc(ratio * 100)}) produce ${pc(share)}. The order helps, but there's no dramatic shortcut.`; }
+  else { o.className = 'readout warn'; o.textContent = `This list is fairly even: you need ${n} of ${items.length} items to reach ${pc(share)}. There's no vital few here, so use deadlines, effort or risk to choose instead.`; }
+  head.textContent = 'Start with'; [...set].forEach(d => { const li = document.createElement('li'); li.textContent = `${d.name} (${num(d.v)})`; list.append(li); });
+}
+let savedList = null; try { savedList = localStorage.getItem('pareto-list'); } catch (e) {}
+$('#yI').value = savedList ?? EXAMPLE;
+$('#yI').addEventListener('input', drawYours);
+$('#yG').addEventListener('input', drawYours);
+$('#yX').addEventListener('click', () => { $('#yI').value = EXAMPLE; drawYours(); });
+$('#yZ').addEventListener('click', () => { $('#yI').value = ''; drawYours(); $('#yI').focus(); });
+
+/* =============== 5. MISLEADS =============== */
+const BUGS = [['Login timeout',420,30],['Payment retry',210,90],['Session expiry',155,20],['PDF export',61,15],['Cache miss',42,5],['Search index',36,10],['Data loss on save',4,640]];
+let measure = 'often';
+function drawMeasure(animate){
+  const col = measure === 'often' ? 1 : 2, items = BUGS.map(r => ({name:r[0], v:r[col]})).sort((a, b) => b.v - a.v);
+  chart($('#msC'), items, {animate, title:'Seven bugs ranked by the chosen measure', fmt:v => num(v) + (col === 1 ? ' times a week' : ' hours lost')});
+  const o = $('#msO');
+  if (col === 1) { o.className = 'readout'; o.textContent = "By frequency, Login timeout leads and Data loss on save comes last. It looks safe to ignore."; }
+  else { o.className = 'readout warn'; o.textContent = 'By hours lost, Data loss on save jumps from last to first. Same bugs, different measure, different vital few.'; }
+}
+$('#msT').innerHTML = BUGS.map(r => `<tr><td>${esc(r[0])}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td></tr>`).join('');
+$('#msP').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; measure = b.dataset.m; pressed($('#msP'), b); drawMeasure(true); });
+const SCEN = [
+  {t:'Choosing which crash causes to fix this sprint', a:'fit', w:'A few causes usually make up most crashes, so start with those.'},
+  {t:'Patching security holes on a public website', a:'all', w:'An attacker only needs one way in. Rank the holes to set the order, then keep going.'},
+  {t:'Picking the first Korean words to learn', a:'fit', w:'Common words appear far more often, so start there. You will still add rarer words later.'},
+  {t:"Running a pilot's pre-flight checklist", a:'all', w:'Each check exists because missing it could be serious, so skipping the rarely needed ones is not an option.'},
+  {t:'Deciding which customers to call first', a:'fit', w:'It makes sense to start with the biggest accounts. Keep an eye on small customers who are growing.'},
+  {t:'Making a website work with screen readers', a:'all', w:'A small group of people could be shut out completely, so a small share of users is not a reason to stop.'}
+];
+$('#scen').innerHTML = SCEN.map((s, i) => `<div class="scen" data-i="${i}"><div>${esc(s.t)}</div><div class="pick"><button class="b" data-a="fit" aria-pressed="false">Start with the top</button><button class="b" data-a="all" aria-pressed="false">Cover everything</button></div><div class="why" hidden></div></div>`).join('');
+$('#scen').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const row = b.closest('.scen'), s = SCEN[+row.dataset.i], ok = b.dataset.a === s.a, why = row.querySelector('.why');
+  pressed(row, b); why.hidden = false; why.className = 'why ' + (ok ? 'ok' : 'no');
+  why.textContent = (ok ? 'Yes. ' : 'Think again. ') + s.w;
+});
+
+/* =============== 6. QUIZ =============== */
+const QUIZ = [
+  {q:'What does the Pareto rule say?', o:['Every task deserves equal effort','A small share of causes often produces most of the results','You should always stop after 20% of the work'], a:1, w:'It describes an uneven pattern. It does not tell you to stop early.'},
+  {q:'A list splits 10/70: the top 10% of items produce 70% of results. Is that a mistake?', o:['Yes, the two numbers must add up to 100','No, they measure different things: a share of items and a share of results'], a:1, w:'The 100 in 80/20 is a coincidence, not a requirement.'},
+  {q:'Why sort biggest first before adding up a running total?', o:['It reaches the target with the fewest items','It makes every item the same size','It changes the total'], a:0, w:'The total stays the same. Sorting only shows the shortest path to the target.'},
+  {q:'Who found that about 20% of people owned about 80% of the land in Italy?', o:['Joseph Juran','Vilfredo Pareto','Alan Turing'], a:1, w:"Pareto noticed the pattern. Juran later applied it widely and helped give it Pareto's name."},
+  {q:'You need 7 of 10 items to reach 80%. What does that tell you?', o:['There is a strong vital few','The list is fairly even, so choose using something else as well','The data must be wrong'], a:1, w:'Not every list has a shortcut, and that is a useful result too.'},
+  {q:'A bug happens rarely but loses customer data. What should you do?', o:['Ignore it because it is rare','Rank by harm as well as by how often it happens'], a:1, w:'What you measure decides what looks important.'},
+  {q:'You patched the holes behind 80% of your security alerts. Can you stop?', o:['Yes, that was the goal','No, an attacker only needs one remaining hole'], a:1, w:'Use the ranking to set the order, not to decide when you are finished.'},
+  {q:'What is the best first step with a messy list?', o:['Assume the top 20% matters','Measure each item, then sort','Delete the smallest items'], a:1, w:'Measure first and sort second. Your own numbers may not be 80/20 at all.'}
+];
+let qRight = 0, qDone = 0;
+function buildQuiz(){
+  qRight = qDone = 0; $('#qS').textContent = `Answer all ${QUIZ.length} questions to check your understanding.`;
+  $('#qB').innerHTML = QUIZ.map((q, i) => `<div class="q" data-i="${i}"><b>${i + 1}. ${esc(q.q)}</b><div class="opts">${q.o.map((t, k) => `<button data-k="${k}">${esc(t)}</button>`).join('')}</div><p class="why" hidden></p></div>`).join('');
+}
+$('#qB').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const box = b.closest('.q'), q = QUIZ[+box.dataset.i], pick = +b.dataset.k, btns = box.querySelectorAll('button');
+  btns.forEach(x => x.disabled = true); btns[q.a].classList.add('right'); if (pick !== q.a) b.classList.add('wrong'); else qRight++;
+  qDone++; const why = box.querySelector('.why'); why.hidden = false; why.textContent = (pick === q.a ? 'Correct. ' : 'Not quite. ') + q.w;
+  $('#qS').textContent = qDone === QUIZ.length ? `You got ${qRight} of ${QUIZ.length} right.` + (qRight === QUIZ.length ? ' Well done.' : ' Reset the quiz to try again.') : `${qRight} of ${qDone} right so far.`;
+});
+$('#qR').addEventListener('click', buildQuiz);
+
+/* =============== START =============== */
+skew.s = findSkew(20, 80); $('#sk').value = skew.s;
+drawSkew(); drawSort(false); drawYours(); drawMeasure(false); buildQuiz();
+
+/* =============== THEME =============== */
+window.onThemeChange = () => {};
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>
