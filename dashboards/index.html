@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-By1PugTDUJ44j/v0E7hnMwMQQYm0rcPq9IQrOIC3uL0='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-KHoDoa5jv+7kl+68zhDznmLLuf1G4LNru2zxHSi9INI='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -11,7 +11,7 @@
 :root{
   --bg:#f5f3ef;--bg2:#ece8e1;--panel:#fffdf9;--fg:#1c1a17;--muted:#6b665d;--line:#ddd7cc;
   --grid:rgba(28,26,23,.05);--shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px -12px rgba(28,26,23,.18);
-  --git:#e5532d;--quantum:#7a4fe0;--ai:#0f8a6c;--korean:#c2410c;--oracle:#c74634;--security:#2563eb;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
+  --git:#e5532d;--quantum:#7a4fe0;--ai:#0f8a6c;--korean:#c2410c;--oracle:#c74634;--security:#2563eb;--cloud:#b45f06;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Charter,"Book Antiqua",Georgia,serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -20,19 +20,19 @@
 :root[data-theme="dark"]{
   --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
   --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-  --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--default:#4fc1a6;--on-c:#14161c;
+  --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--cloud:#f5b04c;--default:#4fc1a6;--on-c:#14161c;
 }
 :root[data-theme="twilight"]{
   --bg:#231f38;--bg2:#332c50;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;
   --grid:rgba(246,235,230,.05);--shadow:0 1px 2px rgba(10,6,25,.35),0 14px 34px -14px rgba(10,6,25,.75);
-  --git:#ff9b6e;--quantum:#c7aaff;--ai:#7ee2c0;--korean:#ffb08a;--oracle:#ff8f86;--security:#9cc2ff;--default:#ffc47d;--on-c:#211b33;
+  --git:#ff9b6e;--quantum:#c7aaff;--ai:#7ee2c0;--korean:#ffb08a;--oracle:#ff8f86;--security:#9cc2ff;--cloud:#ffcf7a;--default:#ffc47d;--on-c:#211b33;
   --sky:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme]){
     --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
     --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-    --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--default:#4fc1a6;--on-c:#14161c;
+    --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--cloud:#f5b04c;--default:#4fc1a6;--on-c:#14161c;
   }
 }
 *{box-sizing:border-box}
@@ -252,6 +252,16 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
    ===================================================================== */
 const DASHBOARDS = [
   {
+    title: 'Cloudflare and R2',
+    href: 'cloud/cloudflare-r2.html',
+    section: 'Cloud',
+    topic: 'cloudflare',
+    added: '2026-10-31',
+    desc: 'How a request reaches the nearest edge, what R2 storage really costs, and how to serve big files beside a GitLab Pages site.',
+    points: ['Send a request, see a cache HIT or MISS', 'Estimate a monthly R2 bill', 'Watch CSP and CORS block R2 files'],
+    tags: ['cdn', 'object storage', 's3', 'cors']
+  },
+  {
     title: 'CSP, Explained',
     href: 'security/csp-explained.html',
     topic: 'security',
@@ -324,6 +334,7 @@ DASHBOARDS.sort((a, b) => (b.added || '').localeCompare(a.added || '') || a.titl
 
 const TOPICS = {
   ai:      { label: 'AI',      color: 'var(--ai)' },
+  cloudflare: { label: 'Cloudflare', color: 'var(--cloud)' },
   git:     { label: 'Git',     color: 'var(--git)' },
   gitlab:  { label: 'GitLab',  color: 'var(--git)' },
   korean:  { label: 'Korean',  color: 'var(--korean)' },
@@ -376,6 +387,12 @@ const ART = {
     ${Array.from({length:5},(_,i)=>`<text x="${22+i*16}" y="${44+i*22}" font-family="ui-monospace,Menlo,monospace" font-size="13" fill="${c}" opacity="${.16+i*.06}">sha256-${['u2iq','yqV4','+5Au','L/pY','3taD'][i]}</text>`).join('')}
     <path d="M170 26 L222 44 V88 C222 120 198 138 170 148 C142 138 118 120 118 88 V44 Z" fill="var(--panel)" stroke="${c}" stroke-width="3" stroke-linejoin="round"/>
     <path d="M148 88 L164 104 L194 70" fill="none" stroke="${c}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+  cloudflare: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    ${[[52,50],[96,128],[288,46],[246,132]].map(([x,y])=>`<path class="flow" d="M${x} ${y} L170 92" stroke="${c}" stroke-width="2" opacity=".4"/><circle cx="${x}" cy="${y}" r="9" fill="var(--panel)" stroke="${c}" stroke-width="2.5"/>`).join('')}
+    <path d="M122 96 a24 24 0 0 1 6 -47 a36 36 0 0 1 68 -7 a28 28 0 0 1 22 54 Z" fill="var(--panel)" stroke="${c}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M146 112 H198 L192 150 H152 Z" fill="${c}" fill-opacity=".14" stroke="${c}" stroke-width="3" stroke-linejoin="round"/>
+    <text x="172" y="77" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="20" font-weight="700" fill="${c}">R2</text>
   </svg>`,
   generic: (c,t) => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     ${Array.from({length:6},(_,i)=>`<circle cx="170" cy="85" r="${20+i*22}" fill="none" stroke="${c}" opacity="${.5-i*.07}"/>`).join('')}

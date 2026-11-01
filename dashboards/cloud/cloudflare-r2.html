@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sGHndAG8uZeDTazGykBWLxrS9PM/eA2OskQg/ziHMVM='; style-src 'sha256-bb5JJKzDOGr0NORi/Lwwgkf7OOJCCuaXNgiEZs9cb3k=' 'sha256-QSDRGcqk4iKKhwVYgUtiBzZhjbOCn1aeoy8ph7wEdXU='; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Cloudflare and R2</title>
+<style>
+  :root, [data-theme="day"] {
+    --bg:#f6f6f2; --surface:#ffffff; --surface2:#f0f2f6; --text:#1d2330; --muted:#5b6475;
+    --border:#dde1e8; --accent:#2f6fde; --accent-soft:#e3ecfc; --ok:#1d9a5f; --ok-soft:#ddf3e8;
+    --bad:#cf4040; --bad-soft:#fbe4e4; --warn:#a26b06; --warn-soft:#fbf0d9; --pkt:#e8590c; --cf:#f38020; --cf-soft:#fdebd9; --on-accent:#ffffff;
+  }
+  [data-theme="twilight"] {
+    --bg:#22263f; --surface:#2c3152; --surface2:#353b62; --text:#ecedf6; --muted:#b3b8d4;
+    --border:#4a5185; --accent:#93abff; --accent-soft:#3a4378; --ok:#5fd69b; --ok-soft:#2c4d4a;
+    --bad:#ff8a8a; --bad-soft:#553148; --warn:#f2c46b; --warn-soft:#4d4434; --pkt:#ffad5c; --cf:#ffa24d; --cf-soft:#4d3a33; --on-accent:#1a1d33;
+  }
+  [data-theme="dark"] {
+    --bg:#0f1115; --surface:#181b21; --surface2:#20242c; --text:#e6e8ec; --muted:#a0a9b8;
+    --border:#2f3540; --accent:#5b9cff; --accent-soft:#1d2b45; --ok:#4cc98a; --ok-soft:#173327;
+    --bad:#ff7373; --bad-soft:#3b1d1d; --warn:#e6b34f; --warn-soft:#3a2f17; --pkt:#ff9a4d; --cf:#ff9a3d; --cf-soft:#3a2a1a; --on-accent:#0f1115;
+  }
+  * { box-sizing:border-box; }
+  html, body { overflow-x:hidden; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .hidden { display:none !important; }
+  header { padding:20px 16px 8px; max-width:1040px; margin:0 auto; display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+  h1 { margin:0; font-size:1.5rem; }
+  .sub { color:var(--muted); margin:4px 0 0; }
+  .theme-switch { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .theme-switch button { background:var(--surface); color:var(--muted); border:0; padding:6px 10px; cursor:pointer; font-size:.85rem; }
+  .theme-switch button.on { background:var(--accent); color:var(--on-accent); }
+  nav { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--border); }
+  nav .inner { max-width:1040px; margin:0 auto; padding:0 16px; display:flex; gap:2px; overflow-x:auto; }
+  nav button { background:none; border:0; color:var(--muted); padding:12px 9px; cursor:pointer; white-space:nowrap; font-size:.9rem; border-bottom:3px solid transparent; }
+  nav button.on { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  main { max-width:1040px; margin:0 auto; padding:16px; }
+  section { display:none; }
+  section.on { display:block; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .card h2 { margin:0 0 6px; font-size:1.15rem; }
+  .card h3 { margin:0 0 6px; font-size:1rem; }
+  .muted { color:var(--muted); }
+  .small { font-size:.86rem; }
+  .mt { margin-top:12px; }
+  .m0 { margin:0; }
+  .analogy { background:var(--warn-soft); border-left:4px solid var(--warn); padding:10px 12px; border-radius:8px; margin-top:12px; }
+  .analogy b:first-child { color:var(--warn); }
+  .caution { background:var(--bad-soft); border-left:4px solid var(--bad); padding:10px 12px; border-radius:8px; margin-top:12px; }
+  .btn { background:var(--accent); color:var(--on-accent); border:0; padding:9px 14px; border-radius:8px; cursor:pointer; font-size:.9rem; font-weight:600; }
+  .btn.ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); font-weight:500; }
+  .btn.ghost.sel { border-color:var(--accent); background:var(--accent-soft); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:760px){ .grid2, .grid3 { grid-template-columns:1fr; } }
+  code, pre { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.85rem; }
+  pre { background:var(--surface2); border:1px solid var(--border); padding:10px 12px; border-radius:8px; overflow-x:auto; margin:8px 0 0; }
+  code { background:var(--surface2); padding:1px 5px; border-radius:4px; overflow-wrap:anywhere; }
+  label.opt { display:flex; gap:8px; align-items:center; padding:5px 0; cursor:pointer; }
+  select, input[type="number"] { background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:.9rem; }
+  input[type="range"] { width:100%; accent-color:var(--accent); }
+  .msg { margin-top:10px; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); }
+  .msg.ok { background:var(--ok-soft); border-color:var(--ok); }
+  .msg.fail { background:var(--bad-soft); border-color:var(--bad); }
+  .msg.warn { background:var(--warn-soft); border-color:var(--warn); }
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; flex-wrap:wrap; }
+  .seg button { background:var(--surface2); color:var(--muted); border:0; padding:6px 12px; cursor:pointer; font-size:.86rem; }
+  .seg button.on { background:var(--accent); color:var(--on-accent); }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  td.good { color:var(--ok); font-weight:600; }
+  td.bad { color:var(--bad); font-weight:600; }
+  td.meh { color:var(--warn); font-weight:600; }
+  .tablewrap { overflow-x:auto; }
+  .log { list-style:none; padding:0; margin:8px 0 0; font-size:.88rem; }
+  .log li { padding:5px 8px; border-left:3px solid var(--border); margin-bottom:4px; background:var(--surface2); border-radius:0 6px 6px 0; }
+  .log li.cur { border-left-color:var(--pkt); }
+
+  /* Diagrams */
+  .svg-wrap { overflow-x:auto; }
+  .svg-wrap svg { width:100%; min-width:640px; display:block; }
+  .node rect { fill:var(--surface2); stroke:var(--border); stroke-width:1.5; transition:all .25s; }
+  .node.click rect { cursor:pointer; }
+  .node text { fill:var(--text); font-size:13px; text-anchor:middle; pointer-events:none; }
+  .node text.s { fill:var(--muted); font-size:11px; }
+  .node.click:hover rect { stroke:var(--accent); }
+  .node.sel rect { stroke:var(--accent); stroke-width:3; fill:var(--accent-soft); }
+  .node.hot rect { stroke:var(--pkt); stroke-width:3; }
+  .node.cf rect { stroke:var(--cf); fill:var(--cf-soft); }
+  .node.off { opacity:.35; }
+  .edge { stroke:var(--muted); stroke-width:1.6; fill:none; opacity:.55; }
+  .edge.dash { stroke-dasharray:5 4; }
+  .edge.off { opacity:.12; }
+  .elabel { fill:var(--muted); font-size:10.5px; text-anchor:middle; }
+  .packet { fill:var(--pkt); }
+  .cache-ok { fill:var(--ok); }
+  .bars { margin-top:10px; }
+  .bar { display:flex; align-items:center; gap:8px; font-size:.82rem; margin-bottom:4px; }
+  .bar .lbl { width:150px; flex:none; color:var(--muted); }
+  .bar .trk { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:5px; height:16px; overflow:hidden; }
+  .bar .fill { height:100%; width:0; background:var(--accent); transition:width .5s; }
+  .bar .fill.cf { background:var(--cf); }
+  .bar .val { width:70px; text-align:right; }
+
+  /* Product cards */
+  .prods { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .prod { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--surface2); cursor:pointer; }
+  .prod .grp { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .prod.sel { border-color:var(--cf); background:var(--cf-soft); }
+  .prod.star { border-color:var(--cf); }
+
+  /* Bucket explorer */
+  .explorer { border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .explorer .hdr { background:var(--surface2); padding:8px 10px; font-size:.85rem; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--border); }
+  .obj { padding:7px 10px; border-bottom:1px solid var(--border); cursor:pointer; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.84rem; display:flex; justify-content:space-between; gap:8px; }
+  .obj:last-child { border-bottom:0; }
+  .obj:hover { background:var(--accent-soft); }
+  .obj.sel { background:var(--accent-soft); }
+  .obj .sz { color:var(--muted); white-space:nowrap; }
+  .obj.dir { font-weight:600; }
+  .indent1 { padding-left:28px; }
+  .indent2 { padding-left:46px; }
+
+  /* Doors */
+  .doors { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:10px; }
+  .door { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--surface2); }
+  .door.pick { border-color:var(--ok); background:var(--ok-soft); }
+  .door.nope { opacity:.45; }
+  .door b { display:block; }
+  .tag { display:inline-block; font-size:.72rem; padding:1px 7px; border-radius:20px; border:1px solid var(--border); margin:4px 4px 0 0; color:var(--muted); }
+
+  /* Calculator */
+  .calc-out { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-top:12px; }
+  .stat { border:1px solid var(--border); border-radius:10px; padding:10px; text-align:center; background:var(--surface2); }
+  .stat b { display:block; font-size:1.35rem; }
+  .stat.total { border-color:var(--accent); background:var(--accent-soft); }
+  .stat.zero b { color:var(--ok); }
+  .fld { margin-bottom:10px; }
+  .fld .top { display:flex; justify-content:space-between; font-size:.86rem; }
+
+  /* Checklist */
+  .check { display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:var(--surface2); cursor:pointer; }
+  .check input { margin-top:4px; transform:scale(1.2); }
+  .check.done { border-color:var(--ok); background:var(--ok-soft); }
+  .check .snip { display:none; }
+  .check.open .snip { display:block; }
+  .progress { height:10px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin:8px 0 14px; }
+  .progress div { height:100%; background:var(--ok); width:0; transition:width .3s; }
+
+  /* Sorter */
+  .items { display:flex; flex-wrap:wrap; gap:8px; }
+  .item { border:1px solid var(--border); border-radius:20px; padding:6px 12px; background:var(--surface2); cursor:pointer; font-size:.86rem; }
+  .item.sel { border-color:var(--accent); background:var(--accent-soft); }
+  .item.right { border-color:var(--ok); background:var(--ok-soft); }
+  .item.wrong { border-color:var(--bad); background:var(--bad-soft); }
+
+  /* CSP/CORS sandbox */
+  .res { display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; margin-top:6px; background:var(--surface2); font-size:.88rem; }
+  .res.ok { border-color:var(--ok); background:var(--ok-soft); }
+  .res.fail { border-color:var(--bad); background:var(--bad-soft); }
+
+  #ciYaml div { white-space:pre; border-radius:4px; padding:0 4px; }
+  #ciYaml .clickline { cursor:pointer; }
+  #ciYaml .clickline:hover, #ciYaml .clickline.sel { background:var(--accent-soft); }
+
+  /* Quiz */
+  .q { margin-bottom:14px; }
+  .q .opts { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .q button { text-align:left; background:var(--surface2); color:var(--text); border:1px solid var(--border); padding:8px 10px; border-radius:8px; cursor:pointer; font-size:.9rem; }
+  .q button.right { border-color:var(--ok); background:var(--ok-soft); }
+  .q button.wrong { border-color:var(--bad); background:var(--bad-soft); }
+  .q .why { font-size:.85rem; margin-top:6px; display:none; }
+  .q.answered .why { display:block; }
+  footer { max-width:1040px; margin:0 auto; padding:0 16px 24px; color:var(--muted); font-size:.8rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Cloudflare and R2, Explained</h1>
+    <p class="sub">How Cloudflare works, what R2 storage is, how to start, and how it fits with your GitLab Pages site</p>
+  </div>
+  <div id="themes">
+    <div class="theme-switch" id="themeSwitch">
+      <button data-t="day">Day</button><button data-t="twilight">Twilight</button><button data-t="dark">Dark</button>
+    </div>
+  </div>
+</header>
+
+<nav><div class="inner" id="tabs">
+  <button data-s="cf" class="on">1. How Cloudflare works</button>
+  <button data-s="r2">2. What is R2</button>
+  <button data-s="doors">3. Ways in &amp; out</button>
+  <button data-s="cost">4. What it costs</button>
+  <button data-s="start">5. Get started</button>
+  <button data-s="gitlab">6. With GitLab Pages</button>
+  <button data-s="quiz">7. Quiz</button>
+</div></nav>
+
+<main>
+
+<!-- 1. HOW CLOUDFLARE WORKS -->
+<section id="cf" class="on">
+  <div class="card">
+    <h2>Cloudflare is a giant network that sits in front of your site</h2>
+    <p class="muted m0">Cloudflare runs data centers in hundreds of cities. When a domain uses Cloudflare, visitors reach the <b>nearest Cloudflare edge</b>, not your server. The edge answers from its cache when it can, filters attacks, and goes to your server (the <b>origin</b>) only when it has to.</p>
+    <div class="row mt">
+      <span class="small muted">Visitor in:</span>
+      <div class="seg" id="citySeg"><button data-v="rockville" class="on">Rockville, MD</button><button data-v="kathmandu">Kathmandu</button><button data-v="london">London</button></div>
+    </div>
+    <div class="row mt">
+      <span class="small muted">DNS record:</span>
+      <div class="seg" id="proxySeg"><button data-v="proxied" class="on">Proxied (orange cloud)</button><button data-v="dns">DNS only (grey cloud)</button></div>
+      <span class="small muted">Edge cache:</span>
+      <div class="seg" id="cacheSeg"><button data-v="miss" class="on">Empty (MISS)</button><button data-v="hit">Has it (HIT)</button></div>
+    </div>
+    <div class="svg-wrap mt">
+    <svg viewBox="0 0 770 200" id="edgeMap" role="img" aria-label="Request path through Cloudflare">
+      <path class="edge" id="eVE" d="M150 100 L310 100"/>
+      <path class="edge" id="eEO" d="M460 100 L620 100"/>
+      <path class="edge dash off" id="eVO" d="M85 128 Q385 205 685 128"/>
+      <text class="elabel" x="230" y="90" id="lblVE">short hop</text>
+      <text class="elabel" x="540" y="90" id="lblEO">only on a MISS</text>
+      <g class="node"><rect x="20" y="72" width="130" height="56" rx="10"/><text x="85" y="96" id="cityName">Rockville</text><text class="s" x="85" y="113">visitor</text></g>
+      <g class="node cf" id="edgeNode"><rect x="310" y="62" width="150" height="76" rx="10"/><text x="385" y="88">Cloudflare edge</text><text class="s" x="385" y="105" id="edgeSub">nearest data center</text><text class="s" x="385" y="121">cache · WAF · TLS</text></g>
+      <circle class="cache-ok hidden" id="cacheDot" cx="452" cy="70" r="6"/>
+      <g class="node"><rect x="620" y="72" width="130" height="56" rx="10"/><text x="685" y="96">Origin</text><text class="s" x="685" y="113">your server / R2</text></g>
+      <circle class="packet" id="cfPkt" r="7" cx="-30" cy="-30"/>
+    </svg>
+    </div>
+    <div class="row mt"><button class="btn" id="cfSend">Send request</button><span class="small muted">The timings are illustrative only, to show the shape. They aren't measurements.</span></div>
+    <div class="bars" id="cfBars"></div>
+    <div class="msg" id="cfMsg">Pick a city and press <b>Send request</b>.</div>
+    <div class="analogy"><b>Analogy:</b> your origin is the central kitchen. Cloudflare runs a chain of neighborhood counters in hundreds of cities. A customer goes to the counter nearest home. If that counter already has the dish in its fridge (a cache HIT), they get it right away. If not (a MISS), the counter orders it from the central kitchen once, keeps a copy, and serves the next customer from the fridge. The counter also has a bouncer (the WAF and DDoS protection) who turns away troublemakers before they reach the kitchen.</div>
+  </div>
+
+  <div class="card">
+    <h2>The Cloudflare product map</h2>
+    <p class="muted m0">Tap a product. The orange-bordered ones matter most for this page.</p>
+    <div class="prods mt" id="prods"></div>
+    <div class="msg" id="prodOut">Choose a product above.</div>
+    <div class="caution"><b>Name clash:</b> <b>Cloudflare Pages</b> is Cloudflare's own static hosting, a competitor to <b>GitLab Pages</b>. This page keeps your site on <b>GitLab Pages</b> and uses Cloudflare only for <b>R2 storage</b>.</div>
+  </div>
+</section>
+
+<!-- 2. WHAT IS R2 -->
+<section id="r2">
+  <div class="card">
+    <h2>R2 = object storage with no egress fees</h2>
+    <div class="grid3">
+      <div class="msg"><b>Object storage</b><br><span class="small">It stores whole files ("objects") in containers called <b>buckets</b>. You put, get, list and delete whole files. You don't edit part of a file or mount it like a drive.</span></div>
+      <div class="msg"><b>S3-compatible</b><br><span class="small">It speaks the same API as Amazon S3, so the AWS SDKs, AWS CLI and <code>rclone</code> work by changing the endpoint and setting <code>region: auto</code>.</span></div>
+      <div class="msg"><b>Zero egress</b><br><span class="small">Reading data out of R2 is free. You pay for stored GB and for the number of operations, not for bandwidth.</span></div>
+    </div>
+    <div class="analogy"><b>Analogy:</b> a bucket is a warehouse, and each object is a sealed box with a label (its <b>key</b>). The warehouse has no real shelves or rooms. A label like <code>videos/intro.mp4</code> only <i>looks</i> like a folder path. Most warehouses charge a fee every time a truck drives a box out (egress). R2 charges only for floor space and for each time a worker handles a box.</div>
+  </div>
+
+  <div class="card">
+    <h2>Look inside a bucket</h2>
+    <p class="muted m0">Folders are an illusion. Switch views, then tap an object to see its details and the URL it would have through each way in.</p>
+    <div class="row mt">
+      <div class="seg" id="viewSeg"><button data-v="tree" class="on">Folder view (how tools show it)</button><button data-v="flat">Raw keys (what R2 really stores)</button></div>
+    </div>
+    <div class="grid2 mt">
+      <div class="explorer">
+        <div class="hdr"><span>🪣 bucket: <b>learn-dashboards-assets</b></span><span class="muted" id="objCount"></span></div>
+        <div id="objList"></div>
+      </div>
+      <div class="msg" id="objOut">Tap an object.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Words you'll see</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td>Account ID</td><td>Your Cloudflare account's ID. It's part of the S3 endpoint URL.</td></tr>
+      <tr><td>Bucket</td><td>A named container for objects. Each account includes up to 100,000 buckets.</td></tr>
+      <tr><td>Object / key</td><td>A stored file, and its full name, such as <code>videos/intro.mp4</code>.</td></tr>
+      <tr><td>Class A operation</td><td>Mostly writes and listings: upload (PUT), copy, list, create multipart upload. These cost more.</td></tr>
+      <tr><td>Class B operation</td><td>Mostly reads: GET and HEAD of an object. These are cheap.</td></tr>
+      <tr><td>Storage class</td><td><b>Standard</b> (default, has a free tier) or <b>Infrequent Access</b> (cheaper to store, but charges per GB read and has a 30-day minimum).</td></tr>
+      <tr><td>Access Key ID + Secret</td><td>S3-style credentials created from an R2 API token, ideally limited to one bucket.</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<!-- 3. WAYS IN & OUT -->
+<section id="doors">
+  <div class="card">
+    <h2>Five doors into a bucket</h2>
+    <p class="muted m0">A new bucket is <b>private</b>. Choose a job, and the right door lights up.</p>
+    <div class="row mt" id="scenarios">
+      <button class="btn ghost" data-sc="ci">CI job uploads files</button>
+      <button class="btn ghost" data-sc="video">Dashboard shows a video to everyone</button>
+      <button class="btn ghost" data-sc="test">Quick test link for myself</button>
+      <button class="btn ghost" data-sc="share">Share one private file for 1 day</button>
+      <button class="btn ghost" data-sc="logic">Custom logic, e.g. checking a login before serving</button>
+    </div>
+    <div class="doors" id="doorGrid"></div>
+    <div class="msg" id="doorOut">Pick a job above.</div>
+    <div class="analogy"><b>Analogy:</b> the warehouse has a staff entrance that needs a badge (the S3 API with keys), a loading dock for quick test pickups that can get crowded (<code>r2.dev</code>), a proper storefront on your own street with a cache and security (a custom domain), a one-day visitor pass for one box (a presigned URL), and an in-house clerk who can run your rules (a Worker).</div>
+  </div>
+  <div class="card">
+    <h3>Side by side</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Door</th><th>URL looks like</th><th>Needs keys?</th><th>Public?</th><th>For production?</th></tr>
+      <tr><td>S3 API</td><td><code>https://&lt;ACCOUNT_ID&gt;.r2.cloudflarestorage.com</code></td><td class="bad">Yes</td><td class="good">No</td><td class="good">Yes, for tools and apps</td></tr>
+      <tr><td>r2.dev URL</td><td><code>https://pub-&lt;id&gt;.r2.dev/…</code></td><td class="good">No</td><td class="bad">Yes, anyone</td><td class="bad">No. It's rate-limited and for testing.</td></tr>
+      <tr><td>Custom domain</td><td><code>https://assets.yourdomain.com/…</code></td><td class="good">No</td><td class="bad">Yes, anyone</td><td class="good">Yes, with caching, WAF and rules</td></tr>
+      <tr><td>Presigned URL</td><td>S3 endpoint plus a signature in the query string</td><td class="meh">Signed with keys</td><td class="meh">Anyone holding the link</td><td class="good">Yes, valid up to 7 days</td></tr>
+      <tr><td>Worker binding</td><td>Your Worker's URL</td><td class="good">No (binding)</td><td class="meh">You decide in code</td><td class="good">Yes</td></tr>
+    </table></div>
+    <p class="small muted">A custom domain needs the domain to be on Cloudflare (added as a zone in your account). Presigned URLs work only with the S3 endpoint, not with custom domains.</p>
+  </div>
+</section>
+
+<!-- 4. COST -->
+<section id="cost">
+  <div class="card">
+    <h2>Cost calculator</h2>
+    <p class="muted m0">Uses Cloudflare's published R2 prices (checked October 2026). Prices can change, so confirm on Cloudflare's pricing page before relying on these numbers.</p>
+    <div class="row mt">
+      <span class="small muted">Storage class:</span>
+      <div class="seg" id="classSeg"><button data-v="std" class="on">Standard</button><button data-v="ia">Infrequent Access</button></div>
+    </div>
+    <div class="grid2 mt">
+      <div>
+        <div class="fld"><div class="top"><span>Stored data</span><b id="vGB"></b></div><input type="range" id="inGB" min="0" max="1000" step="1" value="25"></div>
+        <div class="fld"><div class="top"><span>Uploads / lists per month (Class A)</span><b id="vA"></b></div><input type="range" id="inA" min="0" max="5000000" step="10000" value="20000"></div>
+        <div class="fld"><div class="top"><span>Downloads per month (Class B)</span><b id="vB"></b></div><input type="range" id="inB" min="0" max="50000000" step="50000" value="500000"></div>
+        <div class="fld"><div class="top"><span>Data downloaded per month</span><b id="vOut"></b></div><input type="range" id="inOut" min="0" max="5000" step="5" value="200"></div>
+      </div>
+      <div>
+        <div class="calc-out">
+          <div class="stat"><span class="small muted">Storage</span><b id="cS"></b></div>
+          <div class="stat"><span class="small muted">Class A</span><b id="cA"></b></div>
+          <div class="stat"><span class="small muted">Class B</span><b id="cB"></b></div>
+          <div class="stat" id="retStat"><span class="small muted">Retrieval</span><b id="cR"></b></div>
+          <div class="stat zero"><span class="small muted">Egress</span><b>$0.00</b></div>
+          <div class="stat total"><span class="small muted">Monthly total</span><b id="cT"></b></div>
+        </div>
+        <div class="msg" id="costNote"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Price sheet</h3>
+    <div class="tablewrap"><table>
+      <tr><th></th><th>Standard</th><th>Infrequent Access</th></tr>
+      <tr><td>Storage</td><td>$0.015 per GB-month</td><td>$0.01 per GB-month</td></tr>
+      <tr><td>Class A</td><td>$4.50 per million</td><td>$9.00 per million</td></tr>
+      <tr><td>Class B</td><td>$0.36 per million</td><td>$0.90 per million</td></tr>
+      <tr><td>Data retrieval</td><td class="good">None</td><td>$0.01 per GB read</td></tr>
+      <tr><td>Egress (bandwidth)</td><td class="good">Free</td><td class="good">Free</td></tr>
+      <tr><td>Free tier each month</td><td class="good">10 GB-month, 1M Class A, 10M Class B</td><td class="bad">None</td></tr>
+      <tr><td>Minimum storage time</td><td class="good">None</td><td class="meh">30 days</td></tr>
+    </table></div>
+    <p class="small muted">Usage is rounded up to the next billing unit. Other Cloudflare services connected to a bucket may bill separately.</p>
+  </div>
+</section>
+
+<!-- 5. GET STARTED -->
+<section id="start">
+  <div class="card">
+    <h2>What you need, and the steps</h2>
+    <p class="muted m0">Tap a step for details and commands. Tick it when it's done.</p>
+    <div class="progress"><div id="prog"></div></div>
+    <div id="checklist"></div>
+  </div>
+  <div class="card">
+    <h3>What you get</h3>
+    <div class="grid3">
+      <div class="msg"><b>A private bucket</b><br><span class="small">Reachable only with your keys until you open a public door.</span></div>
+      <div class="msg"><b>An S3 endpoint and keys</b><br><span class="small">Works with <code>rclone</code>, the AWS CLI, boto3 and the AWS SDK for JavaScript or Java, including Spring Boot.</span></div>
+      <div class="msg"><b>Optional public URLs</b><br><span class="small"><code>r2.dev</code> for testing, or a custom domain backed by Cloudflare's cache and security.</span></div>
+      <div class="msg"><b>Free bandwidth</b><br><span class="small">Large videos and datasets can be downloaded many times without bandwidth bills.</span></div>
+      <div class="msg"><b>A free tier</b><br><span class="small">10 GB stored, 1M writes and 10M reads per month on Standard storage.</span></div>
+      <div class="msg"><b>Room to grow</b><br><span class="small">Workers, presigned uploads, lifecycle rules and CORS settings are available when you need them.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. WITH GITLAB PAGES -->
+<section id="gitlab">
+  <div class="card">
+    <h2>Using them together</h2>
+    <p class="muted m0">Keep small HTML in Git, served by GitLab Pages. Put large or binary files in R2, served from a custom domain. The browser loads the page from one and the files from the other.</p>
+    <div class="svg-wrap mt">
+    <svg viewBox="0 0 770 300" id="comboMap" role="img" aria-label="GitLab Pages plus R2 architecture">
+      <path class="edge" d="M150 70 L250 70"/>
+      <path class="edge" d="M380 70 L470 70"/>
+      <path class="edge dash" d="M315 98 L315 200 L470 230"/>
+      <text class="elabel" x="380" y="196">rclone with masked keys</text>
+      <path class="edge" d="M600 70 L640 150"/>
+      <path class="edge" d="M600 230 L640 170"/>
+      <text class="elabel" x="670" y="110">HTML</text>
+      <text class="elabel" x="670" y="215">video, PDF, data</text>
+      <g class="node"><rect x="20" y="42" width="130" height="56" rx="10"/><text x="85" y="66">Your repo</text><text class="s" x="85" y="83">small HTML/CSS/JS</text></g>
+      <g class="node"><rect x="250" y="42" width="130" height="56" rx="10"/><text x="315" y="66">GitLab CI</text><text class="s" x="315" y="83">alpine runner jobs</text></g>
+      <g class="node"><rect x="470" y="42" width="130" height="56" rx="10"/><text x="535" y="66">GitLab Pages</text><text class="s" x="535" y="83">serves the HTML</text></g>
+      <g class="node cf"><rect x="470" y="202" width="130" height="56" rx="10"/><text x="535" y="226">R2 bucket</text><text class="s" x="535" y="243">serves big files</text></g>
+      <g class="node"><rect x="640" y="132" width="120" height="56" rx="10"/><text x="700" y="156">Browser</text><text class="s" x="700" y="173">combines both</text></g>
+      <text class="elabel" x="85" y="250">Big files can also be</text>
+      <text class="elabel" x="85" y="263">uploaded straight from your Mac</text>
+      <path class="edge dash" d="M150 240 L470 232"/>
+    </svg>
+    </div>
+    <div class="analogy"><b>Analogy:</b> GitLab Pages is the menu board at the counter, which is light and changes often. R2 is a big warehouse next door that holds the bulky goods. The menu says "pick up item 7 at the warehouse window," and the customer's browser collects both.</div>
+  </div>
+
+  <div class="card">
+    <h2>Where should each file live?</h2>
+    <p class="muted m0">Tap a file, then choose where it belongs.</p>
+    <div class="items mt" id="sortItems"></div>
+    <div class="row mt">
+      <button class="btn ghost" data-place="pages">Git + GitLab Pages</button>
+      <button class="btn ghost" data-place="r2">R2 bucket</button>
+      <button class="btn ghost" data-place="neither">Neither (keep it internal)</button>
+    </div>
+    <div class="msg" id="sortOut">Choose a file first.</div>
+  </div>
+
+  <div class="card">
+    <h2>Upload pipeline</h2>
+    <p class="muted m0">This adds an upload job before your existing <code>pages</code> job. It uses <code>alpine:latest</code> and <code>rclone</code>, with no build scripts. Choose a line to see what it does.</p>
+    <div class="grid2 mt">
+      <pre id="ciYaml"></pre>
+      <div>
+        <div class="msg" id="ciOut">The keys never go in this file. Set them under <b>Settings → CI/CD → Variables</b> as <b>masked</b> and <b>protected</b>:<br><code>RCLONE_CONFIG_R2_ACCESS_KEY_ID</code><br><code>RCLONE_CONFIG_R2_SECRET_ACCESS_KEY</code><br><code>R2_ACCOUNT_ID</code>, <code>R2_BUCKET</code></div>
+        <div class="msg warn"><b>Why <code>copy</code>, not <code>sync</code>?</b> <code>rclone sync</code> deletes anything in the bucket that isn't in the folder, including files you uploaded from your Mac. <code>copy</code> only adds and updates files.</div>
+        <div class="msg"><b>Large files:</b> don't commit gigabytes to Git. Upload them once from your Mac with <code>rclone copy</code> or the dashboard, and only reference them in your HTML.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>CSP and CORS: why your page might block R2</h2>
+    <p class="muted m0">Your dashboards use a strict Content Security Policy and are fully offline today. Loading anything from R2 means the page needs the network, and the CSP has to allow that domain. Toggle the settings and test.</p>
+    <div class="grid2 mt">
+      <div>
+        <label class="opt"><input type="checkbox" id="cspImg"> CSP <code>img-src</code> allows the R2 domain</label>
+        <label class="opt"><input type="checkbox" id="cspMedia"> CSP <code>media-src</code> allows the R2 domain</label>
+        <label class="opt"><input type="checkbox" id="cspConnect"> CSP <code>connect-src</code> allows the R2 domain</label>
+        <label class="opt"><input type="checkbox" id="cors"> The R2 bucket's CORS rules allow the GitLab Pages origin</label>
+        <pre id="cspText"></pre>
+      </div>
+      <div>
+        <div class="res" id="tImg"><span>&lt;img src="https://assets…/logo.png"&gt;</span><b></b></div>
+        <div class="res" id="tVid"><span>&lt;video src="https://assets…/intro.mp4"&gt;</span><b></b></div>
+        <div class="res" id="tFetch"><span>fetch("https://assets…/data.json")</span><b></b></div>
+        <div class="msg small" id="cspWhy"></div>
+        <pre id="corsJson"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Before you use this at work</h2>
+    <div class="caution">
+      <b>Public means the whole internet.</b> GitLab Pages access control protects your <i>pages</i>, not files in a public R2 bucket. Anyone with an R2 URL can open that file. Never put SSP content, internal data or anything sensitive in a public bucket.
+    </div>
+    <ul class="small">
+      <li>Check with your ISSO or security team before sending work data to a third-party cloud. Confirm whether Cloudflare R2 is inside your authorization boundary.</li>
+      <li>Your self-hosted runner needs outbound access to <code>&lt;ACCOUNT_ID&gt;.r2.cloudflarestorage.com</code>. Corporate firewalls often block it.</li>
+      <li>Limit the API token to <b>Object Read &amp; Write</b> on <b>one bucket</b>, store it as a masked, protected CI variable, and rotate it if it leaks.</li>
+      <li>For files the team should see only temporarily, use presigned URLs (up to 7 days) instead of making the bucket public.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7. QUIZ -->
+<section id="quiz">
+  <div class="card">
+    <h2>Check yourself</h2>
+    <p class="muted">Score: <b id="score">0</b> / <span id="qTotal"></span></p>
+    <div id="quizBox"></div>
+    <button class="btn ghost" id="quizReset">Reset quiz</button>
+  </div>
+</section>
+
+</main>
+<footer>Standalone and offline. A strict Content Security Policy blocks all network requests. R2 prices are from Cloudflare's pricing page as of October 2026 and may change.</footer>
+
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  function $$(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+  function el(tag, cls, html){ var e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
+  function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+  function seg(id, cb){ $$('#'+id+' button').forEach(function(b){ b.addEventListener('click', function(){ $$('#'+id+' button').forEach(function(x){ x.classList.toggle('on', x===b); }); cb(b.dataset.v); }); }); }
+
+  /* Theme */
+  var THEME_KEY='theme';
+  function setTheme(t){ if(['day','twilight','dark'].indexOf(t)<0) t='day'; document.documentElement.setAttribute('data-theme',t);
+    $$('#themeSwitch button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); }); }
+  var qp=null; try{ qp=new URLSearchParams(location.search).get('theme'); }catch(e){}
+  setTheme(qp || store(THEME_KEY) || 'day');
+  $$('#themeSwitch button').forEach(function(b){ b.addEventListener('click', function(){ setTheme(b.dataset.t); store(THEME_KEY,b.dataset.t); }); });
+  window.addEventListener('storage', function(e){ if(e.key===THEME_KEY && e.newValue) setTheme(e.newValue); });
+
+  /* Tabs */
+  function showTab(s){ if(!$(s)) s='cf'; $$('#tabs button').forEach(function(x){ x.classList.toggle('on', x.dataset.s===s); }); $$('main section').forEach(function(x){ x.classList.toggle('on', x.id===s); }); }
+  $$('#tabs button').forEach(function(b){ b.addEventListener('click', function(){ showTab(b.dataset.s); store('cfr2-tab', b.dataset.s); window.scrollTo(0,0); }); });
+  showTab(store('cfr2-tab') || 'cf');
+
+  /* ---------- 1. Edge simulator ---------- */
+  var city='rockville', proxy='proxied', cache='miss', cfBusy=false;
+  var cities={
+    rockville:{n:'Rockville', ve:8, eo:6, vo:12},
+    kathmandu:{n:'Kathmandu', ve:12, eo:240, vo:250},
+    london:{n:'London', ve:9, eo:80, vo:85}
+  };
+  function cfLayout(){
+    var dns = proxy==='dns';
+    $('cityName').textContent=cities[city].n;
+    $('edgeNode').classList.toggle('off', dns);
+    $('eVE').classList.toggle('off', dns); $('eEO').classList.toggle('off', dns); $('eVO').classList.toggle('off', !dns);
+    $('lblVE').textContent = dns ? '' : 'short hop';
+    $('lblEO').textContent = dns ? '' : (cache==='hit' ? 'skipped (HIT)' : 'only on a MISS');
+    $('cacheDot').classList.toggle('hidden', dns || cache!=='hit');
+    $('edgeSub').textContent = 'nearest to '+cities[city].n;
+  }
+  seg('citySeg', function(v){ city=v; cfLayout(); });
+  seg('proxySeg', function(v){ proxy=v; cfLayout(); });
+  seg('cacheSeg', function(v){ cache=v; cfLayout(); });
+  cfLayout();
+  function moveAlong(pts, done){
+    var i=0, pkt=$('cfPkt');
+    function leg(){
+      if(i>=pts.length-1){ pkt.setAttribute('cx',-30); pkt.setAttribute('cy',-30); done(); return; }
+      var a=pts[i], b=pts[i+1], t0=null;
+      function st(ts){ if(t0===null) t0=ts; var p=Math.min((ts-t0)/550,1);
+        pkt.setAttribute('cx', a[0]+(b[0]-a[0])*p); pkt.setAttribute('cy', a[1]+(b[1]-a[1])*p);
+        if(p<1) requestAnimationFrame(st); else { i++; leg(); } }
+      requestAnimationFrame(st);
+    }
+    leg();
+  }
+  function bars(list){
+    var box=$('cfBars'); box.innerHTML=''; var max=0; list.forEach(function(x){ if(x.v>max) max=x.v; }); max=Math.max(max, 300);
+    list.forEach(function(x){
+      var r=el('div','bar'); var l=el('span','lbl'); l.textContent=x.l; var t=el('div','trk'); var f=el('div','fill'+(x.cf?' cf':'')); t.appendChild(f);
+      var v=el('span','val'); v.textContent='~'+x.v+' ms'; r.appendChild(l); r.appendChild(t); r.appendChild(v); box.appendChild(r);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ f.style.width=(x.v/max*100)+'%'; }); });
+    });
+  }
+  $('cfSend').addEventListener('click', function(){
+    if(cfBusy) return; cfBusy=true; var c=cities[city], m=$('cfMsg');
+    var V=[85,100], E=[385,100], O=[685,100];
+    if(proxy==='dns'){
+      moveAlong([V,O,V], function(){ cfBusy=false; });
+      bars([{l:'Round trip to origin', v:c.vo*2}]);
+      m.className='msg warn'; m.innerHTML='<b>DNS only:</b> Cloudflare just answers "here\'s the server\'s IP." The visitor goes straight to your origin, with no cache and no WAF, and your origin\'s IP is exposed. Requests from '+c.n+' cross the whole distance every time.';
+      return;
+    }
+    if(cache==='hit'){
+      moveAlong([V,E,V], function(){ cfBusy=false; });
+      bars([{l:'Visitor ↔ edge', v:c.ve*2, cf:true}]);
+      m.className='msg ok'; m.innerHTML='<b>Cache HIT:</b> the nearest edge already had the file, so the origin never saw the request. That\'s fast for visitors in '+c.n+' and costs the origin nothing.';
+    } else {
+      moveAlong([V,E,O,E,V], function(){ cfBusy=false; cache='hit'; $$('#cacheSeg button').forEach(function(b){ b.classList.toggle('on', b.dataset.v==='hit'); }); cfLayout(); });
+      bars([{l:'Visitor ↔ edge', v:c.ve*2, cf:true},{l:'Edge ↔ origin (once)', v:c.eo*2}]);
+      m.className='msg'; m.innerHTML='<b>Cache MISS:</b> the edge fetched the file from the origin once and kept a copy. <b>Press Send again</b>: the next visitor near '+c.n+' gets a HIT.';
+    }
+  });
+
+  var products=[
+    {g:'Network', n:'DNS', star:false, d:'Cloudflare answers "where is yourdomain.com?" Each record is either <b>proxied</b> (orange cloud: traffic flows through Cloudflare) or <b>DNS only</b> (grey cloud: Cloudflare only gives out the IP).'},
+    {g:'Network', n:'CDN / cache', star:true, d:'Edges keep copies of files near visitors. On a custom domain in front of R2, this cache sits in front of your bucket automatically.'},
+    {g:'Security', n:'WAF, DDoS, TLS', star:false, d:'Bad traffic is filtered at the edge before it reaches your origin, and HTTPS certificates are managed for you.'},
+    {g:'Security', n:'Zero Trust Access', star:false, d:'Puts a login (such as your identity provider) in front of a hostname. One way to make a custom-domain bucket team-only. It\'s a separate product with its own setup and pricing.'},
+    {g:'Developer', n:'Workers', star:false, d:'Small JavaScript functions that run at the edge. They can read and write R2 through a <b>binding</b>, with no keys in code, and apply your own rules, such as checking a token before serving a file.'},
+    {g:'Developer', n:'Cloudflare Pages', star:false, d:'Cloudflare\'s static site hosting. It\'s <b>not</b> GitLab Pages. You could host there instead, but this page keeps your site on your company\'s GitLab Pages.'},
+    {g:'Storage', n:'R2', star:true, d:'S3-compatible object storage with free egress. The main subject of this page.'},
+    {g:'Storage', n:'KV / D1', star:false, d:'KV is a key-value store, and D1 is a SQLite database. They\'re for small data that Workers use. R2 is for files.'}
+  ];
+  var pb=$('prods');
+  products.forEach(function(p){
+    var c=el('div','prod'+(p.star?' star':'')); var g=el('div','grp'); g.textContent=p.g; var b=el('b'); b.textContent=p.n; c.appendChild(g); c.appendChild(b);
+    c.addEventListener('click', function(){ $$('.prod',pb).forEach(function(x){ x.classList.toggle('sel', x===c); }); $('prodOut').innerHTML='<b>'+p.n+':</b> '+p.d; });
+    pb.appendChild(c);
+  });
+
+  /* ---------- 2. Bucket explorer ---------- */
+  var objs=[
+    {k:'index-assets/logo.svg', s:'4 KB', t:'image/svg+xml'},
+    {k:'videos/intro.mp4', s:'412 MB', t:'video/mp4'},
+    {k:'videos/gitlab-pages-demo.mp4', s:'186 MB', t:'video/mp4'},
+    {k:'data/properties-2026.csv', s:'1.8 GB', t:'text/csv'},
+    {k:'data/summary.json', s:'92 KB', t:'application/json'},
+    {k:'docs/cheatsheet.pdf', s:'3.1 MB', t:'application/pdf'}
+  ];
+  var view='tree', selKey=null;
+  function renderObjs(){
+    var box=$('objList'); box.innerHTML=''; $('objCount').textContent=objs.length+' objects';
+    if(view==='flat'){
+      objs.slice().sort(function(a,b){ return a.k<b.k?-1:1; }).forEach(function(o){ box.appendChild(objRow(o, o.k, '')); });
+    } else {
+      var groups={}; objs.forEach(function(o){ var p=o.k.split('/'); (groups[p[0]]=groups[p[0]]||[]).push(o); });
+      Object.keys(groups).sort().forEach(function(g){
+        var d=el('div','obj dir'); var a=el('span'); a.textContent='📁 '+g+'/'; var b=el('span','sz'); b.textContent='(not a real folder)'; d.appendChild(a); d.appendChild(b);
+        d.addEventListener('click', function(){ $('objOut').className='msg warn'; $('objOut').innerHTML='<b>'+g+'/ isn\'t a real thing.</b> R2 has no folders. Tools group keys that share the prefix <code>'+g+'/</code> to look like a folder. Deleting every object with that prefix makes the "folder" disappear.'; });
+        box.appendChild(d);
+        groups[g].forEach(function(o){ box.appendChild(objRow(o, '📄 '+o.k.split('/').slice(1).join('/'), 'indent1')); });
+      });
+    }
+  }
+  function objRow(o, label, extra){
+    var d=el('div','obj '+extra+(selKey===o.k?' sel':'')); var a=el('span'); a.textContent=label; var b=el('span','sz'); b.textContent=o.s; d.appendChild(a); d.appendChild(b);
+    d.addEventListener('click', function(){ selKey=o.k; renderObjs(); showObj(o); });
+    return d;
+  }
+  function showObj(o){
+    var out=$('objOut'); out.className='msg'; out.innerHTML='';
+    var h=el('div'); h.innerHTML='<b>Key:</b> <code></code>'; h.querySelector('code').textContent=o.k; out.appendChild(h);
+    var m=el('div','small mt'); m.textContent='Size '+o.s+' · Content-Type '+o.t; out.appendChild(m);
+    var t=el('div','small mt'); t.innerHTML='<b>Same object through each door:</b>'; out.appendChild(t);
+    [['S3 API (needs keys)','https://<ACCOUNT_ID>.r2.cloudflarestorage.com/learn-dashboards-assets/'+o.k],
+     ['r2.dev (testing only)','https://pub-<id>.r2.dev/'+o.k],
+     ['Custom domain','https://assets.yourdomain.com/'+o.k]].forEach(function(r){
+      var p=el('div','small'); var lb=el('span','muted'); lb.textContent=r[0]+': '; var c=el('code'); c.textContent=r[1]; p.appendChild(lb); p.appendChild(c); out.appendChild(p);
+    });
+    if(/GB/.test(o.s)){ var w=el('div','small mt'); w.textContent='Uploads over 5 GiB must use multipart upload. rclone and the AWS CLI do this automatically.'; out.appendChild(w); }
+  }
+  seg('viewSeg', function(v){ view=v; renderObjs(); });
+  renderObjs();
+
+  /* ---------- 3. Doors ---------- */
+  var doors=[
+    {id:'s3', n:'S3 API + keys', tags:['private','needs keys']},
+    {id:'dev', n:'r2.dev URL', tags:['public','rate-limited','testing']},
+    {id:'custom', n:'Custom domain', tags:['public','cached','production']},
+    {id:'presign', n:'Presigned URL', tags:['temporary','≤ 7 days','one object']},
+    {id:'worker', n:'Worker binding', tags:['your code','no keys in code']}
+  ];
+  var scen={
+    ci:{d:'s3', m:'<b>S3 API with an Object Read &amp; Write token limited to one bucket.</b> The CI job (rclone or the AWS CLI) signs requests with the keys from masked CI variables. Nothing about the bucket needs to be public.'},
+    video:{d:'custom', m:'<b>Custom domain.</b> Connect a hostname such as <code>assets.yourdomain.com</code> (the domain must be on Cloudflare). You get caching, WAF and rules, and egress stays free. Remember that anyone with the link can watch it.'},
+    test:{d:'dev', m:'<b>r2.dev URL.</b> One switch in the bucket settings gives a public <code>pub-…r2.dev</code> link. It\'s rate-limited (roughly hundreds of requests per second, then 429 errors) and not meant for production. Turn it off when you\'re done.'},
+    share:{d:'presign', m:'<b>Presigned URL.</b> Generate it locally with your keys, for example with <code>aws s3 presign … --expires-in 86400</code>. Anyone with the link can GET that one object until it expires (7 days at most). It works only with the S3 endpoint, not a custom domain.'},
+    logic:{d:'worker', m:'<b>Worker with an R2 binding.</b> Your JavaScript runs at the edge, checks whatever you like (a header, a token, Cloudflare Access identity) and streams the object from R2. No S3 keys are needed in the code.'}
+  };
+  function renderDoors(pick){
+    var g=$('doorGrid'); g.innerHTML='';
+    doors.forEach(function(d){
+      var c=el('div','door'+(pick?(d.id===pick?' pick':' nope'):'')); var b=el('b'); b.textContent=d.n; c.appendChild(b);
+      d.tags.forEach(function(t){ var s=el('span','tag'); s.textContent=t; c.appendChild(s); }); g.appendChild(c);
+    });
+  }
+  $$('#scenarios button').forEach(function(b){ b.addEventListener('click', function(){
+    $$('#scenarios button').forEach(function(x){ x.classList.toggle('sel', x===b); });
+    var s=scen[b.dataset.sc]; renderDoors(s.d); $('doorOut').className='msg ok'; $('doorOut').innerHTML=s.m;
+  }); });
+  renderDoors(null);
+
+  /* ---------- 4. Cost ---------- */
+  var sclass='std';
+  function fmt(n){ return '$'+n.toFixed(2); }
+  function num(n){ return n>=1e6 ? (n/1e6).toFixed(n%1e6?2:0)+'M' : n>=1e3 ? (n/1e3).toFixed(0)+'K' : String(n); }
+  function calc(){
+    var gb=+$('inGB').value, A=+$('inA').value, B=+$('inB').value, out=+$('inOut').value;
+    $('vGB').textContent=gb+' GB'; $('vA').textContent=num(A); $('vB').textContent=num(B); $('vOut').textContent=out+' GB';
+    var s,a,b,r;
+    if(sclass==='std'){ s=Math.max(0,gb-10)*0.015; a=Math.max(0,A-1e6)/1e6*4.5; b=Math.max(0,B-1e7)/1e6*0.36; r=0; }
+    else { s=gb*0.01; a=A/1e6*9; b=B/1e6*0.9; r=out*0.01; }
+    $('cS').textContent=fmt(s); $('cA').textContent=fmt(a); $('cB').textContent=fmt(b); $('cR').textContent=fmt(r);
+    $('retStat').classList.toggle('zero', sclass==='std');
+    $('cT').textContent=fmt(s+a+b+r);
+    var n=$('costNote');
+    if(sclass==='std'){ n.className='msg ok'; n.innerHTML='Serving <b>'+out+' GB</b> a month costs <b>$0</b> in bandwidth. The free tier already covers the first 10 GB, 1M Class A and 10M Class B operations.'; }
+    else { n.className='msg warn'; n.innerHTML='Infrequent Access has <b>no free tier</b>, charges <b>$0.01 per GB read</b> (here '+fmt(r)+') and bills at least <b>30 days</b> per object. It\'s worth it only for data that\'s rarely read, such as backups or archives. Not for dashboard assets.'; }
+  }
+  ['inGB','inA','inB','inOut'].forEach(function(id){ $(id).addEventListener('input', calc); });
+  seg('classSeg', function(v){ sclass=v; calc(); });
+  calc();
+
+  /* ---------- 5. Checklist ---------- */
+  var steps=[
+    {t:'Create a Cloudflare account', d:'Free to create at dash.cloudflare.com. Use a personal account for learning, and your organization\'s approved account for anything work-related.', s:'# Optional CLI, runs with Node (you have it):\nnpx wrangler login'},
+    {t:'Enable R2', d:'Open Storage & databases → R2 in the dashboard and activate it. Cloudflare asks for a payment method, even if you stay inside the free tier.', s:'# No command. This is a one-time dashboard step.'},
+    {t:'Create a bucket', d:'Choose a name (lowercase, unique in your account), an optional location hint, and Standard as the default storage class.', s:'npx wrangler r2 bucket create learn-dashboards-assets\nnpx wrangler r2 bucket list'},
+    {t:'Create an R2 API token', d:'R2 → Overview → Manage API Tokens → Create token. Permission: Object Read & Write, limited to this bucket only. Copy the Access Key ID and Secret right away, because the secret is shown only once.', s:'Access Key ID      → RCLONE_CONFIG_R2_ACCESS_KEY_ID\nSecret Access Key  → RCLONE_CONFIG_R2_SECRET_ACCESS_KEY\nS3 endpoint        → https://<ACCOUNT_ID>.r2.cloudflarestorage.com\nRegion             → auto'},
+    {t:'Upload from your Mac', d:'Install rclone (brew install rclone), point it at R2 with environment variables, and copy files.', s:'export RCLONE_CONFIG_R2_TYPE=s3\nexport RCLONE_CONFIG_R2_PROVIDER=Cloudflare\nexport RCLONE_CONFIG_R2_ACCESS_KEY_ID=...\nexport RCLONE_CONFIG_R2_SECRET_ACCESS_KEY=...\nexport RCLONE_CONFIG_R2_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com\nexport RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true\n\nrclone copy ./videos r2:learn-dashboards-assets/videos --progress\nrclone ls r2:learn-dashboards-assets'},
+    {t:'Choose how people will read it', d:'Testing: turn on the r2.dev URL in bucket settings. Production: connect a custom domain, which must be a zone on Cloudflare. Private or temporary sharing: presigned URLs. Leave it private if only CI and tools need it.', s:'# Settings → Public access\n#   r2.dev subdomain:  Allow  (testing only)\n#   Custom domains:    Connect domain → assets.yourdomain.com'},
+    {t:'Add CORS if JavaScript fetches files', d:'Needed only for fetch() or XHR from your GitLab Pages origin. Plain <img> and <video> tags don\'t need it. Set it under bucket Settings → CORS policy.', s:'[\n  {\n    "AllowedOrigins": ["https://team.pages.company.com"],\n    "AllowedMethods": ["GET", "HEAD"],\n    "AllowedHeaders": ["*"],\n    "MaxAgeSeconds": 3600\n  }\n]'},
+    {t:'Wire it into GitLab', d:'Add masked, protected CI/CD variables, add the upload job (tab 6) and update your page CSP to allow the R2 domain.', s:'# Settings → CI/CD → Variables (Masked + Protected)\nRCLONE_CONFIG_R2_ACCESS_KEY_ID\nRCLONE_CONFIG_R2_SECRET_ACCESS_KEY\nR2_ACCOUNT_ID\nR2_BUCKET = learn-dashboards-assets'}
+  ];
+  var cl=$('checklist');
+  steps.forEach(function(it,idx){
+    var d=el('div','check'); var cb=document.createElement('input'); cb.type='checkbox'; d.appendChild(cb);
+    var body=el('div'); body.className=''; var b=el('b'); b.textContent=(idx+1)+'. '+it.t; body.appendChild(b);
+    var p=el('div','muted small'); p.textContent=it.d; body.appendChild(p);
+    var sn=el('div','snip'); var pre=el('pre'); pre.textContent=it.s; sn.appendChild(pre); body.appendChild(sn); d.appendChild(body);
+    cb.addEventListener('click', function(e){ e.stopPropagation(); d.classList.toggle('done', cb.checked); prog(); });
+    d.addEventListener('click', function(){ d.classList.toggle('open'); });
+    cl.appendChild(d);
+  });
+  function prog(){ $('prog').style.width=(cl.querySelectorAll('input:checked').length/steps.length*100)+'%'; }
+
+  /* ---------- 6. With GitLab ---------- */
+  var files=[
+    {n:'index.html', a:'pages', w:'Small, text, changes often, and benefits from Git history and access control.'},
+    {n:'cloudflare-r2.html', a:'pages', w:'A learning page like this one belongs in Git and GitLab Pages.'},
+    {n:'logo.svg (4 KB)', a:'pages', w:'Tiny, so keep it in Git. Inline it if you want the page to stay fully offline.'},
+    {n:'intro.mp4 (412 MB)', a:'r2', w:'Large binary, bad for Git and great for R2 with free egress.'},
+    {n:'properties-2026.csv (1.8 GB)', a:'r2', w:'Large public dataset. R2 handles it with multipart upload.'},
+    {n:'SSP draft.docx', a:'neither', w:'Sensitive compliance content should never go in a public bucket, and probably not in a third-party cloud without approval. Keep it on internal systems.'},
+    {n:'team-only metrics.json', a:'neither', w:'A public R2 bucket would expose it. Keep it behind GitLab Pages access control, or use presigned URLs or Cloudflare Access only if your security team approves.'}
+  ];
+  var selFile=null, ib=$('sortItems');
+  files.forEach(function(f,i){
+    var c=el('div','item'); c.textContent=f.n; c.dataset.i=i;
+    c.addEventListener('click', function(){ selFile=i; $$('.item',ib).forEach(function(x){ x.classList.toggle('sel', x===c); }); $('sortOut').className='msg'; $('sortOut').textContent='Where does "'+f.n+'" belong?'; });
+    ib.appendChild(c);
+  });
+  $$('[data-place]').forEach(function(b){ b.addEventListener('click', function(){
+    if(selFile===null) return; var f=files[selFile], ok=b.dataset.place===f.a, c=ib.children[selFile];
+    c.classList.remove('sel'); c.classList.add(ok?'right':'wrong'); if(ok) c.classList.remove('wrong');
+    var names={pages:'Git + GitLab Pages', r2:'R2', neither:'Neither'};
+    $('sortOut').className='msg '+(ok?'ok':'fail'); $('sortOut').innerHTML=(ok?'<b>Right.</b> ':'<b>Not quite. It belongs in: '+names[f.a]+'.</b> ');
+    $('sortOut').appendChild(document.createTextNode(f.w));
+  }); });
+
+  var ciLines=[
+    ['stages: [upload, deploy]', 'Two stages. Upload runs first, then <code>pages</code> publishes. If the upload fails, the site isn\'t updated with links to missing files.'],
+    ['', ''],
+    ['upload-assets:', 'A job name of your choosing.'],
+    ['  stage: upload', ''],
+    ['  image: alpine:latest', 'The same tiny image as your <code>pages</code> job.'],
+    ['  variables:', 'rclone reads its whole remote config from <code>RCLONE_CONFIG_&lt;NAME&gt;_*</code> environment variables, so no config file is needed.'],
+    ['    RCLONE_CONFIG_R2_TYPE: s3', 'R2 speaks the S3 API.'],
+    ['    RCLONE_CONFIG_R2_PROVIDER: Cloudflare', 'Tells rclone to use R2-friendly settings.'],
+    ['    RCLONE_CONFIG_R2_ENDPOINT: https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com', 'The S3 endpoint for your account. <code>R2_ACCOUNT_ID</code> comes from a CI/CD variable.'],
+    ['    RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"', 'A token limited to one bucket can\'t create buckets, so tell rclone not to try. Without this, uploads with an Object Read &amp; Write token can fail.'],
+    ['  script:', ''],
+    ['    - apk add --no-cache rclone', 'Installs rclone into the throwaway container. The runner must be able to reach Alpine\'s package mirror.'],
+    ['    - rclone copy assets r2:${R2_BUCKET}/assets --checksum', 'Uploads new or changed files from the repo\'s <code>assets/</code> folder. <code>copy</code> never deletes anything in the bucket.'],
+    ['  rules:', ''],
+    ['    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH', 'Only on main, like your <code>pages</code> job.'],
+    ['      changes: [assets/**/*]', 'Runs only when something in <code>assets/</code> changed, so most pushes skip it.'],
+    ['', ''],
+    ['pages:', 'Your existing job, unchanged apart from the stage.'],
+    ['  stage: deploy', ''],
+    ['  image: alpine:latest', ''],
+    ['  script:', ''],
+    ['    - mkdir -p public && cp -r *.html public/', ''],
+    ['  artifacts:', ''],
+    ['    paths: [public]', ''],
+    ['  rules:', ''],
+    ['    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH', '']
+  ];
+  var cy=$('ciYaml');
+  ciLines.forEach(function(l){
+    var d=el('div'); d.textContent=l[0]||' ';
+    if(l[1]){ d.className='clickline'; d.addEventListener('click', function(){ $$('#ciYaml div').forEach(function(x){ x.classList.remove('sel'); }); d.classList.add('sel'); $('ciOut').className='msg'; $('ciOut').innerHTML=l[1]; }); }
+    cy.appendChild(d);
+  });
+
+  function cspUpdate(){
+    var img=$('cspImg').checked, med=$('cspMedia').checked, con=$('cspConnect').checked, cors=$('cors').checked, R='https://assets.yourdomain.com';
+    $('cspText').textContent="Content-Security-Policy:\n  default-src 'none';\n  script-src 'sha256-…';\n  style-src 'sha256-…';\n  img-src "+(img?R:"'none'")+";\n  media-src "+(med?R:"'none'")+";\n  connect-src "+(con?R:"'none'")+";";
+    function res(id, ok, why){ var r=$(id); r.className='res '+(ok?'ok':'fail'); r.querySelector('b').textContent=ok?'loads':why; }
+    res('tImg', img, 'blocked by CSP');
+    res('tVid', med, 'blocked by CSP');
+    res('tFetch', con && cors, !con ? 'blocked by CSP' : 'blocked by CORS');
+    $('cspWhy').innerHTML='<b>Two separate gates.</b> <b>CSP</b> is <i>your page</i> saying which domains it may load from. <b>CORS</b> is <i>the bucket</i> saying which websites\' JavaScript may read its responses. <code>&lt;img&gt;</code> and <code>&lt;video&gt;</code> only need CSP. <code>fetch()</code> needs both. Either way, the page is no longer fully offline.';
+    $('corsJson').textContent = cors ? '// R2 bucket → Settings → CORS policy\n[\n  {\n    "AllowedOrigins": ["https://team.pages.company.com"],\n    "AllowedMethods": ["GET", "HEAD"],\n    "AllowedHeaders": ["*"],\n    "MaxAgeSeconds": 3600\n  }\n]' : '// No CORS policy on the bucket';
+  }
+  ['cspImg','cspMedia','cspConnect','cors'].forEach(function(id){ $(id).addEventListener('change', cspUpdate); });
+  cspUpdate();
+
+  /* ---------- 7. Quiz ---------- */
+  var qs=[
+    {q:'A visitor in Kathmandu requests a file that the nearest Cloudflare edge already has cached. Where is it served from?', o:['Your origin in Virginia','The nearest Cloudflare edge','GitLab Pages'], a:1, w:'A cache HIT is answered at the edge. The origin never sees the request.'},
+    {q:'What does "DNS only" (grey cloud) mean?', o:['Traffic passes through Cloudflare\'s cache and WAF','Cloudflare only returns the IP, and visitors go straight to your server'], a:1, w:'Only proxied (orange cloud) records get caching and protection.'},
+    {q:'What is R2?', o:['A database','S3-compatible object storage with free egress','Cloudflare\'s version of GitLab Pages'], a:1, w:'Buckets of objects, the S3 API and $0 bandwidth.'},
+    {q:'Is videos/ a real folder inside an R2 bucket?', o:['Yes','No, it\'s part of each object\'s key, and tools display shared prefixes as folders'], a:1, w:'Object storage is flat. Folders are an illusion.'},
+    {q:'Which is free on R2 Standard storage?', o:['Storing 500 GB','Egress (data downloaded)','Unlimited Class A operations'], a:1, w:'Egress is always $0. Storage beyond 10 GB and operations beyond the free tier are billed.'},
+    {q:'Which door should production traffic from your dashboards use?', o:['r2.dev URL','A custom domain on a Cloudflare zone','Sharing your Access Key'], a:1, w:'r2.dev is rate-limited and only for testing. Custom domains get caching, WAF and rules.'},
+    {q:'What does the CI upload job need?', o:['A public bucket','An API token\'s keys stored as masked, protected CI/CD variables','Cloudflare Pages'], a:1, w:'The S3 API with keys works on a private bucket.'},
+    {q:'Your page does fetch() of JSON from R2 and it fails. CSP allows the domain. What\'s missing?', o:['A CORS policy on the bucket allowing your Pages origin','A bigger bucket','Infrequent Access storage'], a:0, w:'fetch() needs both the page\'s CSP and the bucket\'s CORS. <img> and <video> only need CSP.'},
+    {q:'Why use rclone copy instead of rclone sync in CI?', o:['It\'s faster','sync deletes bucket files that aren\'t in the folder, including files you uploaded from your Mac'], a:1, w:'copy only adds and updates files.'},
+    {q:'Does GitLab Pages access control protect files in a public R2 bucket?', o:['Yes','No, anyone with the URL can open them'], a:1, w:'Never put sensitive or SSP content in a public bucket.'},
+    {q:'When is Infrequent Access a good fit?', o:['Dashboard images viewed daily','Archives you rarely read'], a:1, w:'IA has no free tier, charges per GB read and has a 30-day minimum.'},
+    {q:'How long can a presigned URL last at most?', o:['1 hour','7 days','Forever'], a:1, w:'Up to 604,800 seconds, and only on the S3 endpoint.'}
+  ];
+  var score=0; $('qTotal').textContent=qs.length;
+  function buildQuiz(){
+    var box=$('quizBox'); box.innerHTML=''; score=0; $('score').textContent=0;
+    qs.forEach(function(it,qi){
+      var d=el('div','q'); var t=el('b'); t.textContent=(qi+1)+'. '+it.q; d.appendChild(t);
+      var opts=el('div','opts'); d.appendChild(opts); var why=el('div','why muted'); d.appendChild(why);
+      it.o.forEach(function(txt,oi){
+        var b=el('button'); b.textContent=txt;
+        b.addEventListener('click', function(){ if(d.classList.contains('answered')) return; d.classList.add('answered');
+          b.classList.add(oi===it.a?'right':'wrong'); opts.children[it.a].classList.add('right');
+          if(oi===it.a){ score++; $('score').textContent=score; } why.textContent=it.w; });
+        opts.appendChild(b);
+      });
+      box.appendChild(d);
+    });
+  }
+  $('quizReset').addEventListener('click', buildQuiz);
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
