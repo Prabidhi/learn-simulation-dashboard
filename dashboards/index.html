@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-EDcdeh3AVnBxKn2O+VXWT4UtMl5WXDJr7fGO2TA90go='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-fB1t4B/cBsN+L2k0uGSLgFEBYmRG5/KvtOvo5UQGVeM='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -253,17 +253,19 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
 const DASHBOARDS = [
   {
     title: 'ORDS 403, Hardened Grants',
-    href: 'oracle/ords-403-hardened-grants.html',
-    topic: 'oracle',
+    href: 'oracle/ords/ords-403-hardened-grants.html',
+    section: 'Oracle',
+    topic: 'ords',
     added: '2026-11-07',
-    desc: 'Why every PL/SQL handler got 403 on a hardened database while plain SQL GETs worked: the code ORDS runs around your handler needs DBMS_LOB and DBMS_PICKLER, and open connections can hide the second.',
-    points: ['Trace a request through all five ORDS stages', 'See why a restart can break a working schema', 'Copy the checks and the DBA request'],
-    tags: ['ords', 'pl/sql', 'privileges', 'dbms_lob', 'dbms_pickler']
+    desc: 'Why every PL/SQL handler got 403 on a hardened database while plain SQL GETs worked: the code ORDS runs around your handler needs DBMS_LOB and DBMS_PICKLER. Look inside both packages and weigh the risk of each grant.',
+    points: ['Trace a request through all five ORDS stages', 'See what each package does and how risky its grant is', 'Copy the checks and the DBA request'],
+    tags: ['ords', 'pl/sql', 'privileges', 'dbms_lob', 'dbms_pickler', 'security', 'cis']
   },
   {
     title: 'ORDS 403, Explained',
-    href: 'oracle/ords-403-explained.html',
-    topic: 'oracle',
+    href: 'oracle/ords/ords-403-explained.html',
+    section: 'Oracle',
+    topic: 'ords',
     added: '2026-11-06',
     desc: 'Why a REST gateway schema\'s POST handlers got 403 while GETs worked, and the one grant that fixed it. Send every request yourself.',
     points: ['Simulate requests through ORDS', 'Replay the investigation step by step', 'Rebuild it with copyable commands'],
@@ -376,7 +378,7 @@ const TOPICS = {
   korean:  { label: 'Korean',  color: 'var(--korean)' },
   'mental-models': { label: 'Mental Models', color: 'var(--mental)' },
   quantum: { label: 'Quantum', color: 'var(--quantum)' },
-  oracle:  { label: 'Oracle',  color: 'var(--oracle)' },
+  ords:    { label: 'ORDS',    color: 'var(--oracle)' },
   security: { label: 'Security', color: 'var(--security)' },
 };
 
@@ -437,7 +439,7 @@ const ART = {
     ${[[79,60],[99,44],[119,34]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5" fill="var(--panel)" stroke="${c}" stroke-width="2.5"/>`).join('')}
     <path d="M60 148 H284" stroke="${c}" stroke-width="1.5" opacity=".45"/>
   </svg>`,
-  oracle: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  ords: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <g fill="var(--panel)" stroke="${c}" stroke-width="2.5"><path d="M214 52 V122 A40 12 0 0 0 294 122 V52"/><ellipse cx="254" cy="52" rx="40" ry="12"/></g>
     <path d="M214 76 A40 12 0 0 0 294 76 M214 100 A40 12 0 0 0 294 100" fill="none" stroke="${c}" stroke-width="2" opacity=".5"/>
     <path class="flow" d="M58 70 H196" stroke="${c}" stroke-width="2.5" opacity=".9"/><path d="M188 63 L198 70 L188 77" fill="none" stroke="${c}" stroke-width="2.5"/>
