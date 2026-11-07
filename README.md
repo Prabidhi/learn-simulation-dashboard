@@ -12,6 +12,13 @@ Every merge to `main` runs the `pages` job in `.gitlab-ci.yml`:
    linking to every dashboard (using each file's path).
 3. GitLab Pages publishes `public/`.
 
+## Learning dashboards for other projects
+
+[LEARNING_DASHBOARD_GUIDE.md](LEARNING_DASHBOARD_GUIDE.md) is a self-contained guide
+to copy into any other project. Ask Claude there to read it and build a learning
+dashboard, and it explains how to study the project, the page rules, data and
+privacy rules, testing, and how to add the page here. It includes a starter page.
+
 ## Adding a dashboard
 
 1. Create a branch and add your `.html` file under `dashboards/`, in folders
