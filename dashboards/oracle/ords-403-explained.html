@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-agOh5aX/xnK4cHbsWC8ml5J2RMbSMHUlsFXAW+85PZI='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORDS 403, Explained</title>
+<meta name="description" content="Why an ORDS gateway schema's POST handlers returned 403 while GETs worked, and how one grant fixed it. Simulate every request yourself.">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --a:#0d7d74;--a-soft:#dcf2ef;--ok:#1a7f37;--ok-soft:#e3f5e8;--bad:#cf222e;--bad-soft:#fde8e8;--warn:#9a5b06;--warn-soft:#fdf0e2;--on-a:#ffffff;
+  --code-bg:#13151b;--code-fg:#e6e8ee;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--code-bg:#0a0c10}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--code-bg:#0a0c10}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
+  --a:#7ee2d6;--a-soft:#24404a;--ok:#7ee2a8;--ok-soft:#24394a;--bad:#ff8f86;--bad-soft:#4a2b3f;--warn:#ffc27a;--warn-soft:#4a3040;--on-a:#211b33;--code-bg:#17142a}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 14px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
+header p{margin:0;color:var(--muted);max-width:820px}
+.thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:900px}
+.chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px;max-width:900px}
+.chipq{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
+.chipq span{display:block;font-size:.76rem;color:var(--muted)}
+.chipq b{display:block;font-size:.92rem;overflow-wrap:anywhere}
+.chipq.no{border-left-color:var(--ok)}
+.chipq.cause{border-left-color:var(--bad)}
+.chipq.fix{border-left-color:var(--a)}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+:root[data-theme="twilight"] nav{background:#2a2444}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--a)}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
+section{margin:30px 0 8px;scroll-margin-top:60px}
+section>h2{font-size:1.28rem;margin:0 0 4px}
+section>p.lead{margin:0 0 12px;color:var(--muted);max-width:860px}
+.analogy{border-left:3px solid var(--a);background:var(--a-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:900px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.wide{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0;margin-bottom:14px}
+.two>.card,.wide>.card,.three>.card{margin-bottom:0}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card .sub{color:var(--muted);font-size:.84rem;margin:0 0 10px}
+.card p{margin:6px 0;font-size:.9rem}
+.gap{margin-top:14px}
+code{font-family:var(--mono);font-size:.84em;background:var(--chip);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+button.b{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.b:hover:not(:disabled){border-color:var(--fg)}
+button.b:disabled{opacity:.5;cursor:default}
+button.b[aria-pressed="true"]{background:var(--a-soft);border-color:var(--a);font-weight:600}
+button.pri{background:var(--a);border-color:var(--a);color:var(--on-a);font-weight:600}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.lbl{font-size:.8rem;color:var(--muted);margin:10px 0 2px}
+.readout{font-size:.9rem;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--chip);overflow-wrap:anywhere}
+.readout.ok{background:var(--ok-soft)}
+.readout.bad{background:var(--bad-soft)}
+.readout.warn{background:var(--warn-soft)}
+.note{font-size:.78rem;color:var(--muted);margin:6px 0 0}
+/* diagram */
+.layer{border:1px dashed var(--line);border-radius:12px;padding:10px;margin-top:10px}
+.layer>span{font-size:.76rem;color:var(--muted)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,1fr) 84px minmax(0,1fr);align-items:stretch;margin-top:6px}
+.node{font:inherit;text-align:center;background:var(--chip);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 8px;cursor:pointer;min-width:0}
+.node:hover{border-color:var(--fg)}
+.node[aria-pressed="true"]{border-color:var(--a);background:var(--a-soft)}
+.node.gw{border-width:2px;border-color:var(--a)}
+.node.htp{border-color:var(--bad);border-style:dashed;width:100%;margin-top:8px}
+.node b{display:block;font-size:.9rem}
+.node span{display:block;font-family:var(--mono);font-size:.72rem;color:var(--muted);overflow-wrap:break-word}
+.arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:.68rem;text-align:center;line-height:1.25;padding:0 4px}
+.arrow i{font-style:normal;font-size:1.1rem;line-height:1}
+/* simulator */
+.opt{display:flex;flex-wrap:wrap;gap:6px}
+.flow{list-style:none;padding:0;margin:10px 0 0;counter-reset:s}
+.flow li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:8px;align-items:start;padding:6px 8px;border-left:3px solid var(--line);margin-bottom:5px;border-radius:0 8px 8px 0;background:var(--chip);font-size:.86rem;transition:opacity .2s}
+.flow li .ic{font-weight:700;text-align:center;font-family:var(--mono)}
+.flow li.pass{border-left-color:var(--ok)}
+.flow li.pass .ic{color:var(--ok)}
+.flow li.fail{border-left-color:var(--bad);background:var(--bad-soft)}
+.flow li.fail .ic{color:var(--bad)}
+.flow li.skip{opacity:.5}
+.flow li.wait{opacity:.35}
+.flow li small{display:block;color:var(--muted)}
+.status{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:6px}
+.status .code{font-family:var(--mono);font-size:1.9rem;font-weight:700;line-height:1.1}
+.status.s2 .code{color:var(--ok)}
+.status.s4 .code{color:var(--bad)}
+.status.sq .code{color:var(--warn)}
+.status .txt{font-weight:600}
+pre{font-family:var(--mono);font-size:.78rem;line-height:1.5;margin:6px 0 0;padding:10px 12px;border-radius:8px;background:var(--code-bg);color:var(--code-fg);overflow-x:auto;white-space:pre}
+pre.wrap{white-space:pre-wrap;overflow-wrap:anywhere}
+.src{font-size:.8rem;color:var(--muted);margin-top:6px}
+/* timeline */
+.phase{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.phase:first-child{border-top:0}
+.mark{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;background:var(--chip);border:1px solid var(--line)}
+.mark.ok{color:var(--ok);border-color:var(--ok)}
+.mark.bad{color:var(--bad);border-color:var(--bad)}
+.phase h3{margin:0;font-size:.98rem}
+.phase p{margin:4px 0 6px;font-size:.88rem}
+.tag{display:inline-block;font-family:var(--mono);font-size:.74rem;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)}
+/* tables */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td .yes{color:var(--ok);font-weight:700}
+td .no{color:var(--bad);font-weight:700}
+/* rebuild */
+.steps{display:flex;flex-wrap:wrap;gap:5px}
+.steps button{font:inherit;font-size:.8rem;min-width:34px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.steps button[aria-pressed="true"]{background:var(--a);border-color:var(--a);color:var(--on-a);font-weight:700}
+.codebox{position:relative}
+.codebox .copy{position:absolute;top:6px;right:6px;font:inherit;font-size:.74rem;padding:3px 9px;border-radius:6px;border:1px solid #ffffff33;background:#ffffff14;color:var(--code-fg);cursor:pointer}
+.codebox .as{font-family:var(--mono);font-size:.74rem;color:var(--muted);margin-top:8px}
+.danger{border-left:3px solid var(--bad);background:var(--bad-soft);padding:8px 12px;border-radius:8px;font-size:.88rem;margin-top:8px}
+/* gotchas */
+.gotcha{font:inherit;text-align:left;width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-top:3px solid var(--bad);border-radius:12px;padding:12px 14px;cursor:pointer}
+.gotcha:hover{border-color:var(--fg);border-top-color:var(--bad)}
+.gotcha b{display:block}
+.gotcha .sy{font-size:.86rem;color:var(--muted)}
+.gotcha .fix{display:none;font-size:.86rem;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.gotcha[aria-expanded="true"] .fix{display:block}
+.q{padding:10px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.q>b{display:block;font-size:.93rem;margin-bottom:6px}
+.q .opts{display:flex;flex-direction:column;gap:6px}
+.q .opts button{font:inherit;font-size:.87rem;text-align:left;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.q .opts button:disabled{cursor:default;color:var(--fg)}
+.q .opts button.right{background:var(--ok-soft);border-color:var(--ok)}
+.q .opts button.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.q .why{font-size:.84rem;margin:6px 0 0;color:var(--muted)}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);font-size:.8rem}
+@media (max-width:900px){.two,.wide,.three{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:620px){.chips{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr)}.arrow{flex-direction:row;gap:6px;padding:4px 0}.arrow i{transform:rotate(90deg)}}
+@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.flow li{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>ORDS 403, Explained</h1>
+  <p>A REST gateway schema with only <code>CREATE SESSION</code> and <code>CREATE SYNONYM</code> got HTTP 403 on its <code>plsql/block</code> POST handlers, while <code>json/collection</code> GETs worked with the same token. This page rebuilds the investigation so you can run every request yourself.</p>
+  <div class="chips">
+    <div class="chipq no"><span>Does the gateway need CREATE PROCEDURE?</span><b>No</b></div>
+    <div class="chipq cause"><span>Real cause of the 403</span><b>EXECUTE on SYS.HTP revoked from PUBLIC</b></div>
+    <div class="chipq fix"><span>The fix</span><b>grant execute on sys.htp to &lt;gateway&gt;</b></div>
+  </div>
+  <div class="thesis"><b>Key idea:</b> ORDS wraps every <code>plsql/block</code> handler in code that uses <code>SYS.HTP</code> to build the HTTP response. If the schema can't reach <code>HTP</code>, the request fails before your code runs. GETs from a <code>json/collection</code> source never use <code>HTP</code>, so they keep working.</div>
+</header>
+<nav><div>
+  <a href="#setup">1. The setup</a>
+  <a href="#sim">2. Send a request</a>
+  <a href="#story">3. The investigation</a>
+  <a href="#proved">4. What it proved</a>
+  <a href="#rebuild">5. Rebuild it</a>
+  <a href="#gotchas">6. Gotchas</a>
+  <a href="#quiz">7. Quiz</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+<main>
+
+<section id="setup">
+  <h2>1. The setup at a glance</h2>
+  <p class="lead">Two layers: the path a request travels, and the chain of schemas inside the database that does the work. The gateway never touches the repository directly. A definer's-rights package in the middle does. Tap any part.</p>
+  <div class="analogy"><b>Analogy:</b> the gateway is a receptionist who may only pass notes to one office. The office (a definer's-rights package) has its own keys to the archive. And every written reply has to go through the building's printer, <code>HTP</code>. Take away the receptionist's printer access and every written reply fails, even though nothing else changed.</div>
+  <div>
+    <div class="card">
+      <div class="layer"><span>Runtime path</span>
+        <div class="row" id="rowA"></div>
+      </div>
+      <div class="layer"><span>Inside the database: the call chain</span>
+        <div class="row" id="rowB"></div>
+        <button class="node htp" data-n="htp" aria-pressed="false"><b>SYS.HTP / OWA_UTIL wrapper</b><span>ORDS wraps every plsql/block call in this</span></button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 id="nodeH">Pick a part</h3>
+      <p class="sub" id="nodeS">Each part shows what it does and which privileges it needs.</p>
+      <div id="nodeB"></div>
+    </div>
+  </div>
+</section>
+
+<section id="sim">
+  <h2>2. Send a request</h2>
+  <p class="lead">Choose an endpoint and set up the database, then send. The simulator follows the rules this investigation proved, and says which test each result comes from.</p>
+  <div class="controls" id="preset">
+    <span class="note" style="margin:0">Load a stage:</span>
+    <button class="b" data-p="phase1">Phase 1: no security</button>
+    <button class="b" data-p="phase2">Phase 2: OAuth</button>
+    <button class="b" data-p="hardened">Hardened database</button>
+    <button class="b" data-p="fixed">The fix</button>
+  </div>
+  <div class="wide">
+    <div class="card">
+      <div class="lbl">Endpoint</div><div class="opt" id="oEp"></div>
+      <div class="two gap">
+        <div>
+          <div class="lbl">Module protected by a privilege</div><div class="opt" id="oProt"></div>
+          <div class="lbl">Bearer token</div><div class="opt" id="oTok"></div>
+          <div class="lbl">p_auto_rest_auth</div><div class="opt" id="oAuto"></div>
+        </div>
+        <div>
+          <div class="lbl">PUBLIC has EXECUTE on SYS.HTP</div><div class="opt" id="oPub"></div>
+          <div class="lbl">Gateway has a direct grant on SYS.HTP</div><div class="opt" id="oWs"></div>
+          <div class="lbl">Gateway has CREATE PROCEDURE</div><div class="opt" id="oProc"></div>
+        </div>
+      </div>
+      <div class="controls gap"><button class="b pri" id="send">Send request</button></div>
+      <pre class="wrap" id="curl"></pre>
+    </div>
+    <div class="card">
+      <h3>What happens</h3>
+      <ol class="flow" id="flow"></ol>
+      <div class="status" id="st" aria-live="polite"></div>
+      <pre class="wrap" id="body" hidden></pre>
+      <div class="readout" id="why"></div>
+      <div class="src" id="src"></div>
+    </div>
+  </div>
+</section>
+
+<section id="story">
+  <h2>3. The investigation, end to end</h2>
+  <p class="lead">Six steps. The first four build and test, and the last two find the cause and prove the fix. The statuses are the HTTP codes actually observed. Load any stage into the simulator.</p>
+  <div class="card" id="phases"></div>
+</section>
+
+<section id="proved">
+  <h2>4. What it proved</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Three suspects, one culprit</h3>
+      <div class="tablewrap"><table><thead><tr><th>Hypothesis</th><th>Verdict</th><th>Evidence</th></tr></thead><tbody>
+        <tr><td>The gateway needs <code>CREATE PROCEDURE</code></td><td><span class="no">No</span></td><td>Phase 1 POST handlers returned 201 with only <code>CREATE SESSION</code> and <code>CREATE SYNONYM</code></td></tr>
+        <tr><td>The OAuth or privilege setup is the cause</td><td><span class="no">No</span></td><td>Phase 2: 401 without a token, 201 with a valid one</td></tr>
+        <tr><td>Database hardening on <code>SYS.HTP</code></td><td><span class="yes">Yes</span></td><td>Revoking it from PUBLIC reproduced the 403 on POST, while GET stayed 200</td></tr>
+      </tbody></table></div>
+      <div class="readout gap"><b>Why GET and POST differ:</b> <code>json/collection</code> GETs go through ORDS's own SQL path and never touch <code>HTP</code>. Every <code>plsql/block</code> handler runs inside generated PL/SQL that needs <code>HTP</code>.</div>
+    </div>
+    <div class="card">
+      <h3>A note on <code>p_auto_rest_auth</code></h3>
+      <p class="sub">The kit enables the schema with <code>false</code>. <code>true</code> is the more secure setting. Both were tested.</p>
+      <div class="tablewrap"><table><thead><tr><th>Endpoint</th><th><code>false</code></th><th><code>true</code></th></tr></thead><tbody>
+        <tr><td><code>POST t/item</code> with token</td><td>201</td><td>201</td></tr>
+        <tr><td><code>POST t/item</code> without token</td><td>401</td><td>401</td></tr>
+        <tr><td><code>metadata-catalog</code> without token</td><td>200 (open)</td><td>401 (gated)</td></tr>
+      </tbody></table></div>
+      <p>The flag gates <b>only</b> the schema's Auto-REST surface. Hand-defined modules are controlled by the privilege you map, so the <code>SYS.HTP</code> finding doesn't depend on it.</p>
+      <div class="readout warn"><b>Caching:</b> ORDS keeps an in-memory schema cache. After changing <code>auto_rest_auth</code>, the metadata-catalog only reflects it reliably once the cache refreshes or ORDS restarts.</div>
+    </div>
+  </div>
+</section>
+
+<section id="rebuild">
+  <h2>5. Rebuild it on another computer</h2>
+  <p class="lead">The path that worked: an Oracle Database Free container plus ORDS in <b>standalone</b> mode, with no Tomcat. Commands use <code>podman</code>, and <code>docker</code> works the same. Every password shown is a throwaway test value, so use your own.</p>
+  <div class="card">
+    <h3>Before you start</h3>
+    <p>Podman or Docker with about 8 GB of free disk and 4 GB of RAM, JDK 17 or newer, SQLcl (the <code>sql</code> command) or SQL Developer, and ORDS 25.x unzipped so you have <code>bin/ords</code>.</p>
+    <div class="steps gap" id="stepNav" role="group" aria-label="Rebuild steps"></div>
+    <h3 class="gap" id="stepT"></h3>
+    <p id="stepP"></p>
+    <div id="stepWarn" class="danger" hidden></div>
+    <div id="stepCode"></div>
+    <p id="stepAfter"></p>
+    <div class="controls"><button class="b" id="prev">Previous</button><button class="b pri" id="next">Next step</button></div>
+  </div>
+</section>
+
+<section id="gotchas">
+  <h2>6. Gotchas hit along the way</h2>
+  <p class="lead">Each one cost time. Tap a card to see the fix.</p>
+  <div class="two" id="gotchaBox"></div>
+</section>
+
+<section id="quiz">
+  <h2>7. Quiz</h2>
+  <p class="lead" id="qS"></p>
+  <div class="card"><div id="qB"></div><div class="controls"><button class="b" id="qR">Reset quiz</button></div></div>
+</section>
+</main>
+<footer>Test environment only: dummy schemas and throwaway passwords, with no real system's code, data or credentials. The simulator runs entirely in this page and never contacts a database.</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
+const pressed = (box, on) => box.querySelectorAll('[aria-pressed]').forEach(b => b.setAttribute('aria-pressed', b === on));
+
+/* =============== 1. DIAGRAM =============== */
+const NODES = {
+  client:{t:'Client', s:'curl + Bearer token', d:'Sends HTTP requests to ORDS. In phase 2 it first asks <code>/oauth/token</code> for a token using the client ID and secret, then sends it as <code>Authorization: Bearer …</code>.'},
+  ords:{t:'ORDS 25.3, standalone', s:'localhost:8088/ords', d:'Oracle REST Data Services turns HTTP into database calls. Here it runs <b>standalone</b> (<code>ords serve</code>) on the host, which reaches the database at <code>localhost</code>. It checks tokens, finds the handler and runs it through a JDBC pool.'},
+  db:{t:'Oracle Database Free', s:'localhost:1521/FREEPDB1', d:'The pluggable database <code>FREEPDB1</code> in a container. All the schemas below live here.'},
+  ws:{t:'WS: the gateway', s:'CREATE SESSION + CREATE SYNONYM', d:'The REST-enabled schema that owns the ORDS module <code>t.mod</code>. It deliberately holds only two system privileges, plus <code>EXECUTE</code> on the application packages and synonyms that point at them. It has <b>no</b> <code>CREATE PROCEDURE</code>.'},
+  app:{t:'APP2.REQ_PKG', s:'AUTHID DEFINER', d:'A <b>definer\'s-rights</b> package: it runs with its owner\'s privileges, not the caller\'s. So the gateway only needs <code>EXECUTE</code> on it, and the package itself reads the repository. Its chain is <code>create_request → make_request_no → next_from_repo()</code>.'},
+  repo:{t:'REPO', s:'req_prefix_v + req_seq', d:'The repository schema: a view that returns a <code>REQ-YYYYMMDD</code> prefix, and a sequence. Only APP2 has <code>SELECT</code> on them, never the gateway.'},
+  htp:{t:'SYS.HTP / OWA_UTIL wrapper', s:'', d:'For every <code>plsql/block</code> handler, ORDS generates PL/SQL that uses <code>HTP</code> and <code>OWA_UTIL</code> to build the HTTP response. That code runs as the gateway schema. Many hardened databases revoke <code>EXECUTE</code> on <code>SYS.HTP</code> from PUBLIC. Without a direct grant, the wrapper fails before your handler runs, and ORDS answers <b>403</b>.'}
+};
+function nodeBtn(k, extra){ const n = NODES[k]; return `<button class="node ${extra || ''}" data-n="${k}" aria-pressed="false"><b>${esc(n.t)}</b><span>${esc(n.s)}</span></button>`; }
+const arrow = t => `<div class="arrow" aria-hidden="true"><i>→</i>${esc(t)}</div>`;
+$('#rowA').innerHTML = nodeBtn('client') + arrow('HTTPS') + nodeBtn('ords') + arrow('JDBC') + nodeBtn('db');
+$('#rowB').innerHTML = nodeBtn('ws', 'gw') + arrow('EXECUTE + synonym') + nodeBtn('app') + arrow('SELECT') + nodeBtn('repo');
+$('#setup').addEventListener('click', e => {
+  const b = e.target.closest('.node'); if (!b) return; const n = NODES[b.dataset.n];
+  document.querySelectorAll('#setup .node').forEach(x => x.setAttribute('aria-pressed', x === b));
+  $('#nodeH').textContent = n.t; $('#nodeS').textContent = n.s; $('#nodeB').innerHTML = `<p>${n.d}</p>`;
+});
+
+/* =============== 2. SIMULATOR =============== */
+const EPS = {
+  getItem:{label:'GET t/item', m:'GET', path:'t/item', type:'json/collection', plsql:false},
+  postItem:{label:'POST t/item', m:'POST', path:'t/item', type:'plsql/block', plsql:true, runs:'Runs <code>begin :status_code := 201; end;</code>'},
+  postReal:{label:'POST t/real', m:'POST', path:'t/real', type:'plsql/block', plsql:true, runs:'Calls <code>app.p.get_count</code>, which reads <code>other.v</code>'},
+  postReq:{label:'POST t/request', m:'POST', path:'t/request', type:'plsql/block', plsql:true, runs:'Calls <code>req_pkg.create_request</code>, which reads REPO\'s view and sequence'},
+  catalog:{label:'GET metadata-catalog', m:'GET', path:'metadata-catalog', type:'Auto-REST', plsql:false, auto:true}
+};
+const OPTS = {
+  oEp:['ep', Object.entries(EPS).map(([k, v]) => [k, v.label])],
+  oProt:['prot', [[false, 'No'], [true, 'Yes']]],
+  oTok:['tok', [[false, 'None'], [true, 'Valid token']]],
+  oAuto:['auto', [[false, 'false'], [true, 'true']]],
+  oPub:['pub', [[true, 'Yes (default)'], [false, 'No, revoked']]],
+  oWs:['wsHtp', [[false, 'No'], [true, 'Yes']]],
+  oProc:['proc', [[false, 'No'], [true, 'Yes']]]
+};
+const PRESETS = {
+  phase1:{ep:'postItem', prot:false, tok:false, auto:false, pub:true, wsHtp:false, proc:false},
+  phase2:{ep:'postItem', prot:true, tok:true, auto:false, pub:true, wsHtp:false, proc:false},
+  hardened:{ep:'postItem', prot:true, tok:true, auto:false, pub:false, wsHtp:false, proc:false},
+  fixed:{ep:'postItem', prot:true, tok:true, auto:false, pub:false, wsHtp:true, proc:false}
+};
+let S = {...PRESETS.phase1}, seq = 0, runId = 0;
+function drawOpts(){
+  Object.entries(OPTS).forEach(([id, [key, list]]) => {
+    $('#' + id).innerHTML = list.map(([v, l]) => `<button class="b" data-v="${v}" aria-pressed="${S[key] === v}">${esc(l)}</button>`).join('');
+  });
+}
+Object.entries(OPTS).forEach(([id, [key, list]]) => $('#' + id).addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const raw = b.dataset.v; S[key] = raw === 'true' ? true : raw === 'false' ? false : raw;
+  pressed($('#' + id), b); idle();
+}));
+function curlFor(){
+  const ep = EPS[S.ep], base = 'BASE=http://localhost:8088/ords/ws', auth = S.tok ? ' \\\n  -H "Authorization: Bearer $TOKEN"' : '';
+  return ep.m === 'GET' ? `${base}\ncurl -i${auth} "$BASE/${ep.path}"` : `${base}\ncurl -i -X POST${auth} \\\n  -H 'Content-Type: application/json' -d '{}' "$BASE/${ep.path}"`;
+}
+/* The rules this investigation proved, as a decision. Each result names the test it comes from. */
+function decide(){
+  const ep = EPS[S.ep], htp = S.pub || S.wsHtp, steps = [];
+  const step = (state, title, note) => steps.push({state, title, note});
+  step('pass', `Client sends ${ep.m} /${ep.path}`, S.tok ? 'with a Bearer token' : 'with no token');
+  if (ep.auto) {
+    if (S.auto && !S.tok) { step('fail', 'ORDS checks Auto-REST access', 'p_auto_rest_auth is true, so the catalog needs a token'); return {code:401, text:'Unauthorized', steps, why:'With <code>p_auto_rest_auth => true</code> the Auto-REST surface, including the metadata-catalog, is gated.', src:'Seen in the auto_rest_auth test.'}; }
+    if (S.auto && S.tok) { step('pass', 'ORDS checks Auto-REST access', 'a token is present'); return {code:'?', text:'Not tested', steps, why:'The kit only called the catalog without a token. Whether this client\'s token opens the catalog depends on the privileges it holds, so the simulator doesn\'t guess.', src:'Not tested in this kit.'}; }
+    step('pass', 'ORDS checks Auto-REST access', 'p_auto_rest_auth is false, so the catalog is open');
+    step('pass', 'ORDS lists the schema\'s Auto-REST metadata', 'no PL/SQL wrapper involved');
+    return {code:200, text:'OK', steps, body:'{"items":[ …the schema\'s Auto-REST metadata… ]}', why:'With <code>false</code>, the catalog is open to anyone. That\'s why <code>true</code> is the more secure setting.', src:'Seen in the auto_rest_auth test.'};
+  }
+  if (S.prot && !S.tok) { step('fail', 'ORDS checks the token against privilege t.priv', 'no token was sent'); return {code:401, text:'Unauthorized', steps, why:'The module is protected by a privilege, and there\'s no token. ORDS rejects the request before any handler runs.', src:!htp ? 'Expected, but not tested in this kit: the token check comes before any handler runs.' : S.ep === 'postItem' ? 'Seen in phase 2.' : 'Same rule as phase 2, which tested POST t/item.'}; }
+  step(S.prot ? 'pass' : 'skip', 'ORDS checks the token against privilege t.priv', S.prot ? 'valid token, role t.role' : 'module not protected');
+  step('pass', `ORDS finds the ${ep.type} handler`, ep.plsql ? 'source type plsql/block' : 'source type json/collection');
+  if (!ep.plsql) {
+    step('skip', 'SYS.HTP response wrapper', 'not used by json/collection');
+    step('pass', 'ORDS runs the query and builds JSON itself', 'select sysdate as now from dual');
+    return {code:200, text:'OK', steps, body:`{"items":[{"now":"${new Date().toISOString().slice(0, 19)}Z"}], …}`, why:'GETs from a <code>json/collection</code> source use ORDS\'s own SQL path. They never touch <code>HTP</code>, so revoking it changes nothing here.', src:htp ? 'Seen in phase 1.' : 'Seen in experiment B: the GET stayed 200 after the revoke.'};
+  }
+  if (!htp) {
+    step('fail', 'SYS.HTP response wrapper', 'the gateway can\'t execute SYS.HTP: no PUBLIC grant and no direct grant');
+    step('skip', 'Your PL/SQL', 'never reached');
+    return {code:403, text:'Forbidden', steps, body:'a function or procedure referenced by the PL/SQL statement being evaluated is not accessible or does not exist', why:'ORDS wraps the handler in generated PL/SQL that calls <code>HTP</code>. It runs as the gateway schema, which can\'t execute <code>SYS.HTP</code>, so the request fails before your code runs. Fix: <code>grant execute on sys.htp to ws;</code>', src:S.ep === 'postItem' ? 'Seen in experiment B.' : 'Same rule as experiment B, which tested POST t/item.'};
+  }
+  step('pass', 'SYS.HTP response wrapper', S.wsHtp ? 'allowed by the direct grant to WS' : 'allowed through PUBLIC');
+  step('pass', 'Your PL/SQL', ep.runs + (S.proc ? '. CREATE PROCEDURE plays no part' : ', with no CREATE PROCEDURE'));
+  let body = '', src;
+  if (S.ep === 'postReq') { seq++; const d = new Date(), ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); body = `{"request_no":"REQ-${ymd}-${String(seq).padStart(6, '0')}"}`; }
+  if (!S.pub && S.wsHtp) src = S.ep === 'postItem' ? 'Seen when the fix was applied.' : 'Same rule as the fix test, which used POST t/item.';
+  else if (S.ep === 'postReq') src = 'Seen in the request-number extension, which ran with a token.';
+  else src = S.prot ? (S.ep === 'postItem' ? 'Seen in phase 2.' : 'Same rule as phase 2.') : 'Seen in phase 1.';
+  const why = S.ep === 'postReq' ? 'The handler emits JSON itself with <code>owa_util.mime_header</code> and <code>htp.p</code>, because ORDS doesn\'t serialise the OUT bind on its own. Each call takes the next number from the sequence.' : 'The gateway can reach <code>HTP</code>, so the wrapper builds the response and returns 201. It never needed <code>CREATE PROCEDURE</code>.';
+  return {code:201, text:'Created', steps, body, why, src};
+}
+function idle(){
+  runId++; $('#curl').textContent = curlFor(); $('#flow').innerHTML = '<li class="wait"><span class="ic">·</span><span>Press <b>Send request</b> to follow it through.</span></li>';
+  $('#st').innerHTML = ''; $('#body').hidden = true; $('#why').className = 'readout'; $('#why').textContent = 'Change any setting, then send.'; $('#src').textContent = '';
+}
+function send(){
+  const r = decide(), id = ++runId, icon = {pass:'✓', fail:'✕', skip:'–'};
+  $('#flow').innerHTML = r.steps.map(s => `<li class="${s.state} wait"><span class="ic">${icon[s.state]}</span><span>${esc(s.title)}<small>${esc(s.note)}</small></span></li>`).join('');
+  $('#st').innerHTML = ''; $('#body').hidden = true; $('#why').textContent = 'Sending…'; $('#why').className = 'readout'; $('#src').textContent = '';
+  const items = [...document.querySelectorAll('#flow li')], gap = calm.matches ? 0 : 260;
+  const finish = () => {
+    if (id !== runId) return;
+    const cls = r.code === '?' ? 'sq' : String(r.code)[0] === '2' ? 's2' : 's4';
+    $('#st').className = 'status ' + cls; $('#st').innerHTML = `<span class="code">${r.code === '?' ? '?' : r.code}</span><span class="txt">${esc(r.text)}</span>`;
+    if (r.body) { $('#body').hidden = false; $('#body').textContent = r.body; }
+    $('#why').className = 'readout ' + (cls === 's2' ? 'ok' : cls === 's4' ? 'bad' : 'warn'); $('#why').innerHTML = r.why; $('#src').textContent = 'Source: ' + r.src;
+  };
+  if (!gap) { items.forEach(li => li.classList.remove('wait')); finish(); return; }
+  items.forEach((li, i) => setTimeout(() => { if (id === runId) li.classList.remove('wait'); }, gap * (i + 1)));
+  setTimeout(finish, gap * (items.length + 1));
+}
+$('#send').addEventListener('click', send);
+function loadPreset(k, go){ S = {...S, ...PRESETS[k]}; drawOpts(); idle(); pressed($('#preset'), $(`#preset [data-p="${k}"]`)); if (go) send(); }
+$('#preset').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+$('#preset').addEventListener('click', e => { const b = e.target.closest('button'); if (b) loadPreset(b.dataset.p, false); });
+
+/* =============== 3. INVESTIGATION =============== */
+const PHASES = [
+  {m:'0', c:'', t:'Bring up the stack', tag:'', p:'Started an Oracle Database Free container and a Tomcat container with ORDS 25.3. The database came up on <code>localhost:1521/FREEPDB1</code>. Its admin password was unknown, so it was reset to a test value with the image\'s <code>setPassword.sh</code>.'},
+  {m:'!', c:'bad', t:'The containerised ORDS wouldn\'t serve', tag:'404', p:'Every request said it "could not be mapped to any database". The pool pointed at <code>localhost</code>, which is wrong inside a container, and a Tomcat 10 container was worse. <b>Resolution:</b> run ORDS standalone on the host (<code>ords serve --port 8088</code>). Everything after this ran against <code>:8088</code>.'},
+  {m:'1', c:'ok', t:'Phase 1: no security', tag:'200 / 201', p:'With the gateway holding only <code>CREATE SESSION</code> and <code>CREATE SYNONYM</code>, the <code>plsql/block</code> POSTs returned 201, including <code>POST t/real</code> across the whole chain. So <b>CREATE PROCEDURE isn\'t required</b>.', load:'phase1'},
+  {m:'2', c:'ok', t:'Phase 2: OAuth token', tag:'401 → 201', p:'Protected the module with a privilege, a role and a <code>client_credentials</code> client. No token gave 401, and a valid token gave 201. So the OAuth layer isn\'t the cause.', load:'phase2'},
+  {m:'B', c:'bad', t:'Experiment B: simulate hardening', tag:'403', p:'Revoked <code>EXECUTE</code> from PUBLIC one package at a time. <code>OWA</code> and <code>OWA_UTIL</code> broke authentication (401). Revoking <b>SYS.HTP</b> reproduced the 403 on the POST, while the GET stayed 200.', load:'hardened'},
+  {m:'✓', c:'ok', t:'Fix validated', tag:'201', p:'With <code>grant execute on sys.htp to ws</code> and PUBLIC\'s grant still revoked, the POST returned 201. A later extension (APP2 and REPO) generated request numbers through the full chain, with the gateway still holding only its two privileges.', load:'fixed'}
+];
+$('#phases').innerHTML = PHASES.map(p => `<div class="phase"><div class="mark ${p.c}">${esc(p.m)}</div><div><h3>${esc(p.t)}${p.tag ? ` <span class="tag ${p.c || 'ok'}">${esc(p.tag)}</span>` : ''}</h3><p>${p.p}</p>${p.load ? `<button class="b" data-load="${p.load}">Load into the simulator</button>` : ''}</div></div>`).join('');
+$('#phases').addEventListener('click', e => { const b = e.target.closest('[data-load]'); if (!b) return; loadPreset(b.dataset.load, true); $('#sim').scrollIntoView(); });
+
+/* =============== 5. REBUILD =============== */
+const STEPS = [
+  {t:'Start the Oracle Free database', p:'Pass a known <code>ORACLE_PWD</code> up front so you never hit the lost-password problem.', as:'bash', code:String.raw`podman run -d --name oracle_free \
+  -p 1521:1521 \
+  -e ORACLE_PWD='Setup#Free1' \
+  container-registry.oracle.com/database/free:latest
+
+# wait until it prints: DATABASE IS READY TO USE
+podman logs -f oracle_free | grep -m1 "DATABASE IS READY TO USE"`, after:'SYS, SYSTEM and PDBADMIN now use <code>Setup#Free1</code>, and the service is <code>localhost:1521/FREEPDB1</code>.'},
+  {t:'Install ORDS into a config folder', p:'This creates <code>ORDS_PUBLIC_USER</code> and <code>ORDS_METADATA</code> in the database and writes a connection pool into <code>./config</code>.', as:'bash, from the unzipped ORDS folder', code:String.raw`cd /path/to/ords-25.3
+
+./bin/ords --config ./config install \
+  --db-hostname localhost --db-port 1521 \
+  --service-name FREEPDB1 \
+  --log-folder ./logs \
+  --admin-user SYS --password-stdin`, after:'It reads the SYS password from stdin, then asks for an <code>ORDS_PUBLIC_USER</code> password. If your version rejects a flag, run <code>./bin/ords --config ./config install</code> and answer the prompts.'},
+  {t:'Create the schemas', p:'The repository → definer\'s-rights → gateway layout. The gateway deliberately gets only two privileges.', as:'sql, connect: sql system/Setup#Free1@localhost:1521/FREEPDB1', code:String.raw`create user other identified by "Other#Test1"
+  default tablespace users quota unlimited on users;
+grant create session, create table, create view to other;
+
+create user app identified by "App#Test1";
+grant create session, create procedure to app;
+
+-- gateway: the two privileges under test, nothing else
+create user ws identified by "Ws#Test1";
+grant create session, create synonym to ws;
+
+-- OTHER: a table + view the package will read
+create table other.t (id number primary key, name varchar2(50));
+insert into other.t values (1,'alpha');
+insert into other.t values (2,'beta');
+commit;
+create view other.v as select id, name from other.t;
+grant select on other.v to app;
+
+-- APP: definer's-rights package that reads OTHER's view
+create or replace package app.p authid definer as
+  function get_count return number;
+end p;
+/
+create or replace package body app.p as
+  function get_count return number is n number;
+  begin select count(*) into n from other.v; return n; end;
+end p;
+/
+grant execute on app.p to ws;
+create synonym ws.p for app.p;`},
+  {t:'REST-enable the gateway and define the endpoints', p:'A GET from a <code>json/collection</code> source as the baseline, and <code>plsql/block</code> POSTs as the symptom.', as:'sql, connect: sql ws/Ws#Test1@localhost:1521/FREEPDB1', code:String.raw`begin
+  ords.enable_schema(p_enabled => true, p_schema => 'WS',
+    p_url_mapping_type => 'BASE_PATH', p_url_mapping_pattern => 'ws',
+    p_auto_rest_auth => false);
+
+  ords.define_module(p_module_name => 't.mod', p_base_path => 't/');
+
+  -- GET json/collection (baseline) + POST plsql/block (the symptom)
+  ords.define_template(p_module_name => 't.mod', p_pattern => 'item');
+  ords.define_handler(p_module_name => 't.mod', p_pattern => 'item', p_method => 'GET',
+    p_source_type => ords.source_type_collection_feed,
+    p_source => 'select sysdate as now from dual');
+  ords.define_handler(p_module_name => 't.mod', p_pattern => 'item', p_method => 'POST',
+    p_source_type => ords.source_type_plsql,
+    p_source => 'begin :status_code := 201; end;');
+
+  -- POST that calls the APP package across the full chain
+  ords.define_template(p_module_name => 't.mod', p_pattern => 'real');
+  ords.define_handler(p_module_name => 't.mod', p_pattern => 'real', p_method => 'POST',
+    p_source_type => ords.source_type_plsql,
+    p_source => 'declare n number; begin n := app.p.get_count; :status_code := 201; end;');
+  commit;
+end;
+/`},
+  {t:'Run ORDS in standalone mode', p:'Leave this running in its own terminal.', as:'bash', code:String.raw`cd /path/to/ords-25.3
+./bin/ords --config ./config serve --port 8088`, after:'Look for <code>Oracle REST Data Services initialized</code> and a <code>Mapped local pools</code> line.'},
+  {t:'Test phase 1 (no security)', p:'All 2xx confirms the gateway runs <code>plsql/block</code> handlers without <code>CREATE PROCEDURE</code>.', as:'bash', code:String.raw`BASE=http://localhost:8088/ords/ws
+
+curl -s -o /dev/null -w 'GET  item  -> %{http_code}\n' "$BASE/t/item"              # 200
+curl -s -o /dev/null -w 'POST item  -> %{http_code}\n' -X POST \
+     -H 'Content-Type: application/json' -d '{}' "$BASE/t/item"                    # 201
+curl -s -o /dev/null -w 'POST real  -> %{http_code}\n' -X POST \
+     -H 'Content-Type: application/json' -d '{}' "$BASE/t/real"                    # 201`, sim:'phase1'},
+  {t:'Add OAuth and test with a token (phase 2)', p:'First create the privilege, role and client as WS, then read its ID and secret.', as:'sql, as WS', code:String.raw`declare
+  l_roles owa.vc_arr; l_patterns owa.vc_arr; l_modules owa.vc_arr;
+begin
+  ords.create_role(p_role_name => 't.role');
+  l_roles(1) := 't.role'; l_modules(1) := 't.mod';
+  ords.define_privilege(p_privilege_name => 't.priv', p_roles => l_roles,
+    p_patterns => l_patterns, p_modules => l_modules, p_label => 'Test', p_comments => null);
+  oauth.create_client(p_name => 't.client', p_grant_type => 'client_credentials',
+    p_owner => 'WS', p_support_email => 'test@example.com', p_privilege_names => 't.priv');
+  oauth.grant_client_role(p_client_name => 't.client', p_role_name => 't.role');
+  commit;
+end;
+/
+select client_id, client_secret from user_ords_clients where name='t.client';`, code2:String.raw`BASE=http://localhost:8088/ords/ws
+TOKEN=$(curl -s -u "$CLIENT_ID:$CLIENT_SECRET" \
+        -d grant_type=client_credentials "$BASE/oauth/token" \
+        | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+curl -s -o /dev/null -w 'no token  -> %{http_code}\n' -X POST \
+     -H 'Content-Type: application/json' -d '{}' "$BASE/t/item"                    # 401
+curl -s -o /dev/null -w 'token     -> %{http_code}\n' -X POST \
+     -H "Authorization: Bearer $TOKEN" \
+     -H 'Content-Type: application/json' -d '{}' "$BASE/t/item"                    # 201`, as2:'bash, using the client_id and client_secret from above', sim:'phase2'},
+  {t:'Reproduce the 403, then apply the fix', p:'Revoke from PUBLIC to reproduce it, grant the gateway directly to fix it, then restore PUBLIC.', warn:'Revoking from PUBLIC runs as SYS AS SYSDBA and breaks ORDS and APEX for the whole database until you grant it back. Only do this on a throwaway test database, and restore it straight away.', as:'sql, connect: sql sys/Setup#Free1@localhost:1521/FREEPDB1 as sysdba', code:String.raw`-- reproduce: the POST now 403s, the GET still 200s
+revoke execute on sys.htp from public;
+
+-- the fix: a direct grant to the gateway schema (no need to touch PUBLIC)
+grant execute on sys.htp to ws;
+-- (also grant sys.htf to ws if your hardening revoked it too)
+
+-- restore PUBLIC when done testing
+grant execute on sys.htp to public;`, after:'On a database that\'s already hardened you skip the revoke and simply run <code>grant execute on sys.htp to &lt;your_gateway_schema&gt;;</code>', sim:'hardened'},
+  {t:'Optional: the request-number chain', p:'A second application schema whose definer\'s-rights package builds a request number from a repository view and sequence. Run the first part as SYSTEM and the second as WS.', as:'sql, as SYSTEM', code:String.raw`create user repo identified by "Repo#Test1";
+grant create session, create view, create sequence to repo;
+create sequence repo.req_seq start with 1 increment by 1 nocache;
+create or replace view repo.req_prefix_v as
+  select 'REQ-' || to_char(sysdate,'YYYYMMDD') as prefix from dual;
+
+create user app2 identified by "App2#Test1";
+grant create session, create procedure to app2;
+grant select on repo.req_prefix_v to app2;
+grant select on repo.req_seq      to app2;
+
+create or replace package app2.req_pkg authid definer as
+  procedure create_request(p_request_no out varchar2);
+end req_pkg;
+/
+create or replace package body app2.req_pkg as
+  function next_from_repo return varchar2 is
+    l_prefix varchar2(30); l_seq number;
+  begin
+    select prefix into l_prefix from repo.req_prefix_v;   -- reads repository view
+    l_seq := repo.req_seq.nextval;
+    return l_prefix || '-' || lpad(l_seq, 6, '0');
+  end;
+  procedure make_request_no(p_request_no out varchar2) is
+  begin p_request_no := next_from_repo; end;
+  procedure create_request(p_request_no out varchar2) is
+  begin make_request_no(p_request_no); end;
+end req_pkg;
+/
+grant execute on app2.req_pkg to ws;
+create synonym ws.req_pkg for app2.req_pkg;`, as2:'sql, as WS', code2:String.raw`begin
+  ords.define_template(p_module_name => 't.mod', p_pattern => 'request');
+  ords.define_handler(p_module_name => 't.mod', p_pattern => 'request', p_method => 'POST',
+    p_source_type => ords.source_type_plsql,
+    p_source => q'[
+      declare
+        l_no varchar2(100);
+      begin
+        req_pkg.create_request(l_no);
+        :status_code := 201;
+        owa_util.mime_header('application/json', true);
+        htp.p('{"request_no":"' || l_no || '"}');
+      end;
+    ]');
+  commit;
+end;
+/`, after:'<code>POST /ords/ws/t/request</code> with a token returns 201 and <code>{"request_no":"REQ-YYYYMMDD-000001"}</code>, counting up on each call.'}
+];
+let at = 0;
+const codeBox = as => `<div class="codebox"><div class="as">${esc(as)}</div><pre></pre><button class="copy" type="button">Copy</button></div>`;
+function drawStep(){
+  const s = STEPS[at];
+  $('#stepNav').innerHTML = STEPS.map((x, i) => `<button data-i="${i}" aria-pressed="${i === at}" title="${esc(x.t)}">${i + 1}</button>`).join('');
+  $('#stepT').textContent = `Step ${at + 1} of ${STEPS.length}: ${s.t}`; $('#stepP').innerHTML = s.p;
+  $('#stepWarn').hidden = !s.warn; $('#stepWarn').textContent = s.warn ? 'Warning: ' + s.warn : '';
+  $('#stepCode').innerHTML = codeBox(s.as) + (s.code2 ? codeBox(s.as2) : '');
+  const pres = $('#stepCode').querySelectorAll('pre'); pres[0].textContent = s.code; if (s.code2) pres[1].textContent = s.code2;
+  $('#stepAfter').innerHTML = (s.after || '') + (s.sim ? ` <button class="b" data-sim="${s.sim}">Try it in the simulator</button>` : '');
+  $('#prev').disabled = at === 0; $('#next').disabled = at === STEPS.length - 1;
+}
+$('#stepNav').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; at = +b.dataset.i; drawStep(); });
+$('#prev').addEventListener('click', () => { at = Math.max(0, at - 1); drawStep(); });
+$('#next').addEventListener('click', () => { at = Math.min(STEPS.length - 1, at + 1); drawStep(); });
+$('#rebuild').addEventListener('click', e => {
+  const sim = e.target.closest('[data-sim]'); if (sim) { loadPreset(sim.dataset.sim, true); $('#sim').scrollIntoView(); return; }
+  const b = e.target.closest('.copy'); if (!b) return;
+  const pre = b.parentElement.querySelector('pre'), done = t => { b.textContent = t; setTimeout(() => b.textContent = 'Copy', 1400); };
+  const select = () => { const r = document.createRange(); r.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done('Selected: press Cmd+C or Ctrl+C'); };
+  try { navigator.clipboard.writeText(pre.textContent).then(() => done('Copied'), select); } catch (err) { select(); }
+});
+
+/* =============== 6. GOTCHAS =============== */
+const GOTCHAS = [
+  {t:'Lost database password', s:'The admin password was unknown, so nothing could log in.', f:'The Oracle Free image shows its random password only when it\'s first created. Set <code>ORACLE_PWD</code> on <code>podman run</code>, or reset it later with <code>podman exec oracle_free /opt/oracle/setPassword.sh \'NewPass\'</code>.'},
+  {t:'Container ORDS wouldn\'t register a pool', s:'Every request said it "could not be mapped to any database" (404).', f:'The pool\'s <code>db.hostname</code> was <code>localhost</code>, which inside a container means the container itself. Use the database container\'s name, or run ORDS standalone on the host, where <code>localhost</code> is correct.'},
+  {t:'Tomcat 10 wouldn\'t run the war', s:'ORDS never initialised in a Tomcat 10.1 container.', f:'This ORDS 25.3 war is the <code>javax</code> build, which runs on Tomcat 9, not Tomcat 10.1. Standalone <code>ords serve</code> avoids the servlet mismatch completely.'},
+  {t:'Empty response body', s:'The request-number handler returned 201 with no body.', f:'ORDS didn\'t serialise the <code>:out</code> bind automatically. Emit JSON yourself with <code>owa_util.mime_header(\'application/json\', true); htp.p(\'{…}\');</code>, which also needs <code>HTP</code> access.'}
+];
+$('#gotchaBox').innerHTML = GOTCHAS.map((g, i) => `<button class="gotcha" data-i="${i}" aria-expanded="false"><b>${esc(g.t)}</b><span class="sy">${esc(g.s)}</span><span class="fix">${g.f}</span></button>`).join('');
+$('#gotchaBox').addEventListener('click', e => { const b = e.target.closest('.gotcha'); if (b) b.setAttribute('aria-expanded', b.getAttribute('aria-expanded') !== 'true'); });
+
+/* =============== 7. QUIZ =============== */
+const QUIZ = [
+  {q:'POST handlers return 403 while GETs with the same token return 200. What is the likeliest cause?', o:['The gateway lacks CREATE PROCEDURE','The schema can\'t execute SYS.HTP, which every plsql/block handler needs','The token has expired'], a:1, w:'An expired token would give 401 on both. Only plsql/block handlers depend on HTP.'},
+  {q:'Does a gateway schema need CREATE PROCEDURE to run plsql/block handlers?', o:['Yes','No'], a:1, w:'Phase 1 returned 201 with only CREATE SESSION and CREATE SYNONYM.'},
+  {q:'Why does the gateway never need SELECT on the repository?', o:['ORDS reads it on the gateway\'s behalf','The package is AUTHID DEFINER, so it runs with its owner\'s privileges','Synonyms grant SELECT automatically'], a:1, w:'Definer\'s rights let the gateway hold only EXECUTE on the package.'},
+  {q:'What is the safest fix on a hardened database?', o:['grant execute on sys.htp to public','grant execute on sys.htp to the gateway schema','grant dba to the gateway schema'], a:1, w:'A direct grant fixes it without undoing the hardening for everyone else.'},
+  {q:'What does p_auto_rest_auth => true protect?', o:['Every module in the schema','Only the Auto-REST surface, such as the metadata-catalog','Only POST handlers'], a:1, w:'Hand-defined modules are protected by the privileges you map to them.'},
+  {q:'A protected module gets a request with no token. What comes back?', o:['401','403','201'], a:0, w:'ORDS rejects it before any handler runs.'},
+  {q:'Why was ORDS run standalone instead of in a Tomcat container?', o:['Standalone is faster','Inside the container, localhost didn\'t reach the database, and Tomcat 10 couldn\'t run this war','Tomcat isn\'t free'], a:1, w:'On the host, localhost reaches the database, and there\'s no servlet version mismatch.'},
+  {q:'Why does the request-number handler call htp.p itself?', o:['ORDS doesn\'t serialise the OUT bind automatically','To make it faster','HTP is optional'], a:0, w:'Emitting JSON yourself is the way to return a value, and it also needs HTP access.'}
+];
+let qRight = 0, qDone = 0;
+function buildQuiz(){
+  qRight = qDone = 0; $('#qS').textContent = `Answer all ${QUIZ.length} questions to check your understanding.`;
+  $('#qB').innerHTML = QUIZ.map((q, i) => `<div class="q" data-i="${i}"><b>${i + 1}. ${esc(q.q)}</b><div class="opts">${q.o.map((t, k) => `<button data-k="${k}">${esc(t)}</button>`).join('')}</div><p class="why" hidden></p></div>`).join('');
+}
+$('#qB').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const box = b.closest('.q'), q = QUIZ[+box.dataset.i], pick = +b.dataset.k, btns = box.querySelectorAll('button');
+  btns.forEach(x => x.disabled = true); btns[q.a].classList.add('right'); if (pick !== q.a) b.classList.add('wrong'); else qRight++;
+  qDone++; const why = box.querySelector('.why'); why.hidden = false; why.textContent = (pick === q.a ? 'Correct. ' : 'Not quite. ') + q.w;
+  $('#qS').textContent = qDone === QUIZ.length ? `You got ${qRight} of ${QUIZ.length} right.` + (qRight === QUIZ.length ? ' Well done.' : ' Reset the quiz to try again.') : `${qRight} of ${qDone} right so far.`;
+});
+$('#qR').addEventListener('click', buildQuiz);
+
+/* =============== START =============== */
+drawOpts(); idle(); drawStep(); buildQuiz();
+
+/* =============== THEME =============== */
+window.onThemeChange = () => {};
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>

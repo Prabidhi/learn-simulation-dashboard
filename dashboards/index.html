@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-vK06u1bNWzPY+gqw5YPFL0xaJ9ZZf9j4MxR7W6skpIg='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-IaEoeHvl2vYi8Qfma228HUbFGCbT4v8mWqolG7vEI5Q='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -252,6 +252,15 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
    ===================================================================== */
 const DASHBOARDS = [
   {
+    title: 'ORDS 403, Explained',
+    href: 'oracle/ords-403-explained.html',
+    topic: 'oracle',
+    added: '2026-11-06',
+    desc: 'Why a REST gateway schema\'s POST handlers got 403 while GETs worked, and the one grant that fixed it. Send every request yourself.',
+    points: ['Simulate requests through ORDS', 'Replay the investigation step by step', 'Rebuild it with copyable commands'],
+    tags: ['ords', 'pl/sql', 'privileges', 'sys.htp']
+  },
+  {
     title: 'Jev, Explained',
     href: 'ai/jev-explained.html',
     topic: 'ai',
@@ -418,6 +427,14 @@ const ART = {
     <path class="flow" d="M79 60 C105 40, 125 32, 159 28 S 240 22, 259 21" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>
     ${[[79,60],[99,44],[119,34]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5" fill="var(--panel)" stroke="${c}" stroke-width="2.5"/>`).join('')}
     <path d="M60 148 H284" stroke="${c}" stroke-width="1.5" opacity=".45"/>
+  </svg>`,
+  oracle: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g fill="var(--panel)" stroke="${c}" stroke-width="2.5"><path d="M214 52 V122 A40 12 0 0 0 294 122 V52"/><ellipse cx="254" cy="52" rx="40" ry="12"/></g>
+    <path d="M214 76 A40 12 0 0 0 294 76 M214 100 A40 12 0 0 0 294 100" fill="none" stroke="${c}" stroke-width="2" opacity=".5"/>
+    <path class="flow" d="M58 70 H196" stroke="${c}" stroke-width="2.5" opacity=".9"/><path d="M188 63 L198 70 L188 77" fill="none" stroke="${c}" stroke-width="2.5"/>
+    <path class="flow" d="M196 108 H58" stroke="${c}" stroke-width="2.5" opacity=".35" stroke-dasharray="6 6"/>
+    <text x="66" y="60" font-family="ui-monospace,Menlo,monospace" font-size="13" fill="${c}">POST</text>
+    <text x="66" y="128" font-family="ui-monospace,Menlo,monospace" font-size="22" font-weight="700" fill="${c}">403</text>
   </svg>`,
   generic: (c,t) => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     ${Array.from({length:6},(_,i)=>`<circle cx="170" cy="85" r="${20+i*22}" fill="none" stroke="${c}" opacity="${.5-i*.07}"/>`).join('')}
