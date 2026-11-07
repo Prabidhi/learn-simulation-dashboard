@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-IaEoeHvl2vYi8Qfma228HUbFGCbT4v8mWqolG7vEI5Q='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-Ocjzu9i6Pvk789InuPM+W25JGcNKRMEoX/+0/fFk+SM='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -251,6 +251,15 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
       e.g. Languages → Korean, Languages → Nepali.
    ===================================================================== */
 const DASHBOARDS = [
+  {
+    title: 'ORDS 403, Hardened Grants',
+    href: 'oracle/ords-403-hardened-grants.html',
+    topic: 'oracle',
+    added: '2026-11-07',
+    desc: 'Why every PL/SQL handler got 403 on a hardened database while plain SQL GETs worked: the code ORDS runs around your handler needs DBMS_LOB.',
+    points: ['Trace a request through all five ORDS stages', 'See which results were lab-tested', 'Copy the checks and the DBA request'],
+    tags: ['ords', 'pl/sql', 'privileges', 'dbms_lob', 'dbms_pickler']
+  },
   {
     title: 'ORDS 403, Explained',
     href: 'oracle/ords-403-explained.html',
