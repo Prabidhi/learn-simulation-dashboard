@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-fB1t4B/cBsN+L2k0uGSLgFEBYmRG5/KvtOvo5UQGVeM='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-98DrUGNW81CKNZlRtHUAYSQMmirEIAj4O/YuH6LvUbg='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -252,6 +252,17 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
    ===================================================================== */
 const DASHBOARDS = [
   {
+    title: 'ORDS Architecture, Explained',
+    href: 'oracle/ords/ords-architecture-explained.html',
+    section: 'Oracle',
+    topic: 'ords',
+    art: 'ords-arch',
+    added: '2026-11-07',
+    desc: 'What happens between an HTTP request and your schema: Tomcat, ords.war, the JDBC driver, the connection pool, ORDS_PUBLIC_USER acting as your schema, and how grants reach other schemas.',
+    points: ['Follow one request through the building', 'Check the office analogy step by step', 'Run the pool and watch lines go new and warm'],
+    tags: ['ords', 'architecture', 'tomcat', 'jdbc', 'connection pool', 'proxy']
+  },
+  {
     title: 'ORDS 403, Hardened Grants',
     href: 'oracle/ords/ords-403-hardened-grants.html',
     section: 'Oracle',
@@ -446,6 +457,17 @@ const ART = {
     <path class="flow" d="M196 108 H58" stroke="${c}" stroke-width="2.5" opacity=".35" stroke-dasharray="6 6"/>
     <text x="66" y="60" font-family="ui-monospace,Menlo,monospace" font-size="13" fill="${c}">POST</text>
     <text x="66" y="128" font-family="ui-monospace,Menlo,monospace" font-size="22" font-weight="700" fill="${c}">403</text>
+  </svg>`,
+  'ords-arch': c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect x="20" y="64" width="58" height="42" rx="8" fill="var(--panel)" stroke="${c}" stroke-width="2.5"/>
+    <rect x="124" y="34" width="100" height="102" rx="10" fill="var(--panel)" stroke="${c}" stroke-width="2.5"/>
+    <rect x="136" y="56" width="76" height="24" rx="5" fill="${c}" fill-opacity=".16" stroke="${c}" stroke-width="1.5"/>
+    <rect x="136" y="90" width="76" height="24" rx="5" fill="${c}" fill-opacity=".16" stroke="${c}" stroke-width="1.5"/>
+    <text x="174" y="72" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="${c}">ORDS</text>
+    <text x="174" y="106" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="${c}">POOL</text>
+    <g fill="var(--panel)" stroke="${c}" stroke-width="2.5"><path d="M264 58 V114 A32 10 0 0 0 328 114 V58"/><ellipse cx="296" cy="58" rx="32" ry="10"/></g>
+    <path class="flow" d="M80 85 H118" stroke="${c}" stroke-width="2.5"/><path d="M112 79 L120 85 L112 91" fill="none" stroke="${c}" stroke-width="2.5"/>
+    <path class="flow" d="M226 85 H258" stroke="${c}" stroke-width="2.5"/><path d="M252 79 L260 85 L252 91" fill="none" stroke="${c}" stroke-width="2.5"/>
   </svg>`,
   generic: (c,t) => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     ${Array.from({length:6},(_,i)=>`<circle cx="170" cy="85" r="${20+i*22}" fill="none" stroke="${c}" opacity="${.5-i*.07}"/>`).join('')}
