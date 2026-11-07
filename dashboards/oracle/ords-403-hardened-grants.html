@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-Z/qps6OToIW+O9ok9ckAeXO6Pj9ZregqNGg4nE9E9cI='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-SX6pBy71T0rKyYDMdCsBKIyWp60t5Ss3roX6dyNn1IU='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ORDS 403, Hardened Grants</title>
@@ -221,15 +221,15 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
   <div class="wrap">
     <p class="eyebrow">ORDS troubleshooting · lab tests from 7 Nov 2026</p>
     <h1>Why every PL/SQL handler returned 403</h1>
-    <p class="lede">In a real case, even a one-line handler like <code>BEGIN :status_code := 200; END;</code> failed with 403, while plain SQL GETs kept working. ORDS runs extra PL/SQL as your schema around every PL/SQL handler, and that code needs packages a hardened database took away from PUBLIC. A lab rebuilt it to find which ones.</p>
+    <p class="lede">In a real case, even a one-line handler like <code>BEGIN :status_code := 200; END;</code> failed with 403, while plain SQL GETs kept working. ORDS runs extra PL/SQL as your schema around every PL/SQL handler, and that code needs packages a hardened database took away from PUBLIC. A lab rebuilt it to find which ones, and found that open connections can hide one of them until ORDS restarts.</p>
     <div class="verdict">
       <div class="cause">
         <p class="k">Cause</p>
-        <p>The REST schema can't use <code>SYS.DBMS_LOB</code>, which hardening removed from PUBLIC. The ORDS 25.3 lab also needed <code>SYS.DBMS_PICKLER</code>, but a working schema in the real case runs without it, so its ORDS 23/24 likely doesn't.</p>
+        <p>Hardening removed two packages from PUBLIC. <code>SYS.DBMS_LOB</code> is needed after every handler, on every request. <code>SYS.DBMS_PICKLER</code> is needed before the handler, once per new connection. Connections that already used it remember the answer, so a schema can work without it until ORDS restarts.</p>
       </div>
       <div class="fix">
         <p class="k">Fix</p>
-        <p>A DBA grants EXECUTE on <code>SYS.DBMS_LOB</code> to the REST schema. Add <code>SYS.DBMS_PICKLER</code> only if ORDS's log still names it afterwards. PUBLIC can stay revoked.</p>
+        <p>A DBA grants EXECUTE on both <code>SYS.DBMS_LOB</code> and <code>SYS.DBMS_PICKLER</code> to every REST schema with PL/SQL handlers, including ones that work today. PUBLIC can stay revoked.</p>
       </div>
       <div class="notit">
         <p class="k">Ruled out</p>
@@ -257,11 +257,11 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
       <p>Pick a starting point, then switch grants and settings on and off. Each result says whether we tested it in the lab or predicted it from the code ORDS runs.</p>
     </div>
     <div class="presets" role="group" aria-label="Starting points">
-      <button type="button" class="preset" data-preset="field">Real case (ORDS 23/24)</button>
-      <button type="button" class="preset" data-preset="granted">After the DBA grants DBMS_LOB</button>
+      <button type="button" class="preset" data-preset="field">Failing schema</button>
+      <button type="button" class="preset" data-preset="working">Working schema today</button>
+      <button type="button" class="preset" data-preset="restart">Working schema after a restart</button>
+      <button type="button" class="preset" data-preset="granted">After the DBA grants both</button>
       <button type="button" class="preset" data-preset="sqlget">Plain SQL GET</button>
-      <button type="button" class="preset" data-preset="labboth">Lab: both missing (ORDS 25.3)</button>
-      <button type="button" class="preset" data-preset="pickleronly">Lab: only DBMS_PICKLER granted</button>
       <button type="button" class="preset" data-preset="notoken">No token</button>
       <button type="button" class="preset" data-preset="norole">Client without the role</button>
       <button type="button" class="preset" data-preset="nogrant">Called package not granted</button>
@@ -271,9 +271,9 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
     <div class="sim">
       <form class="controls" id="controls" autocomplete="off">
         <fieldset>
-          <legend>ORDS version</legend>
-          <label class="opt"><input type="radio" name="version" id="v-25" value="25"><span>25.3, the lab</span><span class="hint">Needs DBMS_PICKLER before your code (tested)</span></label>
-          <label class="opt"><input type="radio" name="version" id="v-2324" value="2324"><span>23 or 24, the real case</span><span class="hint">A working schema there runs PL/SQL without DBMS_PICKLER, so this version likely skips that step (not lab-tested)</span></label>
+          <legend>ORDS's connections</legend>
+          <label class="opt"><input type="radio" name="conn" id="c-fresh" value="fresh"><span>Fresh, after an ORDS restart</span><span class="hint">Each connection asks DBMS_PICKLER the first time it runs a PL/SQL handler</span></label>
+          <label class="opt"><input type="radio" name="conn" id="c-warm" value="warm"><span>Warm, already used while DBMS_PICKLER was available</span><span class="hint">The driver remembers the answer and doesn't ask again until the connection closes</span></label>
         </fieldset>
         <fieldset>
           <legend>Handler code</legend>
@@ -304,7 +304,7 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
 
         <fieldset>
           <legend>Your schema can use (EXECUTE)</legend>
-          <label class="opt"><input type="checkbox" id="pkg-pickler"><span><code>SYS.DBMS_PICKLER</code></span><span class="hint">Before your code: the driver describes OWA.VC_ARR</span></label>
+          <label class="opt"><input type="checkbox" id="pkg-pickler"><span><code>SYS.DBMS_PICKLER</code></span><span class="hint">Before your code, once per new connection: the driver describes OWA.VC_ARR</span></label>
           <label class="opt"><input type="checkbox" id="pkg-owa"><span><code>SYS.OWA</code> and <code>OWA_UTIL</code></span><span class="hint">Request setup and output; ORDS's own sign-in uses them too</span></label>
           <label class="opt"><input type="checkbox" id="pkg-htp"><span><code>SYS.HTP</code></span><span class="hint">Before: <code>htp.init</code>. After: the output buffer</span></label>
           <label class="opt"><input type="checkbox" id="pkg-lob"><span><code>SYS.DBMS_LOB</code></span><span class="hint">After your code: builds the response output</span></label>
@@ -322,7 +322,7 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
       <div class="trace">
         <ol class="stages" id="stages" aria-label="The request's path through ORDS">
           <li class="stage"><span class="n">1</span><h3>Sign-in</h3><p class="what">Token and role check for protected URLs</p><div class="chips"></div><span class="pill"></span></li>
-          <li class="stage"><span class="n">2</span><h3>Before your code</h3><p class="what">Driver describes OWA.VC_ARR, then <code>owa.init_cgi_env</code> and <code>htp.init</code> run as your schema</p><div class="chips"></div><span class="pill"></span></li>
+          <li class="stage"><span class="n">2</span><h3>Before your code</h3><p class="what">Driver describes OWA.VC_ARR (new connections only), then <code>owa.init_cgi_env</code> and <code>htp.init</code> run as your schema</p><div class="chips"></div><span class="pill"></span></li>
           <li class="stage"><span class="n">3</span><h3>Your handler</h3><p class="what">The block you wrote, with <code>:status_code</code> bound</p><div class="chips"></div><span class="pill"></span></li>
           <li class="stage"><span class="n">4</span><h3>After your code</h3><p class="what"><code>OWA.GET_PAGE</code>, <code>DBMS_LOB</code> and <code>WPG_DOCLOAD</code> collect the output, as your schema</p><div class="chips"></div><span class="pill"></span></li>
           <li class="stage"><span class="n">5</span><h3>Response</h3><p class="what">ORDS sends the status your handler set</p><div class="chips"></div><span class="pill"></span></li>
@@ -361,13 +361,15 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
           <tr><td><code>APP.P</code> body made INVALID</td><td><span class="st ok">200</span></td><td><span class="st odd">555</span> on handlers that call APP.P</td><td><code>ORA-04063</code> package body has errors</td></tr>
           <tr><td>Token from a client without the role</td><td><span class="st warn">401</span></td><td><span class="st warn">401</span></td><td>Unauthorized</td></tr>
           <tr><td>URL pattern instead of whole module</td><td>Same as module</td><td>Same as module</td><td>A pattern covers every method on its URL</td></tr>
-          <tr class="field"><td><code>DBMS_LOB</code> and <code>DBMS_PICKLER</code> not visible to WS<span class="tag-field">the real case</span></td><td><span class="st ok">200</span></td><td><span class="st bad">403</span> on every PL/SQL handler</td><td><code>PLS-00201: identifier 'SYS.DBMS_PICKLER' must be declared</code></td></tr>
+          <tr class="field"><td><code>DBMS_LOB</code> and <code>DBMS_PICKLER</code> not visible to WS<span class="tag-field">the failing schema</span></td><td><span class="st ok">200</span></td><td><span class="st bad">403</span> on every PL/SQL handler</td><td><code>PLS-00201: identifier 'SYS.DBMS_PICKLER' must be declared</code></td></tr>
           <tr><td>…then <code>DBMS_PICKLER</code> granted to WS</td><td><span class="st ok">200</span></td><td><span class="st bad">403</span></td><td><code>PLS-00201: identifier 'DBMS_LOB' must be declared</code> at lines 19–40 of ORDS’s after-code, not in the handler</td></tr>
           <tr><td>…then <code>DBMS_LOB</code> granted to WS too</td><td><span class="st ok">200</span></td><td><span class="st ok">200 / 201</span></td><td>Nothing</td></tr>
+          <tr class="field"><td>Only <code>DBMS_PICKLER</code> removed from PUBLIC, <code>DBMS_LOB</code> still granted, ORDS restarted<span class="tag-field">the working schema</span></td><td><span class="st ok">200</span></td><td><span class="st bad">403</span> on every PL/SQL handler, 40 of 40 calls</td><td><code>PLS-00201: identifier 'SYS.DBMS_PICKLER' must be declared</code> before the handler</td></tr>
+          <tr><td>The same removal while ORDS kept running on warm connections</td><td><span class="st ok">200</span></td><td><span class="st ok">200 / 201</span> on 38 of 40 PL/SQL calls, <span class="st bad">403</span> on 2</td><td>The 2 failures were <code>DBMS_PICKLER</code> errors on connections not used before</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="foot">Lab: ORDS 25.3.1 standalone with Oracle AI Database 26ai Free (23.26). WS is the lab's REST schema and APP.P a package it calls. ORDS was restarted between steps, so every test used fresh connections. Not tested: DBMS_LOB available with DBMS_PICKLER missing, which is how the working schema in the real case seems to run.</p>
+    <p class="foot">Lab: ORDS 25.3.1 standalone with Oracle AI Database 26ai Free (23.26). WS is the lab's REST schema and APP.P a package it calls. Unless a row says otherwise, ORDS was restarted between steps, so every test used fresh connections. The two DBMS_PICKLER rows were added later the same day; each restored every grant afterwards. Not tested: ORDS 23 or 24, which the real case runs. If that version never calls DBMS_PICKLER, the extra grant does no harm.</p>
   </section>
 
   <section id="decoder" aria-labelledby="decoder-title">
@@ -389,7 +391,7 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
     </div>
     <div class="cards">
       <div class="codecard">
-        <div class="head"><div><h3>Compare grants</h3><p>Run it as a working schema and as the failing one. What the working one has and the failing one lacks is what to request.</p></div><button type="button" class="copy" data-copy="q-grants">Copy</button></div>
+        <div class="head"><div><h3>Compare grants</h3><p>Run it as a working schema and as the failing one. What the working one has and the failing one lacks is the likely cause of today's 403. If neither has DBMS_PICKLER, the working one is probably running on warm connections.</p></div><button type="button" class="copy" data-copy="q-grants">Copy</button></div>
 <pre id="q-grants">select table_name, grantee, privilege
 from   all_tab_privs
 where  table_schema = 'SYS'
@@ -405,6 +407,14 @@ from   user_ords_handlers  h
 join   user_ords_templates t on t.id = h.template_id
 join   user_ords_modules   m on m.id = t.module_id
 order  by 1, 2;</pre>
+      </div>
+      <div class="codecard">
+        <div class="head"><div><h3>Who can use DBMS_PICKLER (DBA)</h3><p>Needs a DBA view. If the working schema, or a role it has, isn't listed, it's most likely relying on warm connections. Also ask when ORDS or Tomcat last restarted, and whether that was before or after the revoke.</p></div><button type="button" class="copy" data-copy="q-pickler">Copy</button></div>
+<pre id="q-pickler">select grantee, privilege
+from   dba_tab_privs
+where  owner = 'SYS'
+and    table_name = 'DBMS_PICKLER'
+order  by grantee;</pre>
       </div>
       <div class="codecard">
         <div class="head"><div><h3>Compile ORDS's after-code</h3><p>Nothing runs, because the calls sit inside <code>IF FALSE</code>. A <code>PLS-00201</code> names what is missing.</p></div><button type="button" class="copy" data-copy="q-compile">Copy</button></div>
@@ -430,7 +440,7 @@ end;
   <section id="ask" aria-labelledby="ask-title">
     <div class="section-head">
       <h2 id="ask-title">5. Ask your DBA</h2>
-      <p>Replace <code>&lt;SCHEMA&gt;</code> with your REST schema. It asks for DBMS_LOB first, and for DBMS_PICKLER only if ORDS's log still names it.</p>
+      <p>Replace <code>&lt;SCHEMA&gt;</code> with the failing REST schema and <code>&lt;WORKING_SCHEMA&gt;</code> with the one that works today. It asks for both packages, so a later ORDS restart can't break either schema.</p>
     </div>
     <div class="codecard">
       <div class="head"><div><h3>Message to send</h3><p>Only SYS, or a DBA allowed to grant on SYS objects, can run the grants.</p></div><button type="button" class="copy" data-copy="q-dba">Copy</button></div>
@@ -439,18 +449,23 @@ referenced by the PL/SQL statement being evaluated is not accessible or does
 not exist") on every PL/SQL handler, even BEGIN :status_code := 200; END;.
 
 ORDS runs some of its own PL/SQL as that schema around each handler. That code
-calls SYS.DBMS_LOB (and, on ORDS 25.3, SYS.DBMS_PICKLER). Both are revoked from
-PUBLIC on our database. In a test environment, removing them gave this exact
-403 and granting them to the schema fixed it. PUBLIC can stay revoked.
+calls SYS.DBMS_LOB on every request, and its database driver calls
+SYS.DBMS_PICKLER once per new connection. Both are revoked from PUBLIC on our
+database. In a test environment, removing either one gave this exact 403, and
+granting both to the schema fixed it. PUBLIC can stay revoked.
+
+A missing DBMS_PICKLER can stay hidden: connections that used it before the
+revoke remember its answer until ORDS restarts. So &lt;WORKING_SCHEMA&gt; may work
+today only until the next restart.
 
 Please run as SYS:
 
-grant execute on sys.dbms_lob to &lt;SCHEMA&gt;;
+grant execute on sys.dbms_lob     to &lt;SCHEMA&gt;;
+grant execute on sys.dbms_pickler to &lt;SCHEMA&gt;;
+grant execute on sys.dbms_pickler to &lt;WORKING_SCHEMA&gt;;
 
-If the 403 continues and ORDS's log shows
-PLS-00201: identifier 'SYS.DBMS_PICKLER' must be declared, please also run:
-
-grant execute on sys.dbms_pickler to &lt;SCHEMA&gt;;</pre>
+If the 403 continues right after, restarting ORDS (Tomcat) once gives it
+fresh connections.</pre>
     </div>
   </section>
 
@@ -471,7 +486,7 @@ grant execute on sys.dbms_pickler to &lt;SCHEMA&gt;;</pre>
 
 <footer>
   <div class="wrap">
-    <p>Built from lab tests on 7 Nov 2026: ORDS 25.3.1 standalone with Oracle AI Database 26ai Free. The real case runs ORDS 23/24 on Tomcat, so results marked "predicted" or "not lab-tested" are worth confirming in ORDS's log there.</p>
+    <p>Built from lab tests on 7 Nov 2026: ORDS 25.3.1 standalone with Oracle AI Database 26ai Free. The real case runs ORDS 23/24 on Tomcat, so results marked "predicted" are worth confirming in ORDS's log there.</p>
   </div>
 </footer>
 
@@ -511,8 +526,8 @@ function evaluate(s) {
       fix: "Nothing to fix" };
   }
 
-  if (!s.pickler && s.version === "25") return stop(1, 403, "bad", "PLS-00201: identifier 'SYS.DBMS_PICKLER' must be declared, in: begin :1 := sys.dbms_pickler.get_type_shape(…)", "tested",
-    "Your handler never ran. Before running it, ORDS 25.3 passes request data in OWA.VC_ARR arrays, and the database driver first asks SYS.DBMS_PICKLER to describe that type. Tested with fresh connections. A working schema in the real case runs without it, so switch the version to 23 or 24 to see that case.",
+  if (!s.pickler && s.conn === "fresh") return stop(1, 403, "bad", "PLS-00201: identifier 'SYS.DBMS_PICKLER' must be declared, in: begin :1 := sys.dbms_pickler.get_type_shape(…)", "tested",
+    "Your handler never ran. Before running it, ORDS passes request data in OWA.VC_ARR arrays, and on a connection that hasn't done this before, the database driver first asks SYS.DBMS_PICKLER to describe that type. After an ORDS restart every connection is new, so every PL/SQL call stops here, even with DBMS_LOB granted. In the lab, 40 of 40 calls did.",
     "grant execute on sys.dbms_pickler to <SCHEMA>;");
   if (!s.owa) return stop(1, 403, "bad", "PLS-00201: identifier 'OWA.VC_ARR' must be declared", "predicted",
     "The setup block declares OWA.VC_ARR variables and calls owa.init_cgi_env.",
@@ -532,29 +547,32 @@ function evaluate(s) {
   }
   states[2] = "pass";
 
-  const skipNote = !s.pickler && s.version !== "25" ? " The DBMS_PICKLER step is treated as not needed on 23/24, based on the working schema in the real case." : "";
-  if (!s.lob) return stop(3, 403, "bad", "ORA-06550: line 19, column 7: PLS-00201: identifier 'DBMS_LOB' must be declared", "tested",
+  const warm = !s.pickler && s.conn === "warm";
+  const skipNote = warm ? " DBMS_PICKLER is missing too, but this connection already used it and remembers the answer, so the request got past that step. After an ORDS restart it would stop there instead." : "";
+  if (!s.lob) return stop(3, 403, "bad", "ORA-06550: line 19, column 7: PLS-00201: identifier 'DBMS_LOB' must be declared", warm ? "field" : "tested",
     "Your handler already ran. Then ORDS runs its own after-code, which collects the output with OWA.GET_PAGE and DBMS_LOB, and Oracle checks every name in a block before running it. The 403 text speaks of “the PL/SQL statement being evaluated”, but ORDS shows it for whichever of its statements fails. The log’s line numbers (19 to 40) are the dbms_lob calls in ORDS’s after-code, and your handler is one line." + skipNote,
-    "grant execute on sys.dbms_lob to <SCHEMA>;");
+    warm ? "grant execute on sys.dbms_lob to <SCHEMA>; grant execute on sys.dbms_pickler to <SCHEMA>;" : "grant execute on sys.dbms_lob to <SCHEMA>;");
   if (!s.wpg) return stop(3, 403, "bad", "PLS-00201: identifier 'WPG_DOCLOAD' must be declared", "predicted",
     "The same block calls wpg_docload.is_file_download to check for a file download.",
     "grant execute on sys.wpg_docload to <SCHEMA>;");
   states[3] = "pass"; states[4] = "pass";
   const code = s.handler === "oneline" ? 200 : 201;
-  return { states, failAt: -1, code, tone: "ok", message: code === 200 ? "OK" : "Created", log: "(nothing)", evidence: skipNote ? "field" : "tested",
-    why: "Every step could see what it needed, so ORDS sent the status your handler set." + skipNote,
-    fix: skipNote ? "Nothing more. If ORDS's log names SYS.DBMS_PICKLER, grant it too" : "Nothing to fix" };
+  if (warm) return { states, failAt: -1, code, tone: "warn", message: (code === 200 ? "OK" : "Created") + ", until ORDS restarts", log: "(nothing)", evidence: "tested",
+    why: "It works, but only because this connection remembers what DBMS_PICKLER told it before the revoke. A connection ORDS opens later fails before your handler, and after an ORDS restart they all do. In the lab, 38 of 40 PL/SQL calls on warm connections worked and 2 on new connections got 403.",
+    fix: "grant execute on sys.dbms_pickler to <SCHEMA>;" };
+  return { states, failAt: -1, code, tone: "ok", message: code === 200 ? "OK" : "Created", log: "(nothing)", evidence: "tested",
+    why: "Every step could see what it needed, so ORDS sent the status your handler set.",
+    fix: "Nothing to fix" };
 }
 
-const BASE = { version: "25", handler: "oneline", method: "POST", protection: "pattern-hit", token: true, role: true,
+const BASE = { conn: "fresh", handler: "oneline", method: "POST", protection: "pattern-hit", token: true, role: true,
   htp: true, owa: true, wpg: true, pickler: true, lob: true, grantP: true, validP: true };
-const FIELD = { ...BASE, version: "2324", pickler: false };
 const PRESETS = {
-  field:       { ...FIELD, lob: false },
-  granted:     { ...FIELD },
-  sqlget:      { ...FIELD, handler: "sql", method: "GET", lob: false },
-  labboth:     { ...BASE, pickler: false, lob: false },
-  pickleronly: { ...BASE, lob: false },
+  field:       { ...BASE, conn: "warm", pickler: false, lob: false },
+  working:     { ...BASE, conn: "warm", pickler: false },
+  restart:     { ...BASE, pickler: false },
+  granted:     { ...BASE },
+  sqlget:      { ...BASE, conn: "warm", handler: "sql", method: "GET", pickler: false, lob: false },
   notoken:     { ...BASE, token: false },
   norole:      { ...BASE, role: false },
   nogrant:     { ...BASE, handler: "callspkg", grantP: false },
@@ -567,16 +585,16 @@ const PRESETS = {
   const form = $("controls");
   const stageEls = Array.from(document.querySelectorAll("#stages .stage"));
   const PILL = { pass: "passed", fail: "stopped here", skip: "skipped", unreached: "not reached" };
-  const KEYS = ["version", "handler", "method", "protection", "token", "role", "htp", "owa", "wpg", "pickler", "lob", "grantP", "validP"];
+  const KEYS = ["conn", "handler", "method", "protection", "token", "role", "htp", "owa", "wpg", "pickler", "lob", "grantP", "validP"];
   const BOX = { token: "token", role: "role", htp: "pkg-htp", owa: "pkg-owa", wpg: "pkg-wpg", pickler: "pkg-pickler", lob: "pkg-lob", grantP: "grant-p", validP: "valid-p" };
 
   function read() {
-    const s = { version: form.elements.version.value, handler: form.elements.handler.value, method: form.elements.method.value, protection: $("protection").value };
+    const s = { conn: form.elements.conn.value, handler: form.elements.handler.value, method: form.elements.method.value, protection: $("protection").value };
     Object.keys(BOX).forEach(k => { s[k] = $(BOX[k]).checked; });
     return s;
   }
   function write(p) {
-    form.elements.version.value = p.version;
+    form.elements.conn.value = p.conn;
     form.elements.handler.value = p.handler;
     form.elements.method.value = p.method;
     $("protection").value = p.protection;
@@ -589,8 +607,8 @@ const PRESETS = {
     if (i === 0) return prot ? chip("bearer token", s.token) + chip("client role", s.role) + chip("OWA (ORDS sign-in)", s.owa) : chip("public URL", true);
     if (i === 1) {
       const pk = s.pickler ? chip("DBMS_PICKLER", true)
-        : s.version === "25" ? chip("DBMS_PICKLER", false)
-        : '<span class="chip maybe">DBMS_PICKLER<span class="tag">likely not needed on 23/24</span></span>';
+        : s.conn === "fresh" ? chip("DBMS_PICKLER", false)
+        : '<span class="chip maybe">DBMS_PICKLER<span class="tag">missing, but remembered</span></span>';
       return pk + chip("OWA", s.owa) + chip("HTP", s.htp);
     }
     if (i === 2) {
@@ -616,7 +634,7 @@ const PRESETS = {
     $("r-msg").textContent = r.message;
     $("r-stop").textContent = r.failAt >= 0 ? STAGE_NAMES[r.failAt] : "Didn't stop: the response was sent";
     $("r-log").textContent = r.log;
-    $("r-evidence").textContent = { tested: "Tested in the lab", predicted: "Predicted from the code ORDS runs, not tested", field: "Based on the real case's working schema, not lab-tested" }[r.evidence];
+    $("r-evidence").textContent = { tested: "Tested in the lab", predicted: "Predicted from the code ORDS runs, not tested", field: "Combines two lab results that weren't run together" }[r.evidence];
     $("r-evidence").dataset.kind = r.evidence;
     $("r-why").textContent = r.why;
     $("r-fix").textContent = r.fix;
