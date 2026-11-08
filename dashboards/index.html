@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-98DrUGNW81CKNZlRtHUAYSQMmirEIAj4O/YuH6LvUbg='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-C5wI+6FXbXkvrRJZix9LucFGk/kp0kYFZG8AhPS/iM0='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -278,9 +278,9 @@ const DASHBOARDS = [
     section: 'Oracle',
     topic: 'ords',
     added: '2026-11-06',
-    desc: 'Why a REST gateway schema\'s POST handlers got 403 while GETs worked, and the one grant that fixed it. Send every request yourself.',
-    points: ['Simulate requests through ORDS', 'Replay the investigation step by step', 'Rebuild it with copyable commands'],
-    tags: ['ords', 'pl/sql', 'privileges', 'sys.htp']
+    desc: 'Why a REST gateway schema\'s POST handlers got 403 while GETs worked: the HTP reproduction from the lab, the two packages the real database was missing, and why DBMS_PICKLER is only asked on new connections.',
+    points: ['Replay the investigation and see why HTP was ruled out', 'Watch connections go new and warm, step by step', 'Simulate requests and rebuild the lab'],
+    tags: ['ords', 'pl/sql', 'privileges', 'sys.htp', 'dbms_lob', 'dbms_pickler', 'connection pool']
   },
   {
     title: 'Jev, Explained',

@@ -2,24 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-agOh5aX/xnK4cHbsWC8ml5J2RMbSMHUlsFXAW+85PZI='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-H+mZJpiix8z8sPJs2ec36jJ7rGGBq9dkk7W+s7+9QaY='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ORDS 403, Explained</title>
-<meta name="description" content="Why an ORDS gateway schema's POST handlers returned 403 while GETs worked, and how one grant fixed it. Simulate every request yourself.">
+<meta name="description" content="Why an ORDS gateway schema's POST handlers returned 403 while GETs worked: the HTP reproduction from the lab, the two packages the real database was missing, and why DBMS_PICKLER isn't needed on every request.">
 <style>
 :root{
   --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
-  --a:#0d7d74;--a-soft:#dcf2ef;--ok:#1a7f37;--ok-soft:#e3f5e8;--bad:#cf222e;--bad-soft:#fde8e8;--warn:#9a5b06;--warn-soft:#fdf0e2;--on-a:#ffffff;
+  --a:#0d7d74;--a-soft:#dcf2ef;--ok:#1a7f37;--ok-soft:#e3f5e8;--bad:#cf222e;--bad-soft:#fde8e8;--warn:#9a5b06;--warn-soft:#fdf0e2;--on-a:#ffffff;--pad-bg:#fff3b0;--pad-fg:#4a3a00;
   --code-bg:#13151b;--code-fg:#e6e8ee;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 :root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
-  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--code-bg:#0a0c10}
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--code-bg:#0a0c10;--pad-bg:#3a3314;--pad-fg:#f3e5a3}
 @media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
-  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--code-bg:#0a0c10}}
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--code-bg:#0a0c10;--pad-bg:#3a3314;--pad-fg:#f3e5a3}}
 :root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
-  --a:#7ee2d6;--a-soft:#24404a;--ok:#7ee2a8;--ok-soft:#24394a;--bad:#ff8f86;--bad-soft:#4a2b3f;--warn:#ffc27a;--warn-soft:#4a3040;--on-a:#211b33;--code-bg:#17142a}
+  --a:#7ee2d6;--a-soft:#24404a;--ok:#7ee2a8;--ok-soft:#24394a;--bad:#ff8f86;--bad-soft:#4a2b3f;--warn:#ffc27a;--warn-soft:#4a3040;--on-a:#211b33;--code-bg:#17142a;--pad-bg:#4b4031;--pad-fg:#ffe7ad}
 :root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -29,13 +29,14 @@ header{padding:28px 20px 14px;max-width:1180px;margin:0 auto}
 header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
 header p{margin:0;color:var(--muted);max-width:820px}
 .thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:900px}
-.chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px;max-width:900px}
+.chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;max-width:900px}
 .chipq{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
 .chipq span{display:block;font-size:.76rem;color:var(--muted)}
 .chipq b{display:block;font-size:.92rem;overflow-wrap:anywhere}
 .chipq.no{border-left-color:var(--ok)}
 .chipq.cause{border-left-color:var(--bad)}
 .chipq.fix{border-left-color:var(--a)}
+.chipq.lab{border-style:dashed;border-left:3px solid var(--warn)}
 nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 :root[data-theme="twilight"] nav{background:#2a2444}
 nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -47,7 +48,7 @@ nav a:hover{border-color:var(--a)}
 .themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 .themes svg{width:15px;height:15px;flex:none}
 main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
-section{margin:30px 0 8px;scroll-margin-top:60px}
+section{margin:30px 0 8px;scroll-margin-top:var(--navh,60px)}
 section>h2{font-size:1.28rem;margin:0 0 4px}
 section>p.lead{margin:0 0 12px;color:var(--muted);max-width:860px}
 .analogy{border-left:3px solid var(--a);background:var(--a-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:900px}
@@ -151,31 +152,96 @@ td .no{color:var(--bad);font-weight:700}
 .q .opts button.wrong{background:var(--bad-soft);border-color:var(--bad)}
 .q .why{font-size:.84rem;margin:6px 0 0;color:var(--muted)}
 footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);font-size:.8rem}
+/* update note + 5. the real cause */
+.update{margin-top:14px;padding:10px 14px;border-radius:10px;background:var(--warn-soft);border:1px solid var(--warn);max-width:900px;font-size:.9rem}
+.update a,.readout a,.note a{color:inherit;font-weight:600}
+td .mid{color:var(--warn);font-weight:700}
+.facts{margin:6px 0 0;padding-left:20px;font-size:.9rem}
+.facts li{margin:4px 0}
+.stages{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr);align-items:stretch;margin-top:6px}
+.stage{background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.stage h4{margin:0 0 6px;font-size:.88rem}
+.pk{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:var(--mono);font-size:.76rem;padding:5px 0;border-top:1px dashed var(--line)}
+.pk span:first-child{min-width:0;overflow-wrap:anywhere}
+.pk span:last-child{flex:none;font-weight:700}
+.pk .y{color:var(--ok)}
+.pk .n{color:var(--bad)}
+.card p.note{font-size:.78rem;margin:6px 0 0}
+.card h3.gap{margin-top:14px}
+/* 6. new vs warm connections */
+.ideas{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr);align-items:stretch;margin-bottom:14px}
+.idea{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.idea .num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--a);color:var(--on-a);font-weight:700;font-size:.8rem}
+.idea h3{margin:6px 0 4px;font-size:.96rem}
+.idea p{margin:0;font-size:.87rem}
+pre.trace{font-size:.76rem;line-height:1.45}
+pre.trace .tk{color:#56d364}
+pre.trace .tb{color:#ff7b72;font-weight:700}
+pre.trace .tw{color:#e3b341}
+pre.trace .td{color:#8b949e}
+.kind{display:inline-block;font-family:var(--sans);font-size:.66rem;font-weight:700;letter-spacing:.05em;padding:1px 7px;border-radius:999px;border:1px solid transparent;vertical-align:2px}
+.kind.new{background:var(--chip);color:var(--muted);border-color:var(--line)}
+.kind.warm{background:var(--warn-soft);color:var(--warn)}
+.kind.closed{color:var(--muted);border-color:var(--line);border-style:dashed}
+.story-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.story-head h3{margin:0}
+.scen{display:flex;flex-wrap:wrap;gap:6px}
+.clockbar{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;margin:14px 0 6px}
+.clock{font-family:var(--mono);font-size:1.5rem;font-weight:700}
+.gpill{font-size:.8rem;font-weight:600;padding:3px 10px;border-radius:999px}
+.gpill.y{background:var(--ok-soft);color:var(--ok)}
+.gpill.n{background:var(--bad-soft);color:var(--bad)}
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px 12px;padding-top:12px}
+.ln{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0;transition:border-color .25s,box-shadow .25s,opacity .25s}
+.ln.on{border-color:var(--a);box-shadow:0 0 0 3px var(--a-soft)}
+.ln.gone{opacity:.55;border-style:dashed;box-shadow:none}
+.ln .top{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.ln .name{font-weight:700;font-size:.88rem}
+.pad{margin-top:8px;padding:6px 8px;border-radius:3px;font-family:var(--mono);font-size:.7rem;line-height:1.35;min-height:40px;background:var(--pad-bg);color:var(--pad-fg);box-shadow:0 1px 3px rgba(0,0,0,.2);transform:rotate(-1.2deg)}
+.pad.empty{display:grid;place-items:center;background:transparent;color:var(--muted);border:1px dashed var(--line);box-shadow:none;transform:none}
+.ln .age{display:flex;justify-content:space-between;gap:6px;font-size:.7rem;color:var(--muted);margin-top:8px}
+.agebar{height:4px;border-radius:2px;background:var(--chip);overflow:hidden;margin-top:3px}
+.agebar i{display:block;height:100%;background:var(--a)}
+.agebar.old i{background:var(--bad)}
+.res{position:absolute;top:-11px;right:10px;font-family:var(--mono);font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:999px}
+.res.ok{background:var(--ok);color:var(--on-a)}
+.res.bad{background:var(--bad);color:var(--on-a)}
+.wcap{font-size:.95rem;margin:14px 0 8px;min-height:3.1em;max-width:900px}
+.counts{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.8rem;color:var(--muted);margin-top:8px}
+.counts b{color:var(--fg);font-family:var(--mono)}
+.dots{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.dots button{width:14px;height:14px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--chip);cursor:pointer}
+.dots button:hover{border-color:var(--fg)}
+.dots button[aria-current="step"]{background:var(--a);border-color:var(--a)}
 @media (max-width:900px){.two,.wide,.three{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:620px){.chips{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr)}.arrow{flex-direction:row;gap:6px;padding:4px 0}.arrow i{transform:rotate(90deg)}}
-@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.flow li{transition:none}}
+@media (max-width:620px){.chips{grid-template-columns:minmax(0,1fr)}.row,.stages,.ideas{grid-template-columns:minmax(0,1fr)}.arrow{flex-direction:row;gap:6px;padding:4px 0}.arrow i{transform:rotate(90deg)}}
+@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}pre.trace{font-size:.7rem}.clock{font-size:1.25rem}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.flow li,.ln{transition:none}}
 </style>
 </head>
 <body>
 <header>
   <h1>ORDS 403, Explained</h1>
-  <p>A REST gateway schema with only <code>CREATE SESSION</code> and <code>CREATE SYNONYM</code> got HTTP 403 on its <code>plsql/block</code> POST handlers, while <code>json/collection</code> GETs worked with the same token. This page rebuilds the investigation so you can run every request yourself.</p>
+  <p>A REST gateway schema with only <code>CREATE SESSION</code> and <code>CREATE SYNONYM</code> got HTTP 403 on its <code>plsql/block</code> POST handlers, while <code>json/collection</code> GETs worked with the same token. This page rebuilds the lab investigation so you can run every request yourself, then shows what the real database turned out to be missing.</p>
+  <div class="update" role="note"><b>Updated 7 November 2026.</b> In the lab, revoking <code>SYS.HTP</code> reproduced the 403 exactly, so this page first named HTP as the cause. The real database still had HTP. It was missing <code>SYS.DBMS_LOB</code> and <code>SYS.DBMS_PICKLER</code> instead. Read <a href="#real">what the real database was missing</a> and <a href="#warm">why DBMS_PICKLER isn't needed on every request</a>.</div>
   <div class="chips">
+    <div class="chipq cause"><span>Real cause of the 403</span><b>EXECUTE on SYS.DBMS_LOB and SYS.DBMS_PICKLER revoked from PUBLIC</b></div>
+    <div class="chipq fix"><span>The fix</span><b>grant execute on sys.dbms_lob to &lt;gateway&gt;, then sys.dbms_pickler if ORDS's log still names it</b></div>
     <div class="chipq no"><span>Does the gateway need CREATE PROCEDURE?</span><b>No</b></div>
-    <div class="chipq cause"><span>Real cause of the 403</span><b>EXECUTE on SYS.HTP revoked from PUBLIC</b></div>
-    <div class="chipq fix"><span>The fix</span><b>grant execute on sys.htp to &lt;gateway&gt;</b></div>
+    <div class="chipq lab"><span>Reproduced in the lab, but not the real cause</span><b>EXECUTE on SYS.HTP revoked from PUBLIC</b></div>
   </div>
-  <div class="thesis"><b>Key idea:</b> ORDS wraps every <code>plsql/block</code> handler in code that uses <code>SYS.HTP</code> to build the HTTP response. If the schema can't reach <code>HTP</code>, the request fails before your code runs. GETs from a <code>json/collection</code> source never use <code>HTP</code>, so they keep working.</div>
+  <div class="thesis"><b>Key idea:</b> ORDS wraps every <code>plsql/block</code> handler in its own PL/SQL, and that code runs as your schema. Before your code, it sets up the request with <code>OWA</code> and <code>HTP</code>, and on a new connection ORDS 25.3's JDBC driver first asks <code>DBMS_PICKLER</code> for a type's layout. After your code, <code>OWA</code>, <code>DBMS_LOB</code> and <code>WPG_DOCLOAD</code> collect the response. If the schema can't reach any one of them, you get the same 403, whichever package it is. GETs from a <code>json/collection</code> source use none of them, so they keep working.</div>
 </header>
 <nav><div>
   <a href="#setup">1. The setup</a>
   <a href="#sim">2. Send a request</a>
   <a href="#story">3. The investigation</a>
   <a href="#proved">4. What it proved</a>
-  <a href="#rebuild">5. Rebuild it</a>
-  <a href="#gotchas">6. Gotchas</a>
-  <a href="#quiz">7. Quiz</a>
+  <a href="#real">5. The real cause</a>
+  <a href="#warm">6. New vs warm</a>
+  <a href="#rebuild">7. Rebuild it</a>
+  <a href="#gotchas">8. Gotchas</a>
+  <a href="#quiz">9. Quiz</a>
   <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
 </div></nav>
 <main>
@@ -183,7 +249,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);fon
 <section id="setup">
   <h2>1. The setup at a glance</h2>
   <p class="lead">Two layers: the path a request travels, and the chain of schemas inside the database that does the work. The gateway never touches the repository directly. A definer's-rights package in the middle does. Tap any part.</p>
-  <div class="analogy"><b>Analogy:</b> the gateway is a receptionist who may only pass notes to one office. The office (a definer's-rights package) has its own keys to the archive. And every written reply has to go through the building's printer, <code>HTP</code>. Take away the receptionist's printer access and every written reply fails, even though nothing else changed.</div>
+  <div class="analogy"><b>Analogy:</b> the gateway is a receptionist who may only pass notes to one office. The office (a definer's-rights package) has its own keys to the archive. And every written reply goes through the building's mailroom, a row of machines the receptionist must be allowed to use: a printer (<code>HTP</code>), an envelope packer (<code>DBMS_LOB</code>) and a few more. Take away access to any one machine and every written reply fails, even though nothing else changed. The lab switched off the printer first. In the real building the printer worked, and the envelope packer (<code>DBMS_LOB</code>) and a form-layout lookup (<code>DBMS_PICKLER</code>) were off.</div>
   <div>
     <div class="card">
       <div class="layer"><span>Runtime path</span>
@@ -191,7 +257,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);fon
       </div>
       <div class="layer"><span>Inside the database: the call chain</span>
         <div class="row" id="rowB"></div>
-        <button class="node htp" data-n="htp" aria-pressed="false"><b>SYS.HTP / OWA_UTIL wrapper</b><span>ORDS wraps every plsql/block call in this</span></button>
+        <button class="node htp" data-n="htp" aria-pressed="false"><b>ORDS's wrapper code</b><span>OWA, HTP, DBMS_LOB, WPG_DOCLOAD and DBMS_PICKLER, around every plsql/block call</span></button>
       </div>
     </div>
     <div class="card">
@@ -204,13 +270,13 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);fon
 
 <section id="sim">
   <h2>2. Send a request</h2>
-  <p class="lead">Choose an endpoint and set up the database, then send. The simulator follows the rules this investigation proved, and says which test each result comes from.</p>
+  <p class="lead">Choose an endpoint and set up the database, then send. This simulator replays the lab's HTP experiment and says which test each result comes from. The packages the real database was missing are in sections 5 and 6.</p>
   <div class="controls" id="preset">
     <span class="note" style="margin:0">Load a stage:</span>
     <button class="b" data-p="phase1">Phase 1: no security</button>
     <button class="b" data-p="phase2">Phase 2: OAuth</button>
-    <button class="b" data-p="hardened">Hardened database</button>
-    <button class="b" data-p="fixed">The fix</button>
+    <button class="b" data-p="hardened">Lab: HTP revoked</button>
+    <button class="b" data-p="fixed">Lab: HTP fix</button>
   </div>
   <div class="wide">
     <div class="card">
@@ -243,7 +309,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);fon
 
 <section id="story">
   <h2>3. The investigation, end to end</h2>
-  <p class="lead">Six steps. The first four build and test, and the last two find the cause and prove the fix. The statuses are the HTTP codes actually observed. Load any stage into the simulator.</p>
+  <p class="lead">Eight steps. The first six are the lab investigation, which reproduced the 403 with HTP and proved that fix. The last two are what the real database showed, and how the lab confirmed it. The statuses are the HTTP codes actually observed. Load any lab stage into the simulator.</p>
   <div class="card" id="phases"></div>
 </section>
 
@@ -251,13 +317,14 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);fon
   <h2>4. What it proved</h2>
   <div class="two">
     <div class="card">
-      <h3>Three suspects, one culprit</h3>
+      <h3>Four suspects</h3>
       <div class="tablewrap"><table><thead><tr><th>Hypothesis</th><th>Verdict</th><th>Evidence</th></tr></thead><tbody>
         <tr><td>The gateway needs <code>CREATE PROCEDURE</code></td><td><span class="no">No</span></td><td>Phase 1 POST handlers returned 201 with only <code>CREATE SESSION</code> and <code>CREATE SYNONYM</code></td></tr>
         <tr><td>The OAuth or privilege setup is the cause</td><td><span class="no">No</span></td><td>Phase 2: 401 without a token, 201 with a valid one</td></tr>
-        <tr><td>Database hardening on <code>SYS.HTP</code></td><td><span class="yes">Yes</span></td><td>Revoking it from PUBLIC reproduced the 403 on POST, while GET stayed 200</td></tr>
+        <tr><td>Database hardening on <code>SYS.HTP</code></td><td><span class="mid">Lab only</span></td><td>Revoking it from PUBLIC reproduced the 403 on POST while GET stayed 200, but the real database still had HTP</td></tr>
+        <tr><td>Database hardening on <code>SYS.DBMS_LOB</code> and <code>SYS.DBMS_PICKLER</code></td><td><span class="yes">Yes</span></td><td>The real schema couldn't reach either. Revoking both in the lab gave the exact message, and granting both fixed it (section 5)</td></tr>
       </tbody></table></div>
-      <div class="readout gap"><b>Why GET and POST differ:</b> <code>json/collection</code> GETs go through ORDS's own SQL path and never touch <code>HTP</code>. Every <code>plsql/block</code> handler runs inside generated PL/SQL that needs <code>HTP</code>.</div>
+      <div class="readout gap"><b>Why GET and POST differ:</b> <code>json/collection</code> GETs go through ORDS's own SQL path and never touch the wrapper packages. Every <code>plsql/block</code> handler runs inside ORDS's generated PL/SQL, which needs <code>OWA</code>, <code>HTP</code>, <code>DBMS_LOB</code> and <code>WPG_DOCLOAD</code>, plus <code>DBMS_PICKLER</code> on new connections.</div>
     </div>
     <div class="card">
       <h3>A note on <code>p_auto_rest_auth</code></h3>
@@ -267,14 +334,173 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);fon
         <tr><td><code>POST t/item</code> without token</td><td>401</td><td>401</td></tr>
         <tr><td><code>metadata-catalog</code> without token</td><td>200 (open)</td><td>401 (gated)</td></tr>
       </tbody></table></div>
-      <p>The flag gates <b>only</b> the schema's Auto-REST surface. Hand-defined modules are controlled by the privilege you map, so the <code>SYS.HTP</code> finding doesn't depend on it.</p>
+      <p>The flag gates <b>only</b> the schema's Auto-REST surface. Hand-defined modules are controlled by the privilege you map, so the 403 doesn't depend on it.</p>
       <div class="readout warn"><b>Caching:</b> ORDS keeps an in-memory schema cache. After changing <code>auto_rest_auth</code>, the metadata-catalog only reflects it reliably once the cache refreshes or ORDS restarts.</div>
     </div>
   </div>
 </section>
 
+<section id="real">
+  <h2>5. What the real database was missing</h2>
+  <p class="lead">The HTP result is real: revoking it does cause this 403. It just isn't what happened in the real database. Two facts ruled it out, and the code ORDS runs around a handler showed what was missing instead.</p>
+  <div class="two">
+    <div class="card">
+      <h3>Why HTP was ruled out</h3>
+      <ul class="facts">
+        <li>The failing schema could reach <code>HTP</code>, <code>HTF</code>, <code>OWA</code>, <code>OWA_UTIL</code> and <code>WPG_DOCLOAD</code> through PUBLIC.</li>
+        <li>Even a one-line handler, <code>begin :status_code := 200; end;</code>, got 403. So the cause wasn't anything a handler called.</li>
+      </ul>
+      <h3 class="gap">What was missing</h3>
+      <p><code>EXECUTE</code> on <code>SYS.DBMS_LOB</code> and <code>SYS.DBMS_PICKLER</code>. Hardening had revoked both from PUBLIC, and the schema had no grant of its own.</p>
+      <h3 class="gap">How the lab confirmed it</h3>
+      <ul class="facts">
+        <li>Revoking both from PUBLIC: every PL/SQL handler got 403 with the exact message, and GETs stayed 200.</li>
+        <li>Granting WS only <code>DBMS_PICKLER</code>: still 403, now on <code>DBMS_LOB</code>.</li>
+        <li>Granting WS both: everything worked.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>The fix</h3>
+      <p class="sub">Run by a DBA. Both are direct grants to one schema, so PUBLIC stays revoked.</p>
+      <pre>-- first: needed on every PL/SQL request
+grant execute on sys.dbms_lob to &lt;gateway_schema&gt;;
+
+-- then, only if ORDS's log still says
+-- PLS-00201: identifier 'SYS.DBMS_PICKLER' must be declared
+grant execute on sys.dbms_pickler to &lt;gateway_schema&gt;;</pre>
+      <p>Why the second grant waits: ORDS 25.3 asks <code>DBMS_PICKLER</code> on databases from 12c on, but whether ORDS 23 or 24 does hasn't been checked. And a missing <code>DBMS_PICKLER</code> can look fine for a while, because connections remember its answer (section 6).</p>
+      <div class="readout"><b>Which package is it?</b> The 403 message never says. ORDS's log does, in a line like <code>PLS-00201: identifier 'SYS.DBMS_LOB' must be declared</code>. Checks that need no DBA, and the risk of each grant, are on <a href="../../index.html#/oracle/ords/ords-403-hardened-grants.html" target="_top">ORDS 403, Hardened Grants</a>.</div>
+    </div>
+  </div>
+  <div class="card gap">
+    <h3>What ORDS runs as your schema, around every PL/SQL handler</h3>
+    <p class="sub">Captured from <code>v$sql</code> in the lab. ✓ and ✕ show what the real schema could reach.</p>
+    <div class="stages">
+      <div class="stage"><h4>1. Before your code</h4>
+        <div class="pk"><span>driver: get_type_shape</span><span class="n">✕ DBMS_PICKLER</span></div>
+        <div class="pk"><span>owa.init_cgi_env</span><span class="y">✓ OWA</span></div>
+        <div class="pk"><span>htp.init</span><span class="y">✓ HTP</span></div>
+        <p class="note">The driver's call happens only on a new connection (section 6). If anything here fails, your code never runs.</p>
+      </div>
+      <div class="arrow" aria-hidden="true"><i>→</i></div>
+      <div class="stage"><h4>2. Your code</h4>
+        <div class="pk"><span>:status_code := 200;</span><span></span></div>
+        <p class="note">Needs only what your handler itself calls.</p>
+      </div>
+      <div class="arrow" aria-hidden="true"><i>→</i></div>
+      <div class="stage"><h4>3. After your code</h4>
+        <div class="pk"><span>owa.get_page</span><span class="y">✓ OWA</span></div>
+        <div class="pk"><span>dbms_lob.createtemporary, open, writeappend</span><span class="n">✕ DBMS_LOB</span></div>
+        <div class="pk"><span>wpg_docload.is_file_download</span><span class="y">✓ WPG_DOCLOAD</span></div>
+        <p class="note">On every PL/SQL request. When only DBMS_LOB is missing, your code has already run by the time this step fails.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="warm">
+  <h2>6. New vs warm connections</h2>
+  <p class="lead">Why <code>DBMS_PICKLER</code> is only asked now and then, and why that still doesn't make it optional. This is ORDS 25.3 on a 12c-or-newer database, where ORDS's code was read and the lab ran the tests. On older databases, ORDS 25.3 passes the headers another way and never asks.</p>
+  <div class="ideas">
+    <div class="idea"><span class="num">1</span><h3>ORDS keeps connections open</h3><p>Logging in for every request would be slow. So ORDS logs in a few times as <code>ORDS_PUBLIC_USER</code> and keeps those connections open: the pool. Each request borrows one, uses it as your schema, and hands it back.</p></div>
+    <div class="arrow" aria-hidden="true"><i>→</i></div>
+    <div class="idea"><span class="num">2</span><h3>The first PL/SQL request asks</h3><p>Before your handler, ORDS hands the request headers to <code>owa.init_cgi_env</code> as <code>OWA.VC_ARR</code> arrays. To build one, the JDBC driver needs that type's layout, so it calls <code>sys.dbms_pickler.get_type_shape</code>, running as your schema.</p></div>
+    <div class="arrow" aria-hidden="true"><i>→</i></div>
+    <div class="idea"><span class="num">3</span><h3>The connection remembers</h3><p>The driver keeps the answer in ORDS's memory, on that connection, for your schema. The next request on that connection skips the question. The connection is now <b>warm</b>.</p></div>
+  </div>
+  <div class="analogy"><b>Analogy:</b> each connection is a phone line with a notepad beside it. The first time a line handles your schema's PL/SQL request, the operator phones the records office (<code>DBMS_PICKLER</code>) to ask how the header form (<code>OWA.VC_ARR</code>) is laid out, and writes the answer on the notepad. After that, the operator just reads the notepad. If your schema isn't allowed to phone the records office, a line with an empty notepad can't serve you. A line that already has the answer still can, until that line is replaced.</div>
+  <div class="two">
+    <div class="card">
+      <h3>New connection <span class="kind new">NEW</span></h3>
+      <p class="sub">Just opened, just replaced, or never used for your schema. Its notepad is empty.</p>
+      <pre class="trace">request ─► line <span class="td">(new, empty notepad)</span>
+    │
+    ▼
+driver: "what does OWA.VC_ARR look like?"
+    │asks sys.dbms_pickler.get_type_shape
+    │<span class="td">as your schema</span>
+    ▼
+  <span class="tk">grant ✓</span> ─► write it down ─► run handler
+  <span class="tb">grant ✕</span> ─► PLS-00201 ─► 403</pre>
+      <p><b>Needs the grant</b>, because the lookup runs as your schema.</p>
+    </div>
+    <div class="card">
+      <h3>Warm connection <span class="kind warm">WARM</span></h3>
+      <p class="sub">Already asked once, successfully, for your schema. Its notepad has the answer.</p>
+      <pre class="trace">request ─► line <span class="tw">(warm, notepad filled)</span>
+    │
+    ▼
+driver reads the notepad
+    │<span class="td">no call to DBMS_PICKLER,</span>
+    │<span class="td">so the grant is never checked</span>
+    ▼
+init_cgi_env ─► handler ─► DBMS_LOB ─► <span class="tk">201</span></pre>
+      <p><b>Doesn't check the grant</b>, because it never asks.</p>
+    </div>
+  </div>
+  <div class="card gap">
+    <div class="story-head">
+      <h3>Watch a pool, step by step</h3>
+      <div class="scen" id="wScen" role="group" aria-label="Scenario">
+        <button class="b" data-s="during" aria-pressed="true">Grant removed while ORDS runs</button>
+        <button class="b" data-s="never" aria-pressed="false">Grant never there</button>
+        <button class="b" data-s="normal" aria-pressed="false">Grant in place</button>
+      </div>
+    </div>
+    <div class="clockbar">
+      <div><span class="clock" id="wClock">0:00</span> <span class="note" id="wSince">since ORDS started</span></div>
+      <span class="gpill" id="wGrant"></span>
+    </div>
+    <div class="pool" id="wPool" role="group" aria-label="Connections in the pool"></div>
+    <p class="wcap" id="wCap" aria-live="polite"></p>
+    <pre class="trace" id="wTrace"></pre>
+    <div class="counts" id="wCounts"></div>
+    <div class="controls">
+      <button class="b" id="wBack">Back</button>
+      <button class="b pri" id="wNext">Next</button>
+      <button class="b" id="wPlay">Play</button>
+      <div class="dots" id="wDots" role="group" aria-label="Steps"></div>
+    </div>
+    <p class="note">Times are illustrative. The behaviour was tested in the lab on ORDS 25.3, which replaces a connection that's over 60 seconds old right after its next use. The bar under each line fills toward those 60 seconds and turns red once the line is past them. To click through a pool yourself, try the switchboard on <a href="../../index.html#/oracle/ords/ords-architecture-explained.html" target="_top">ORDS Architecture, Explained</a>.</p>
+  </div>
+  <div class="two gap">
+    <div class="card">
+      <h3>The grant and the notepad are different things</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th></th><th>The grant</th><th>The notepad</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">What it is</th><td><code>EXECUTE</code> on <code>SYS.DBMS_PICKLER</code>, for your schema or for PUBLIC</td><td>The layout of <code>OWA.VC_ARR</code>, kept by the JDBC driver</td></tr>
+          <tr><th scope="row">Where it lives</th><td>In the database</td><td>In ORDS's memory, on one connection, for one schema</td></tr>
+          <tr><th scope="row">What it decides</th><td>Whether a lookup succeeds</td><td>Whether a lookup happens at all</td></tr>
+          <tr><th scope="row">How long it lasts</th><td>Until a DBA changes it</td><td>Until ORDS replaces the connection, moves it to another schema, or restarts</td></tr>
+        </tbody></table></div>
+      <p class="note">So "new" and "warm" aren't a schema setting or a database setting. Nothing about them is stored in the database.</p>
+    </div>
+    <div class="card">
+      <h3>What makes a connection new again</h3>
+      <ul class="facts">
+        <li><b>ORDS starts or restarts:</b> every connection at once.</li>
+        <li><b>A busy moment:</b> the pool opens extra connections, up to 10.</li>
+        <li><b>Age:</b> a connection over 60 seconds old is closed right after its next request, and a new one takes its place. An idle one keeps its notepad until then; in the lab, idle connections still had it after 40 minutes.</li>
+        <li><b>Use:</b> the same happens after 1,000 requests.</li>
+        <li><b>Another schema:</b> when a connection switches to a different schema, the driver drops what it remembered. This comes from reading the driver's code. The lab had only one REST schema, so it wasn't tested.</li>
+      </ul>
+      <p class="note">These are ORDS 25.3's defaults: <code>jdbc.MaxLimit</code> 10, <code>jdbc.MaxConnectionReuseTime</code> 60 seconds, <code>jdbc.MaxConnectionReuseCount</code> 1,000. Other versions and configurations may differ.</p>
+    </div>
+  </div>
+  <div class="readout warn gap"><b>What this means for you</b>
+    <ul class="facts">
+      <li><b>"Not on every request" doesn't mean optional.</b> Every new connection asks, and with regular traffic connections are replaced about once a minute.</li>
+      <li><b>Warm connections only hide a grant that was removed while ORDS was running, and only briefly.</b> In the lab, 38 of 40 PL/SQL calls on warm connections still worked and 2 on new ones got 403. After a restart, every one failed.</li>
+      <li><b>They never help a new schema.</b> A connection only becomes warm after a lookup that worked, and that needs the grant.</li>
+      <li><b>So a schema that works for days without DBMS_PICKLER has another reason.</b> Its ORDS version may not ask, it may reach DBMS_PICKLER through a role or a direct grant, or its handlers aren't PL/SQL. Section 4, "Check your database", on <a href="../../index.html#/oracle/ords/ords-403-hardened-grants.html" target="_top">ORDS 403, Hardened Grants</a> tells you which.</li>
+      <li><b>DBMS_LOB has no notepad.</b> The code after your handler calls it on every PL/SQL request, so a missing DBMS_LOB fails every time.</li>
+    </ul>
+  </div>
+</section>
+
 <section id="rebuild">
-  <h2>5. Rebuild it on another computer</h2>
+  <h2>7. Rebuild it on another computer</h2>
   <p class="lead">The path that worked: an Oracle Database Free container plus ORDS in <b>standalone</b> mode, with no Tomcat. Commands use <code>podman</code>, and <code>docker</code> works the same. Every password shown is a throwaway test value, so use your own.</p>
   <div class="card">
     <h3>Before you start</h3>
@@ -290,13 +516,13 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);fon
 </section>
 
 <section id="gotchas">
-  <h2>6. Gotchas hit along the way</h2>
+  <h2>8. Gotchas hit along the way</h2>
   <p class="lead">Each one cost time. Tap a card to see the fix.</p>
   <div class="two" id="gotchaBox"></div>
 </section>
 
 <section id="quiz">
-  <h2>7. Quiz</h2>
+  <h2>9. Quiz</h2>
   <p class="lead" id="qS"></p>
   <div class="card"><div id="qB"></div><div class="controls"><button class="b" id="qR">Reset quiz</button></div></div>
 </section>
@@ -317,7 +543,7 @@ const NODES = {
   ws:{t:'WS: the gateway', s:'CREATE SESSION + CREATE SYNONYM', d:'The REST-enabled schema that owns the ORDS module <code>t.mod</code>. It deliberately holds only two system privileges, plus <code>EXECUTE</code> on the application packages and synonyms that point at them. It has <b>no</b> <code>CREATE PROCEDURE</code>.'},
   app:{t:'APP2.REQ_PKG', s:'AUTHID DEFINER', d:'A <b>definer\'s-rights</b> package: it runs with its owner\'s privileges, not the caller\'s. So the gateway only needs <code>EXECUTE</code> on it, and the package itself reads the repository. Its chain is <code>create_request → make_request_no → next_from_repo()</code>.'},
   repo:{t:'REPO', s:'req_prefix_v + req_seq', d:'The repository schema: a view that returns a <code>REQ-YYYYMMDD</code> prefix, and a sequence. Only APP2 has <code>SELECT</code> on them, never the gateway.'},
-  htp:{t:'SYS.HTP / OWA_UTIL wrapper', s:'', d:'For every <code>plsql/block</code> handler, ORDS generates PL/SQL that uses <code>HTP</code> and <code>OWA_UTIL</code> to build the HTTP response. That code runs as the gateway schema. Many hardened databases revoke <code>EXECUTE</code> on <code>SYS.HTP</code> from PUBLIC. Without a direct grant, the wrapper fails before your handler runs, and ORDS answers <b>403</b>.'}
+  htp:{t:'ORDS\'s wrapper code', s:'OWA · HTP · DBMS_LOB · WPG_DOCLOAD · DBMS_PICKLER', d:'For every <code>plsql/block</code> handler, ORDS runs its own PL/SQL as the gateway schema. Before your code: <code>owa.init_cgi_env</code> and <code>htp.init</code>, and on a new connection ORDS 25.3\'s JDBC driver first calls <code>sys.dbms_pickler.get_type_shape</code>. After your code: <code>owa.get_page</code>, <code>dbms_lob</code> calls and <code>wpg_docload</code>. If the schema can\'t execute any one of these, ORDS answers <b>403</b>. The lab first broke it by revoking <code>SYS.HTP</code>. The real database was missing <code>DBMS_LOB</code> and <code>DBMS_PICKLER</code> (section 5).'}
 };
 function nodeBtn(k, extra){ const n = NODES[k]; return `<button class="node ${extra || ''}" data-n="${k}" aria-pressed="false"><b>${esc(n.t)}</b><span>${esc(n.s)}</span></button>`; }
 const arrow = t => `<div class="arrow" aria-hidden="true"><i>→</i>${esc(t)}</div>`;
@@ -390,7 +616,7 @@ function decide(){
   if (!htp) {
     step('fail', 'SYS.HTP response wrapper', 'the gateway can\'t execute SYS.HTP: no PUBLIC grant and no direct grant');
     step('skip', 'Your PL/SQL', 'never reached');
-    return {code:403, text:'Forbidden', steps, body:'a function or procedure referenced by the PL/SQL statement being evaluated is not accessible or does not exist', why:'ORDS wraps the handler in generated PL/SQL that calls <code>HTP</code>. It runs as the gateway schema, which can\'t execute <code>SYS.HTP</code>, so the request fails before your code runs. Fix: <code>grant execute on sys.htp to ws;</code>', src:S.ep === 'postItem' ? 'Seen in experiment B.' : 'Same rule as experiment B, which tested POST t/item.'};
+    return {code:403, text:'Forbidden', steps, body:'a function or procedure referenced by the PL/SQL statement being evaluated is not accessible or does not exist', why:'ORDS wraps the handler in generated PL/SQL that calls <code>HTP</code>. It runs as the gateway schema, which can\'t execute <code>SYS.HTP</code>, so the request fails before your code runs. Fix: <code>grant execute on sys.htp to ws;</code> The real database got the same 403 from <code>DBMS_LOB</code> and <code>DBMS_PICKLER</code> instead (section 5).', src:S.ep === 'postItem' ? 'Seen in experiment B.' : 'Same rule as experiment B, which tested POST t/item.'};
   }
   step('pass', 'SYS.HTP response wrapper', S.wsHtp ? 'allowed by the direct grant to WS' : 'allowed through PUBLIC');
   step('pass', 'Your PL/SQL', ep.runs + (S.proc ? '. CREATE PROCEDURE plays no part' : ', with no CREATE PROCEDURE'));
@@ -430,11 +656,13 @@ $('#preset').addEventListener('click', e => { const b = e.target.closest('button
 /* =============== 3. INVESTIGATION =============== */
 const PHASES = [
   {m:'0', c:'', t:'Bring up the stack', tag:'', p:'Started an Oracle Database Free container and a Tomcat container with ORDS 25.3. The database came up on <code>localhost:1521/FREEPDB1</code>. Its admin password was unknown, so it was reset to a test value with the image\'s <code>setPassword.sh</code>.'},
-  {m:'!', c:'bad', t:'The containerised ORDS wouldn\'t serve', tag:'404', p:'Every request said it "could not be mapped to any database". The pool pointed at <code>localhost</code>, which is wrong inside a container, and a Tomcat 10 container was worse. <b>Resolution:</b> run ORDS standalone on the host (<code>ords serve --port 8088</code>). Everything after this ran against <code>:8088</code>.'},
+  {m:'!', c:'bad', t:'The containerised ORDS wouldn\'t serve', tag:'404', p:'Every request said it "could not be mapped to any database". Running the same war standalone inside the container showed the error Tomcat had hidden: the auto-login wallet holding <code>ORDS_PUBLIC_USER</code>\'s password was made on the Mac and couldn\'t be opened inside the container, so the pool was invalid. A Tomcat 10 container couldn\'t run this war at all. <b>Resolution:</b> run ORDS standalone on the host (<code>ords serve --port 8088</code>). Everything after this ran against <code>:8088</code>.'},
   {m:'1', c:'ok', t:'Phase 1: no security', tag:'200 / 201', p:'With the gateway holding only <code>CREATE SESSION</code> and <code>CREATE SYNONYM</code>, the <code>plsql/block</code> POSTs returned 201, including <code>POST t/real</code> across the whole chain. So <b>CREATE PROCEDURE isn\'t required</b>.', load:'phase1'},
   {m:'2', c:'ok', t:'Phase 2: OAuth token', tag:'401 → 201', p:'Protected the module with a privilege, a role and a <code>client_credentials</code> client. No token gave 401, and a valid token gave 201. So the OAuth layer isn\'t the cause.', load:'phase2'},
-  {m:'B', c:'bad', t:'Experiment B: simulate hardening', tag:'403', p:'Revoked <code>EXECUTE</code> from PUBLIC one package at a time. <code>OWA</code> and <code>OWA_UTIL</code> broke authentication (401). Revoking <b>SYS.HTP</b> reproduced the 403 on the POST, while the GET stayed 200.', load:'hardened'},
-  {m:'✓', c:'ok', t:'Fix validated', tag:'201', p:'With <code>grant execute on sys.htp to ws</code> and PUBLIC\'s grant still revoked, the POST returned 201. A later extension (APP2 and REPO) generated request numbers through the full chain, with the gateway still holding only its two privileges.', load:'fixed'}
+  {m:'B', c:'bad', t:'Experiment B: simulate hardening', tag:'403', p:'Revoked <code>EXECUTE</code> from PUBLIC one package at a time. <code>OWA</code> and <code>OWA_UTIL</code> broke authentication (401). Revoking <b>SYS.HTP</b> reproduced the 403 on the POST, while the GET stayed 200. <code>DBMS_LOB</code> and <code>DBMS_PICKLER</code> weren\'t on this first list.', load:'hardened'},
+  {m:'✓', c:'ok', t:'HTP fix validated in the lab', tag:'201', p:'With <code>grant execute on sys.htp to ws</code> and PUBLIC\'s grant still revoked, the POST returned 201. A later extension (APP2 and REPO) generated request numbers through the full chain, with the gateway still holding only its two privileges.', load:'fixed'},
+  {m:'R', c:'bad', t:'The real database: HTP was there', tag:'403', p:'The failing schema could reach <code>HTP</code>, <code>HTF</code>, <code>OWA</code>, <code>OWA_UTIL</code> and <code>WPG_DOCLOAD</code> through PUBLIC, and even <code>begin :status_code := 200; end;</code> got 403. So HTP wasn\'t the cause there. Capturing the SQL that ORDS runs around a handler (from <code>v$sql</code> in the lab) showed two packages the first list had missed: <code>DBMS_PICKLER</code> before the handler and <code>DBMS_LOB</code> after it. The real database had revoked both from PUBLIC.'},
+  {m:'✓', c:'ok', t:'Real cause reproduced and fixed in the lab', tag:'403 → 201', p:'Revoking <code>DBMS_LOB</code> and <code>DBMS_PICKLER</code> from PUBLIC gave the exact message on every PL/SQL handler while GETs stayed 200. ORDS\'s log said <code>PLS-00201: identifier \'SYS.DBMS_PICKLER\' must be declared</code>. Granting WS only <code>DBMS_PICKLER</code> still failed, now on <code>DBMS_LOB</code>. Granting both fixed it. Section 5 has the details.'}
 ];
 $('#phases').innerHTML = PHASES.map(p => `<div class="phase"><div class="mark ${p.c}">${esc(p.m)}</div><div><h3>${esc(p.t)}${p.tag ? ` <span class="tag ${p.c || 'ok'}">${esc(p.tag)}</span>` : ''}</h3><p>${p.p}</p>${p.load ? `<button class="b" data-load="${p.load}">Load into the simulator</button>` : ''}</div></div>`).join('');
 $('#phases').addEventListener('click', e => { const b = e.target.closest('[data-load]'); if (!b) return; loadPreset(b.dataset.load, true); $('#sim').scrollIntoView(); });
@@ -542,7 +770,7 @@ curl -s -o /dev/null -w 'no token  -> %{http_code}\n' -X POST \
 curl -s -o /dev/null -w 'token     -> %{http_code}\n' -X POST \
      -H "Authorization: Bearer $TOKEN" \
      -H 'Content-Type: application/json' -d '{}' "$BASE/t/item"                    # 201`, as2:'bash, using the client_id and client_secret from above', sim:'phase2'},
-  {t:'Reproduce the 403, then apply the fix', p:'Revoke from PUBLIC to reproduce it, grant the gateway directly to fix it, then restore PUBLIC.', warn:'Revoking from PUBLIC runs as SYS AS SYSDBA and breaks ORDS and APEX for the whole database until you grant it back. Only do this on a throwaway test database, and restore it straight away.', as:'sql, connect: sql sys/Setup#Free1@localhost:1521/FREEPDB1 as sysdba', code:String.raw`-- reproduce: the POST now 403s, the GET still 200s
+  {t:'Reproduce the HTP variant, then fix it', p:'Revoke from PUBLIC to reproduce the lab\'s first result, grant the gateway directly to fix it, then restore PUBLIC.', warn:'Revoking from PUBLIC runs as SYS AS SYSDBA and breaks ORDS and APEX for the whole database until you grant it back. Only do this on a throwaway test database, and restore it straight away.', as:'sql, connect: sql sys/Setup#Free1@localhost:1521/FREEPDB1 as sysdba', code:String.raw`-- reproduce: the POST now 403s, the GET still 200s
 revoke execute on sys.htp from public;
 
 -- the fix: a direct grant to the gateway schema (no need to touch PUBLIC)
@@ -550,7 +778,7 @@ grant execute on sys.htp to ws;
 -- (also grant sys.htf to ws if your hardening revoked it too)
 
 -- restore PUBLIC when done testing
-grant execute on sys.htp to public;`, after:'On a database that\'s already hardened you skip the revoke and simply run <code>grant execute on sys.htp to &lt;your_gateway_schema&gt;;</code>', sim:'hardened'},
+grant execute on sys.htp to public;`, after:'This is the lab\'s HTP variant. On a database that\'s already hardened, first find which package is missing: ORDS\'s log names it in a <code>PLS-00201</code> line. If it\'s HTP, run <code>grant execute on sys.htp to &lt;your_gateway_schema&gt;;</code>. If it\'s <code>DBMS_LOB</code> or <code>DBMS_PICKLER</code>, see section 5.', sim:'hardened'},
   {t:'Optional: the request-number chain', p:'A second application schema whose definer\'s-rights package builds a request number from a repository view and sequence. Run the first part as SYSTEM and the second as WS.', as:'sql, as SYSTEM', code:String.raw`create user repo identified by "Repo#Test1";
 grant create session, create view, create sequence to repo;
 create sequence repo.req_seq start with 1 increment by 1 nocache;
@@ -624,8 +852,10 @@ $('#rebuild').addEventListener('click', e => {
 
 /* =============== 6. GOTCHAS =============== */
 const GOTCHAS = [
+  {t:'Same 403, different package', s:'Revoking HTP reproduced the exact message, so it looked solved. The real database still had HTP.', f:'The 403 message is the same for every package ORDS\'s wrapper code can\'t reach, and it never names the package. ORDS\'s log does, in a line like <code>PLS-00201: identifier \'SYS.DBMS_LOB\' must be declared</code>. Read that line before you trust a reproduction.'},
+  {t:'It worked, then it didn\'t', s:'Right after DBMS_PICKLER was revoked, most PL/SQL calls still worked.', f:'Warm connections remembered DBMS_PICKLER\'s answer and didn\'t ask again, while new ones asked and got 403. After an ORDS restart, every PL/SQL call failed. When you test what removing a grant does, restart ORDS after the revoke, or warm connections can hide the result (section 6).'},
   {t:'Lost database password', s:'The admin password was unknown, so nothing could log in.', f:'The Oracle Free image shows its random password only when it\'s first created. Set <code>ORACLE_PWD</code> on <code>podman run</code>, or reset it later with <code>podman exec oracle_free /opt/oracle/setPassword.sh \'NewPass\'</code>.'},
-  {t:'Container ORDS wouldn\'t register a pool', s:'Every request said it "could not be mapped to any database" (404).', f:'The pool\'s <code>db.hostname</code> was <code>localhost</code>, which inside a container means the container itself. Use the database container\'s name, or run ORDS standalone on the host, where <code>localhost</code> is correct.'},
+  {t:'Container ORDS wouldn\'t register a pool', s:'Every request said it "could not be mapped to any database" (404).', f:'Tomcat hid the real error. Running the same war with <code>ords serve</code> inside the container showed it: the auto-login wallet holding <code>ORDS_PUBLIC_USER</code>\'s password was made on the Mac and couldn\'t be opened in the container, so the pool was invalid. Store the password again from inside the container, or run ORDS standalone on the host where the wallet was made.'},
   {t:'Tomcat 10 wouldn\'t run the war', s:'ORDS never initialised in a Tomcat 10.1 container.', f:'This ORDS 25.3 war is the <code>javax</code> build, which runs on Tomcat 9, not Tomcat 10.1. Standalone <code>ords serve</code> avoids the servlet mismatch completely.'},
   {t:'Empty response body', s:'The request-number handler returned 201 with no body.', f:'ORDS didn\'t serialise the <code>:out</code> bind automatically. Emit JSON yourself with <code>owa_util.mime_header(\'application/json\', true); htp.p(\'{…}\');</code>, which also needs <code>HTP</code> access.'}
 ];
@@ -634,13 +864,16 @@ $('#gotchaBox').addEventListener('click', e => { const b = e.target.closest('.go
 
 /* =============== 7. QUIZ =============== */
 const QUIZ = [
-  {q:'POST handlers return 403 while GETs with the same token return 200. What is the likeliest cause?', o:['The gateway lacks CREATE PROCEDURE','The schema can\'t execute SYS.HTP, which every plsql/block handler needs','The token has expired'], a:1, w:'An expired token would give 401 on both. Only plsql/block handlers depend on HTP.'},
+  {q:'POST handlers return 403 while GETs with the same token return 200. What is the likeliest cause?', o:['The gateway lacks CREATE PROCEDURE','The schema can\'t execute one of the packages ORDS runs around every plsql/block handler','The token has expired'], a:1, w:'An expired token would give 401 on both. Only plsql/block handlers run ORDS\'s wrapper code. In the lab it was HTP; in the real database, DBMS_LOB and DBMS_PICKLER. ORDS\'s log names the package.'},
   {q:'Does a gateway schema need CREATE PROCEDURE to run plsql/block handlers?', o:['Yes','No'], a:1, w:'Phase 1 returned 201 with only CREATE SESSION and CREATE SYNONYM.'},
   {q:'Why does the gateway never need SELECT on the repository?', o:['ORDS reads it on the gateway\'s behalf','The package is AUTHID DEFINER, so it runs with its owner\'s privileges','Synonyms grant SELECT automatically'], a:1, w:'Definer\'s rights let the gateway hold only EXECUTE on the package.'},
-  {q:'What is the safest fix on a hardened database?', o:['grant execute on sys.htp to public','grant execute on sys.htp to the gateway schema','grant dba to the gateway schema'], a:1, w:'A direct grant fixes it without undoing the hardening for everyone else.'},
+  {q:'A hardened database is missing a package ORDS needs. What is the safest fix?', o:['Grant it back to PUBLIC','Grant it directly to the gateway schema','Grant DBA to the gateway schema'], a:1, w:'A direct grant fixes it without undoing the hardening for everyone else.'},
+  {q:'DBMS_PICKLER was revoked from PUBLIC a minute ago, yet most PL/SQL requests still work. Why?', o:['ORDS caches grants for an hour','Connections that already asked DBMS_PICKLER remember the answer, so they don\'t ask again','A revoke only takes effect after the database restarts'], a:1, w:'Warm connections skip the lookup. New connections have to ask, and they get 403.'},
+  {q:'WS is a new schema that never had DBMS_PICKLER. Can warm connections save its PL/SQL requests?', o:['Yes, if other schemas have warmed up the pool','No: a connection only becomes warm after a lookup that worked, for that schema'], a:1, w:'Its first lookup fails, nothing is remembered, and every PL/SQL request gets 403.'},
+  {q:'Which package is needed on every PL/SQL request, warm connection or not?', o:['DBMS_PICKLER','DBMS_LOB'], a:1, w:'ORDS\'s code after your handler calls DBMS_LOB every time. Only DBMS_PICKLER\'s answer is remembered.'},
   {q:'What does p_auto_rest_auth => true protect?', o:['Every module in the schema','Only the Auto-REST surface, such as the metadata-catalog','Only POST handlers'], a:1, w:'Hand-defined modules are protected by the privileges you map to them.'},
   {q:'A protected module gets a request with no token. What comes back?', o:['401','403','201'], a:0, w:'ORDS rejects it before any handler runs.'},
-  {q:'Why was ORDS run standalone instead of in a Tomcat container?', o:['Standalone is faster','Inside the container, localhost didn\'t reach the database, and Tomcat 10 couldn\'t run this war','Tomcat isn\'t free'], a:1, w:'On the host, localhost reaches the database, and there\'s no servlet version mismatch.'},
+  {q:'Why was ORDS run standalone instead of in a Tomcat container?', o:['Standalone is faster','The container couldn\'t open the wallet made on the Mac, so the pool was invalid, and Tomcat 10 couldn\'t run this war','Tomcat isn\'t free'], a:1, w:'On the host, the wallet opens where it was made, and there\'s no servlet version mismatch.'},
   {q:'Why does the request-number handler call htp.p itself?', o:['ORDS doesn\'t serialise the OUT bind automatically','To make it faster','HTP is optional'], a:0, w:'Emitting JSON yourself is the way to return a value, and it also needs HTP access.'}
 ];
 let qRight = 0, qDone = 0;
@@ -657,8 +890,144 @@ $('#qB').addEventListener('click', e => {
 });
 $('#qR').addEventListener('click', buildQuiz);
 
+/* =============== 6. NEW vs WARM CONNECTIONS =============== */
+/* Hand-written stories, replayed from step 0 each time so Back works. The rules come from the lab on ORDS 25.3:
+   a line with an empty notepad asks DBMS_PICKLER as WS; a lookup that works is written on that line's notepad;
+   a failed one writes nothing; a line over 60 s old is replaced right after its next use; a restart clears every line. */
+const W = {
+  during: [
+    {at:0, start:2, grant:'public', cap:'ORDS starts and opens two connections, lines 1 and 2, logged in as <code>ORDS_PUBLIC_USER</code>. Both notepads are empty, because neither line has run a PL/SQL handler for WS yet. Right now WS can run <code>DBMS_PICKLER</code> through PUBLIC.'},
+    {at:5, use:[1], cap:'Request 1 borrows line 1. Its notepad is empty, so before the handler runs, the driver asks <code>DBMS_PICKLER</code>, as WS, for the layout of <code>OWA.VC_ARR</code>. WS is allowed, so the answer goes on line 1\'s notepad and the request returns 201.'},
+    {at:12, use:[2], cap:'Request 2 borrows line 2, and the same happens there. Both lines are now warm: each has asked once.'},
+    {at:20, grant:false, cap:'The DBA revokes <code>EXECUTE</code> on <code>DBMS_PICKLER</code> from PUBLIC. WS has no grant of its own, so from now on every lookup as WS fails. But nothing inside ORDS changes: the notepads live in ORDS\'s memory, not in the database.'},
+    {at:30, use:[1], cap:'Request 3 borrows line 1. Its notepad already has the answer, so the driver never calls <code>DBMS_PICKLER</code> and nothing checks the grant: 201. <b>This is a warm connection hiding the missing grant.</b>'},
+    {at:34, use:[1, 2, 'new'], cap:'Three requests arrive at once. Requests 4 and 5 get lines 1 and 2, both warm: 201. Every line is busy, so the pool opens line 3 for request 6. Line 3 is new, so the driver has to ask <code>DBMS_PICKLER</code>, and WS isn\'t allowed: 403.'},
+    {at:72, use:[1], retire:[1], cap:'Request 7 borrows line 1, still warm, so it works. But line 1 is now over 60 seconds old, so ORDS closes it as soon as it\'s handed back. Its notepad goes with it, and line 4 opens in its place.'},
+    {at:80, use:[4], cap:'Request 8 borrows line 4. New line, empty notepad: the driver asks, WS isn\'t allowed, 403. Line 3 would fail the same way again, because a failed lookup writes nothing down.'},
+    {at:150, use:[2], retire:[2], cap:'Request 9 borrows line 2, the last warm line. It works, and then line 2 is replaced as well, since it\'s over 60 seconds old too.'},
+    {at:156, use:[5], cap:'No line is warm any more, so every PL/SQL request gets 403 until the DBA grants <code>DBMS_PICKLER</code> to WS. With this traffic, the first 403 came 14 seconds after the revoke, and the last warm line was gone about two minutes after it.'},
+    {at:5, restart:true, use:[6], cap:'If ORDS restarts, every notepad is gone at once, so even the first PL/SQL request fails. That\'s why a missing grant often seems to appear "after a restart".'}
+  ],
+  never: [
+    {at:0, start:2, grant:false, cap:'This time WS never had <code>DBMS_PICKLER</code>. Maybe it was revoked from PUBLIC before ORDS started, or WS is a new schema on a database that was already hardened. ORDS opens lines 1 and 2, with empty notepads.'},
+    {at:5, use:[1], cap:'Request 1 borrows line 1. Empty notepad, so the driver asks <code>DBMS_PICKLER</code> as WS and gets PLS-00201: 403. Your handler never runs.'},
+    {at:9, use:[1], cap:'Request 2 borrows line 1 again. The notepad is still empty, because a failed lookup writes nothing down. So the driver asks again, and fails again.'},
+    {at:14, use:[2], cap:'Line 2 is no different. A line only becomes warm after a lookup that worked, so without the grant no line ever does. Every PL/SQL request fails, from the very first one.'},
+    {at:20, grant:'direct', cap:'The DBA runs <code>grant execute on sys.dbms_pickler to ws;</code>. The grant is stored in the database, so the next lookup as WS can succeed.'},
+    {at:26, use:[1], cap:'Request 4 borrows line 1. The driver asks again, WS is allowed now, and the answer goes on the notepad: 201. From here on it works like the normal case. (WS also needs <code>DBMS_LOB</code>; this story assumes it has it.)'}
+  ],
+  normal: [
+    {at:0, start:2, grant:'public', cap:'The normal case: WS can run <code>DBMS_PICKLER</code>. ORDS opens lines 1 and 2, with empty notepads.'},
+    {at:5, use:[1], cap:'Request 1 borrows line 1. The driver asks <code>DBMS_PICKLER</code> once, gets the layout and writes it on the notepad: 201.'},
+    {at:8, use:[1], cap:'Request 2 borrows line 1 again and reads the notepad. No call to <code>DBMS_PICKLER</code> this time.'},
+    {at:11, use:[2], cap:'Request 3 borrows line 2. It\'s new, so it asks once too.'},
+    {at:40, use:[1, 2], cap:'Requests 4 and 5 arrive together and use lines 1 and 2. Both are warm, so neither asks.'},
+    {at:66, use:[1], retire:[1], cap:'Request 6 borrows line 1 and works. Line 1 is now over 60 seconds old, so ORDS replaces it with line 3 as soon as it\'s handed back.'},
+    {at:70, use:[3], cap:'Request 7 borrows line 3. It\'s new, so the driver asks <code>DBMS_PICKLER</code> again, and it works. That\'s the pattern: one lookup per new connection, not one per request. In the lab, 119 PL/SQL calls needed only 11 lookups.'}
+  ]
+};
+const mmss = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+const wOk = s => `<span class="tk">${s}</span>`, wBad = s => `<span class="tb">${s}</span>`;
+const wWarm = s => `<span class="tw">${s}</span>`, wDim = s => `<span class="td">${s}</span>`;
+const wNames = ids => ids.length === 1 ? 'line ' + ids[0] : 'lines ' + ids.slice(0, -1).join(', ') + ' and ' + ids[ids.length - 1];
+function wReplay(name, upto){
+  const st = {t:0, grant:false, lines:[], next:1, reqs:0, looks:0, fails:0, restarted:false};
+  const open = born => { const l = {id:st.next++, born, note:false, uses:0, closed:false}; st.lines.push(l); return l; };
+  let ev = null;
+  for (let i = 0; i <= upto; i++) {
+    const s = W[name][i];
+    ev = {uses:[], start:null, restart:null, grant:undefined, retired:null};
+    st.lines = st.lines.filter(l => !l.closed);
+    if (s.start || s.restart) {
+      if (s.restart) { ev.restart = st.lines.map(l => l.id); st.lines = []; st.restarted = true; }
+      ev.start = [];
+      for (let k = 0; k < (s.start || 2); k++) ev.start.push(open(0).id);
+    }
+    st.t = s.at;
+    if ('grant' in s) { st.grant = s.grant; if (!s.start) ev.grant = s.grant; }
+    (s.use || []).forEach(u => {
+      const l = u === 'new' ? open(st.t) : st.lines.find(x => x.id === u);
+      let kind = 'warm';
+      st.reqs++; l.uses++;
+      if (!l.note) { st.looks++; if (st.grant) { l.note = true; kind = 'ok'; } else { st.fails++; kind = 'fail'; } }
+      ev.uses.push({id:l.id, kind});
+    });
+    (s.retire || []).forEach(id => {
+      const l = st.lines.find(x => x.id === id);
+      l.closed = true;
+      ev.retired = {id, age:st.t - l.born, to:open(st.t).id};
+    });
+  }
+  return {st, ev};
+}
+function wTrace(st, ev){
+  const o = [];
+  if (ev.restart) o.push('ORDS restarts', `    │closes ${wNames(ev.restart)}:`, '    │' + wDim('every notepad is gone'), '    ▼', `opens ${wNames(ev.start)}, ` + wDim('empty notepads'), '');
+  else if (ev.start) o.push('ORDS starts', `    │opens ${wNames(ev.start)},`, '    │logged in as ORDS_PUBLIC_USER', '    ▼', wDim('both notepads are empty'));
+  if (ev.grant === false) {
+    o.push('DBA: revoke execute on sys.dbms_pickler', '       from public;', '    │', '    ▼' + wDim('changes the database only'));
+    st.lines.forEach(l => o.push(`line ${l.id} notepad: ` + (l.note ? wWarm('filled') : wDim('empty')) + wDim(', unchanged')));
+  } else if (ev.grant) {
+    o.push('DBA: grant execute on sys.dbms_pickler', '       to ws;', '    │', '    ▼' + wDim('stored in the database'), 'the next lookup as WS can succeed');
+  }
+  if (ev.uses.length > 1) {
+    ev.uses.forEach(u => o.push(`line ${u.id}  ` + (u.kind === 'warm' ? wWarm('warm') + ' ─► reads the notepad  ' : wDim('new ') + ' ─► asks DBMS_PICKLER ' + (u.kind === 'ok' ? wOk('✓') : wBad('✕'))) + ' ─► ' + (u.kind === 'fail' ? wBad('403') : wOk('201'))));
+  } else if (ev.uses.length) {
+    const u = ev.uses[0];
+    if (u.kind === 'warm') {
+      o.push(`request ─► line ${u.id} ` + wWarm('(warm, notepad filled)'), '    │', '    ▼', 'driver reads the notepad', '    │' + wDim('no call to DBMS_PICKLER,'), '    │' + wDim('so the grant is never checked'), '    ▼', 'init_cgi_env ─► handler ─► DBMS_LOB ─► ' + wOk('201'));
+    } else {
+      o.push(`request ─► line ${u.id} ` + wDim('(new, empty notepad)'), '    │', '    ▼', 'driver: "what does OWA.VC_ARR look like?"', '    │asks sys.dbms_pickler.get_type_shape', '    │' + wDim('as WS'), '    ▼');
+      if (u.kind === 'ok') o.push(wOk('✓ allowed') + ' ─► answer goes on the notepad', '    │', '    ▼', 'init_cgi_env ─► handler ─► DBMS_LOB ─► ' + wOk('201'));
+      else o.push(wBad('✕ PLS-00201 ─► 403'), wDim('  your handler never runs,'), wDim('  and the notepad stays empty'));
+    }
+  }
+  if (ev.retired) o.push('', `then: line ${ev.retired.id} is ${mmss(ev.retired.age)} old, over 60 s`, '    ─► closed, and its notepad with it', `    ─► line ${ev.retired.to} opens, ` + wDim('empty notepad'));
+  return o.join('\n');
+}
+let wName = 'during', wAt = 0, wTimer = null;
+function wRender(){
+  const steps = W[wName], {st, ev} = wReplay(wName, wAt), used = {};
+  ev.uses.forEach(u => used[u.id] = u.kind);
+  pressed($('#wScen'), $(`#wScen [data-s="${wName}"]`));
+  $('#wClock').textContent = mmss(st.t);
+  $('#wSince').textContent = st.restarted ? 'since the restart' : 'since ORDS started';
+  $('#wGrant').className = 'gpill ' + (st.grant ? 'y' : 'n');
+  $('#wGrant').textContent = st.grant ? 'WS can run DBMS_PICKLER ' + (st.grant === 'public' ? '(through PUBLIC)' : '(direct grant)') : 'WS can\'t run DBMS_PICKLER';
+  $('#wPool').innerHTML = st.lines.map(l => {
+    const age = st.t - l.born, kind = l.closed ? 'closed' : l.note ? 'warm' : 'new', u = used[l.id];
+    const res = u ? `<span class="res ${u === 'fail' ? 'bad' : 'ok'}">${u === 'fail' ? '403' : '201'}</span>` : '';
+    const pad = l.note && !l.closed ? '<div class="pad">OWA.VC_ARR =<br>table of VARCHAR2</div>' : `<div class="pad empty">${l.closed ? 'closed: notepad gone' : 'empty notepad'}</div>`;
+    return `<div class="ln${u ? ' on' : ''}${l.closed ? ' gone' : ''}">${res}<div class="top"><span class="name">Line ${l.id}</span><span class="kind ${kind}">${kind.toUpperCase()}</span></div>${pad}<div class="age"><span>age ${mmss(age)}</span><span>used ${l.uses}×</span></div><div class="agebar${age > 60 ? ' old' : ''}"><i style="width:${Math.min(100, Math.round(age / 0.6))}%"></i></div></div>`;
+  }).join('');
+  $('#wCap').innerHTML = steps[wAt].cap;
+  $('#wTrace').innerHTML = wTrace(st, ev);
+  $('#wCounts').innerHTML = `<span>Step <b>${wAt + 1}</b> of ${steps.length}</span><span>PL/SQL requests <b>${st.reqs}</b></span><span>DBMS_PICKLER lookups <b>${st.looks}</b></span><span>403s <b>${st.fails}</b></span>`;
+  $('#wDots').innerHTML = steps.map((x, i) => `<button type="button" aria-label="Step ${i + 1}"${i === wAt ? ' aria-current="step"' : ''}></button>`).join('');
+  $('#wBack').disabled = wAt === 0;
+  $('#wNext').disabled = wAt === steps.length - 1;
+}
+function wStop(){ if (wTimer) clearInterval(wTimer); wTimer = null; $('#wPlay').textContent = 'Play'; }
+$('#wScen').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; wStop(); wName = b.dataset.s; wAt = 0; wRender(); });
+$('#wBack').addEventListener('click', () => { wStop(); if (wAt > 0) { wAt--; wRender(); } });
+$('#wNext').addEventListener('click', () => { wStop(); if (wAt < W[wName].length - 1) { wAt++; wRender(); } });
+$('#wDots').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  wStop(); wAt = [...$('#wDots').children].indexOf(b); wRender(); $('#wDots').children[wAt].focus();
+});
+$('#wPlay').addEventListener('click', () => {
+  if (wTimer) { wStop(); return; }
+  if (wAt >= W[wName].length - 1) { wAt = 0; wRender(); }
+  $('#wPlay').textContent = 'Pause';
+  wTimer = setInterval(() => { if (wAt >= W[wName].length - 1) { wStop(); return; } wAt++; wRender(); }, 4500);
+});
+
 /* =============== START =============== */
-drawOpts(); idle(); drawStep(); buildQuiz();
+drawOpts(); idle(); drawStep(); buildQuiz(); wRender();
+/* Keep section headings clear of the sticky nav, however many rows it wraps to */
+const navBar = document.querySelector('nav');
+const setNavH = () => document.documentElement.style.setProperty('--navh', (navBar.offsetHeight + 12) + 'px');
+if ('ResizeObserver' in window) new ResizeObserver(setNavH).observe(navBar); else { setNavH(); addEventListener('resize', setNavH); }
 
 /* =============== THEME =============== */
 window.onThemeChange = () => {};

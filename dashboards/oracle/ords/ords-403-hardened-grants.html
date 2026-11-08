@@ -318,6 +318,7 @@ footer .wrap { padding-block: 0 40px; font-size: 12.5px; color: var(--muted); }
           <legend>ORDS's connections</legend>
           <label class="opt"><input type="radio" name="conn" id="c-fresh" value="fresh"><span>New: after a restart, or one ORDS just replaced</span><span class="hint">Each connection asks DBMS_PICKLER the first time it runs a PL/SQL handler</span></label>
           <label class="opt"><input type="radio" name="conn" id="c-warm" value="warm"><span>Warm, already used while DBMS_PICKLER was available</span><span class="hint">The driver remembers the answer and doesn't ask again until the connection closes</span></label>
+          <p class="foot" style="margin:0">New to these terms? <a href="../../index.html#/oracle/ords/ords-403-explained.html" target="_top">ORDS 403, Explained</a> walks through new and warm connections step by step in section 6.</p>
         </fieldset>
         <fieldset>
           <legend>Handler code</legend>
@@ -559,7 +560,7 @@ fresh connections.</pre>
       </div>
       <div class="mini">
         <h3>How long a connection remembers</h3>
-        <p class="foot">The database driver keeps DBMS_PICKLER's answer for as long as a connection keeps its session for your schema. Pick when DBMS_PICKLER was removed from PUBLIC.</p>
+        <p class="foot">The database driver keeps DBMS_PICKLER's answer for as long as a connection keeps its session for your schema. Pick when DBMS_PICKLER was removed from PUBLIC. For a slower walk-through, see section 6 of <a href="../../index.html#/oracle/ords/ords-403-explained.html" target="_top">ORDS 403, Explained</a>.</p>
         <div class="chooser" role="group" aria-label="When DBMS_PICKLER was removed" id="tl-pick">
           <button type="button" data-tl="never">Never removed</button>
           <button type="button" data-tl="during">Removed while ORDS runs</button>
