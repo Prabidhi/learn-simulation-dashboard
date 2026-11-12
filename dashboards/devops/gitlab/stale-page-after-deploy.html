@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-lrUqSU6SXMFQknQ4fiijw5W924QYaM2Jpmlzgby2WD4='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why You Saw the Old Page</title>
+<meta name="description" content="You deploy, reload, and the old version is still there. See what the browser keeps, who it asks, what a fresh copy costs, and the one-line change that fixed the Lab.">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --a:#0d7d74;--a-soft:#dcf2ef;--ok:#1a7f37;--ok-soft:#e3f5e8;--bad:#cf222e;--bad-soft:#fde8e8;--warn:#9a5b06;--warn-soft:#fdf0e2;--on-a:#ffffff;
+  --new:#a3336b;--new-soft:#fbe6f0;--code-bg:#13151b;--code-fg:#e6e8ee;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
+  --a:#7ee2d6;--a-soft:#24404a;--ok:#7ee2a8;--ok-soft:#24394a;--bad:#ff8f86;--bad-soft:#4a2b3f;--warn:#ffc27a;--warn-soft:#4a3040;--on-a:#211b33;--new:#ffa3cf;--new-soft:#4a2a44;--code-bg:#17142a}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 14px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
+header p{margin:0;color:var(--muted);max-width:820px}
+.thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:900px}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+:root[data-theme="twilight"] nav{background:#2a2444}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--a)}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
+section{margin:30px 0 8px;scroll-margin-top:var(--navh,60px)}
+section>h2{font-size:1.28rem;margin:0 0 4px}
+section>p.lead{margin:0 0 12px;color:var(--muted);max-width:860px}
+.analogy{border-left:3px solid var(--a);background:var(--a-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:900px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.wide{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card .sub{color:var(--muted);font-size:.84rem;margin:0 0 10px}
+.card p{margin:6px 0;font-size:.9rem}
+.gap{margin-top:14px}
+code{font-family:var(--mono);font-size:.84em;background:var(--chip);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+button.b{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.b:hover:not(:disabled){border-color:var(--fg)}
+button.b:disabled{opacity:.5;cursor:default}
+button.b[aria-pressed="true"]{background:var(--a-soft);border-color:var(--a);font-weight:600}
+button.pri{background:var(--a);border-color:var(--a);color:var(--on-a);font-weight:600}
+button:focus-visible,a:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.lbl{font-size:.8rem;color:var(--muted);margin:10px 0 4px}
+.opt{display:flex;flex-wrap:wrap;gap:6px}
+.readout{font-size:.9rem;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--chip);overflow-wrap:anywhere}
+.readout.ok{background:var(--ok-soft)}
+.readout.bad{background:var(--bad-soft)}
+.readout.warn{background:var(--warn-soft)}
+.note{font-size:.78rem;color:var(--muted);margin:6px 0 0}
+pre{font-family:var(--mono);font-size:.78rem;line-height:1.5;margin:6px 0 0;padding:10px 12px;border-radius:8px;background:var(--code-bg);color:var(--code-fg);overflow-x:auto;white-space:pre}
+pre .tk{color:#56d364}
+pre .tb{color:#ff7b72;font-weight:700}
+pre .td{color:#8b949e}
+pre .tn{color:#f08bb8}
+.facts{margin:6px 0 0;padding-left:20px;font-size:.9rem}
+.facts li{margin:4px 0}
+.ev{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;padding:1px 8px;border-radius:999px;vertical-align:1px}
+.ev.t{background:var(--ok-soft);color:var(--ok)}
+.ev.r{background:var(--warn-soft);color:var(--warn)}
+.ev.n{background:var(--chip);color:var(--muted);border:1px solid var(--line)}
+/* 1. map */
+.zone{border:1px dashed var(--line);border-radius:14px;padding:10px 12px 12px;margin-top:10px}
+.zone>span{font-size:.76rem;color:var(--muted);font-weight:600}
+.zone .inner{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;align-items:stretch}
+.part{font:inherit;text-align:left;flex:1 1 150px;min-width:0;background:var(--chip);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
+.part:hover{border-color:var(--fg)}
+.part[aria-pressed="true"]{border-color:var(--a);box-shadow:0 0 0 3px var(--a-soft)}
+.part b{display:block;font-size:.9rem}
+.part span{display:block;font-family:var(--mono);font-size:.72rem;color:var(--muted);overflow-wrap:anywhere}
+.part.new{background:var(--new-soft);border-color:var(--new)}
+.part.new b{color:var(--new)}
+.part.off{opacity:.5;border-style:dashed}
+.box{border:1px solid var(--line);border-radius:12px;padding:8px 10px 10px;flex:1 1 100%;background:var(--panel)}
+.box>span{font-size:.76rem;color:var(--muted);font-weight:600}
+.down{text-align:center;color:var(--muted);font-size:.74rem;margin:6px 0 0}
+/* 2. router */
+.route{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.stn{font-family:var(--mono);font-size:.74rem;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--muted);transition:background .2s,color .2s,border-color .2s}
+.stn.lit{background:var(--a-soft);border-color:var(--a);color:var(--fg);font-weight:700}
+.stn.stop{background:var(--bad-soft);border-color:var(--bad);color:var(--fg);font-weight:700}
+.sep{color:var(--muted);font-size:.8rem}
+.status{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:10px}
+.status .code{font-family:var(--mono);font-size:1.9rem;font-weight:700;line-height:1.1}
+.status.s2 .code{color:var(--ok)}
+.status.s4 .code{color:var(--bad)}
+.status .txt{font-weight:600}
+/* 3. what breaks what */
+.outs{display:grid;gap:8px;margin-top:6px}
+.out{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--chip);border-left:3px solid var(--line)}
+.out.ok{border-left-color:var(--ok)}
+.out.bad{border-left-color:var(--bad);background:var(--bad-soft)}
+.out.unk{border-left-color:var(--warn)}
+.out b{font-size:.9rem}
+.out .c{font-family:var(--mono);font-weight:700;font-size:1.05rem}
+.out.ok .c{color:var(--ok)}
+.out.bad .c{color:var(--bad)}
+.out.unk .c{color:var(--warn)}
+.out small{grid-column:1/-1;color:var(--muted);font-size:.82rem}
+/* steps + tables + codes + quiz */
+.steps{display:flex;flex-wrap:wrap;gap:5px}
+.steps button{font:inherit;font-size:.8rem;min-width:34px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.steps button[aria-pressed="true"]{background:var(--a);border-color:var(--a);color:var(--on-a);font-weight:700}
+.danger{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:.88rem;margin-top:8px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td .yes{color:var(--ok);font-weight:700}
+td .no{color:var(--bad);font-weight:700}
+.codes{display:flex;flex-wrap:wrap;gap:6px}
+.codes button{font-family:var(--mono);font-size:.84rem;font-weight:700;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.codes button[aria-pressed="true"]{background:var(--a-soft);border-color:var(--a)}
+.q{padding:10px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.q>b{display:block;font-size:.93rem;margin-bottom:6px}
+.q .opts{display:flex;flex-direction:column;gap:6px}
+.q .opts button{font:inherit;font-size:.87rem;text-align:left;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.q .opts button:disabled{cursor:default;color:var(--fg)}
+.q .opts button.right{background:var(--ok-soft);border-color:var(--ok)}
+.q .opts button.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.q .why{font-size:.84rem;margin:6px 0 0;color:var(--muted)}
+/* 7. pictures */
+.gxrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;align-items:start;margin-top:10px}
+.gxpane{min-width:0}
+.gxpane h3{margin:0 0 6px;font-size:.95rem;text-align:center}
+svg.gx{width:100%;max-width:440px;height:auto;display:block;margin:0 auto}
+.gx-t{font:600 11px var(--sans);fill:var(--fg)}
+.gx-s{font:10px var(--sans);fill:var(--muted)}
+.gb,.gz-g,.gx-l{transition:opacity .25s}
+.gb-n rect{fill:var(--panel);stroke:var(--muted)}
+.gb-ok rect{fill:var(--ok-soft);stroke:var(--ok)}
+.gb-bad rect{fill:var(--bad-soft);stroke:var(--bad)}
+.gb-new rect{fill:var(--new-soft);stroke:var(--new)}
+.gz-dash{fill:none;stroke:var(--muted);stroke-dasharray:4 4}
+.gz-tom{fill:var(--a-soft);stroke:var(--a)}
+.gz-db{fill:var(--warn-soft);stroke:var(--warn)}
+.gz-new{fill:var(--new-soft);stroke:var(--new)}
+.gz-ok{fill:var(--ok-soft);stroke:var(--ok)}
+.gx-l{fill:none;stroke:var(--muted);stroke-width:1.3}
+.gx-dash{stroke-dasharray:4 3}
+.gx-head{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.gx-dim{opacity:.18}
+.gb[data-p]{cursor:pointer}
+.gb[data-p] rect{stroke-dasharray:2 2}
+.gb[data-p]:hover rect,.gb[data-p]:focus-visible rect,.gb[aria-pressed="true"] rect{stroke-width:2.2;stroke-dasharray:none}
+.gb:focus{outline:none}
+.gxleg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.82rem;color:var(--muted);margin-top:10px}
+.gxleg i{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid;vertical-align:-1px;margin-right:6px}
+.gxleg i.ok{background:var(--ok-soft);border-color:var(--ok)}
+.gxleg i.bad{background:var(--bad-soft);border-color:var(--bad)}
+.gxleg i.new{background:var(--new-soft);border-color:var(--new)}
+.gxleg i.tap{background:var(--panel);border:1px dashed var(--muted)}
+@media (prefers-reduced-motion:reduce){.gb,.gz-g,.gx-l{transition:none}}
+/* stale page */
+.state{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.st{background:var(--chip);border-radius:10px;padding:10px 12px;border-left:3px solid var(--line);min-width:0}
+.st.old{border-left-color:var(--warn);background:var(--warn-soft)}
+.st.new{border-left-color:var(--ok);background:var(--ok-soft)}
+.st small{display:block;color:var(--muted);font-size:.78rem}
+.st b{font-size:.98rem;overflow-wrap:anywhere}
+.addr{font-family:var(--mono);font-size:.84rem;background:var(--code-bg);color:var(--code-fg);padding:8px 10px;border-radius:8px;overflow-wrap:anywhere;margin-top:8px}
+.log{font-family:var(--mono);font-size:.8rem;margin:10px 0 0;padding:0;list-style:none}
+.log li{padding:4px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.rng{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 12px;align-items:center;font-size:.9rem}
+.rng input{width:100%;accent-color:var(--a)}
+.rng output{font-weight:700;min-width:2.5em;text-align:right}
+.sq-hot{stroke:var(--bad);stroke-width:3}
+details{font-size:.86rem;color:var(--muted);margin-top:14px}
+details a{color:var(--a)}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);font-size:.8rem}
+footer a{color:inherit}
+@media (max-width:900px){.two,.wide{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}pre{font-size:.7rem}}
+@media (prefers-reduced-motion:reduce){.stn{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Why you saw the old page</h1>
+  <p>You deploy a new version, reload, and the old one is still there. This page shows what the browser keeps, who it asks, what a fresh copy costs, and the one-line change that fixed it in the Lab.</p>
+  <div class="thesis"><b>Key idea:</b> a browser files each saved page under its exact address and trusts it for a set time. Change the address even slightly and the browser has no saved copy, so it must ask the server.</div>
+</header>
+<nav><div>
+  <a href="#story">1. The story</a>
+  <a href="#who">2. Who gets asked</a>
+  <a href="#cost">3. What it costs</a>
+  <a href="#fix">4. The fix</a>
+  <a href="#quiz">5. Quiz</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+<main>
+<div class="danger"><b>Simulated.</b> Nothing here contacts a server. The 10-minute limit and the page sizes were read from the Lab site's own responses on 2026-11-12. The monthly totals in section 3 are illustrative.</div>
+
+<section id="story">
+  <h2>1. The story, minute by minute</h2>
+  <p class="lead">One dashboard, one deploy, one confused reader. Step through what the browser did and why.</p>
+  <div class="analogy"><b>Analogy:</b> the browser keeps a photocopy of each page in a drawer, labelled with the page's address. A note on the copy says "good for 10 minutes". Until the note runs out, the browser reads the photocopy and never phones the library.</div>
+  <div class="card">
+    <div class="steps" id="stPick" role="group" aria-label="Step"></div>
+    <h3 id="stH" style="margin-top:12px"></h3>
+    <p id="stP" aria-live="polite"></p>
+    <div class="state" id="stState"></div>
+  </div>
+</section>
+
+<section id="who">
+  <h2>2. Who gets asked</h2>
+  <p class="lead">Three parties are involved when you reopen a dashboard. Pick a case and see which of them hears from your browser, and how much comes back.</p>
+  <div class="controls" id="sqPick" role="group" aria-label="Case"></div>
+  <div class="wide">
+    <div class="card"><svg class="gx" viewBox="0 0 340 250" role="img" aria-labelledby="sqAlt"><title id="sqAlt">Your browser asks Cloudflare where the site is, then asks GitLab Pages for the page. The size of the reply from GitLab Pages depends on the case.</title>
+      <defs><marker id="sqa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="gx-head" d="M2 1L8 5L2 9"/></marker></defs>
+      <g class="gb gb-n"><rect x="6" y="6" width="100" height="40" rx="7"/><text class="gx-t" x="56" y="19" text-anchor="middle" dominant-baseline="central">Your browser</text><text class="gx-s" x="56" y="35" text-anchor="middle" dominant-baseline="central">on your Wi-Fi</text></g>
+      <g class="gb gb-new"><rect x="120" y="6" width="100" height="40" rx="7"/><text class="gx-t" x="170" y="19" text-anchor="middle" dominant-baseline="central">Cloudflare</text><text class="gx-s" x="170" y="35" text-anchor="middle" dominant-baseline="central">name lookup only</text></g>
+      <g class="gb gb-ok"><rect x="234" y="6" width="100" height="40" rx="7"/><text class="gx-t" x="284" y="19" text-anchor="middle" dominant-baseline="central">GitLab Pages</text><text class="gx-s" x="284" y="35" text-anchor="middle" dominant-baseline="central">sends pages</text></g>
+      <path class="gx-l gx-dash" d="M56,46 L56,240"/><path class="gx-l gx-dash" d="M170,46 L170,240"/><path class="gx-l gx-dash" d="M284,46 L284,240"/>
+      <g class="gz-g" id="sq1"><text class="gx-s" x="113" y="78" text-anchor="middle">Where is the site?</text><path class="gx-l" d="M59,84 L167,84" marker-end="url(#sqa)"/><text class="gx-s" x="113" y="106" text-anchor="middle">An address, tiny</text><path class="gx-l" d="M167,112 L59,112" marker-end="url(#sqa)"/></g>
+      <g class="gz-g" id="sq3"><text class="gx-s" x="227" y="146" text-anchor="middle">Send me the page</text><path class="gx-l" d="M59,152 L281,152" marker-end="url(#sqa)"/></g>
+      <g class="gz-g" id="sq4"><text class="gx-s" id="sq4t" x="227" y="186" text-anchor="middle">Whole page</text><path class="gx-l" id="sq4l" d="M281,192 L59,192" marker-end="url(#sqa)"/></g>
+    </svg></div>
+    <div class="card">
+      <h3 id="sqH"></h3>
+      <div class="status" id="sqStatus" aria-live="polite"></div>
+      <p id="sqP"></p>
+      <div class="readout">Cloudflare only answers "where is the site?". On the Lab site the pages themselves never pass through it, so its work is the same in all three cases. Browsers usually remember that answer too.</div>
+    </div>
+  </div>
+</section>
+
+<section id="cost">
+  <h2>3. What a fresh copy costs</h2>
+  <p class="lead">With the fix, every Lab visit downloads each opened dashboard in full once. Move the sliders to see how much data that is in a month.</p>
+  <div class="card">
+    <div class="rng">
+      <label for="cV">Lab visits per month</label><input type="range" id="cV" min="1" max="200" step="1" value="30"><output id="cVo" for="cV">30</output>
+      <label for="cD">Dashboards opened per visit</label><input type="range" id="cD" min="1" max="15" step="1" value="3"><output id="cDo" for="cD">3</output>
+    </div>
+    <div class="state" aria-live="polite">
+      <div class="st"><small>Cloudflare, extra work</small><b>None</b></div>
+      <div class="st"><small>GitLab Pages sends, at most</small><b id="cG"></b></div>
+      <div class="st"><small>Readers download, at most</small><b id="cY"></b></div>
+    </div>
+    <div class="readout" id="cNote"></div>
+  </div>
+  <div class="card gap">
+    <h3>What you give up and what you get</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Give up</th><th>Get</th></tr>
+      <tr><td>A full download per dashboard on every Lab visit, where a repeat visit used to be free or under 1 KB</td><td>A plain reload of the Lab always shows the newest version</td></tr>
+      <tr><td>Old tagged copies left in the browser's drawer until it clears them</td><td>No hard refresh, no waiting 10 minutes after a deploy</td></tr>
+      <tr><td>Nothing for direct links: a dashboard opened by its own address can still be up to 10 minutes old</td><td>The dashboards themselves are unchanged: still one file each, still work offline</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<section id="fix">
+  <h2>4. The fix: a tag on the address</h2>
+  <p class="lead">The Lab's home page now adds a short tag to the address each time it opens a dashboard. The tag changes on every Lab visit. Try it with the tag on and off.</p>
+  <div class="analogy"><b>Analogy:</b> the drawer is searched by the exact label. Ask for "page.html?v=2" and the photocopy labelled "page.html?v=1" doesn't count, so the browser phones the library. The library ignores the tag and hands over today's page.</div>
+  <div class="wide">
+    <div class="card">
+      <div class="controls" role="group" aria-label="Tag">
+        <button class="b" id="fxTag" aria-pressed="true">Per-visit tag: on</button>
+      </div>
+      <div class="controls">
+        <button class="b pri" id="fxOpen">Open the dashboard</button>
+        <button class="b" id="fxReload">Reload the Lab</button>
+        <button class="b" id="fxDeploy">Deploy a new version</button>
+        <button class="b" id="fxReset">Reset</button>
+      </div>
+      <div class="lbl">Address the Lab asks for</div>
+      <div class="addr" id="fxAddr"></div>
+      <div class="state" id="fxState" aria-live="polite"></div>
+      <div class="readout" id="fxVerdict" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <h3>What happened</h3>
+      <p class="sub">Newest first. The 10-minute limit is left out here so you can see the worst case.</p>
+      <ul class="log" id="fxLog"></ul>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>5. Quiz</h2>
+  <p class="lead" id="qS"></p>
+  <div class="card"><div id="qB"></div><div class="controls"><button class="b" id="qR">Reset quiz</button></div></div>
+  <details><summary>Sources</summary>
+    <p>How browsers store and reuse pages, <code>max-age</code>, and "not changed" replies: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching" target="_blank" rel="noopener noreferrer">MDN, HTTP caching</a> (address checked 2026-11-12).</p>
+    <p>The 10-minute limit, the missing compression and the page sizes are not from a document. They were read from the Lab site's own response headers on 2026-11-12. The hard-refresh behaviour in the frame was seen in Chrome on the same day.</p>
+  </details>
+</section>
+</main>
+<footer>Everything on this page runs in your browser. Related pages: <a href="gitlab-pages-ci.html">GitLab Pages and CI</a> · <a href="../../security/csp-explained.html">CSP, Explained</a></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pressed = (box, on) => box.querySelectorAll('[aria-pressed]').forEach(b => b.setAttribute('aria-pressed', b === on));
+const navBar = document.querySelector('nav');
+const setNavH = () => document.documentElement.style.setProperty('--navh', (navBar.offsetHeight + 12) + 'px');
+if ('ResizeObserver' in window) new ResizeObserver(setNavH).observe(navBar); else { setNavH(); addEventListener('resize', setNavH); }
+
+/* =============== 1. STORY =============== */
+const STORY = [
+  {t:'15:15', h:'You open a dashboard', p:'The browser downloads the page and puts a copy in its drawer. The server\'s reply includes a note: this copy is good for 10 minutes.', copy:['Version 1, fresh', 'new'], server:['Version 1', 'new'], see:['Version 1', 'new']},
+  {t:'15:21', h:'A new version is deployed', p:'The server now holds version 2. Nobody tells the browser. Its copy is 6 minutes old and still inside the 10 minutes.', copy:['Version 1, 6 minutes old', 'old'], server:['Version 2', 'new'], see:['Version 1', 'old']},
+  {t:'15:23', h:'You reload the Lab', p:'The copy is 8 minutes old, so the browser still trusts it. It shows the copy and sends nothing to the server. You see the old page.', copy:['Version 1, 8 minutes old', 'old'], server:['Version 2', 'new'], see:['Version 1 (old)', 'old']},
+  {t:'15:24', h:'You hard refresh the Lab', p:'A hard refresh fetches a new copy of the page in the address bar, which is the Lab\'s home page. The dashboard sits in a frame and is loaded afterwards by script, as a normal load. So the browser reaches into the drawer again. Seen in Chrome on 2026-11-12.', copy:['Version 1, 9 minutes old', 'old'], server:['Version 2', 'new'], see:['Version 1 (old)', 'old']},
+  {t:'15:26', h:'The 10 minutes run out', p:'The copy is now too old to trust. On the next load the browser asks the server "has this changed?". It has, so the server sends version 2.', copy:['Version 2, fresh', 'new'], server:['Version 2', 'new'], see:['Version 2', 'new']},
+  {t:'Any time', h:'The shortcut', p:'Open the dashboard by its own address, outside the Lab, and hard refresh there. Now the dashboard is the page in the address bar, so the browser replaces its copy at once.', copy:['Version 2, fresh', 'new'], server:['Version 2', 'new'], see:['Version 2', 'new']}
+];
+let stI = 0;
+function drawStory(){
+  const s = STORY[stI];
+  $('#stPick').innerHTML = STORY.map((x, i) => `<button data-i="${i}" aria-pressed="${i === stI}">${esc(x.t)}</button>`).join('');
+  $('#stH').textContent = `${s.t}: ${s.h}`; $('#stP').textContent = s.p;
+  const cell = (label, v) => `<div class="st ${v[1]}"><small>${label}</small><b>${esc(v[0])}</b></div>`;
+  $('#stState').innerHTML = cell('Server has', s.server) + cell('Browser\'s saved copy', s.copy) + cell('You see', s.see);
+}
+$('#stPick').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; stI = +b.dataset.i; drawStory(); });
+
+/* =============== 2. WHO GETS ASKED =============== */
+const SQ = [
+  {n:'Today, within 10 minutes', on:[1], t:'', hot:false, size:'0 KB', cls:'s2', p:'The browser still trusts its saved copy, so it asks GitLab Pages for nothing. Fast and free, and also why the old page kept showing.'},
+  {n:'Today, after 10 minutes', on:[1,3,4], t:'Not changed', hot:false, size:'under 1 KB', cls:'s2', p:'The copy has expired, so the browser asks whether the page changed. If it hasn\'t, GitLab Pages replies "not changed" in a few hundred bytes and the browser reuses its copy.'},
+  {n:'With the fix', on:[1,3,4], t:'Whole page', hot:true, size:'57 to 91 KB', cls:'s4', p:'The tagged address is new to the browser, so GitLab Pages sends the whole page, once per Lab visit. The Lab site sends pages uncompressed, so this is the real size on the wire for the four ORDS pages measured.'}
+];
+let sqI = 2;
+function drawSq(){
+  const s = SQ[sqI];
+  [1,3,4].forEach(k => $('#sq' + k).classList.toggle('gx-dim', !s.on.includes(k)));
+  $('#sq4t').textContent = s.t || 'Whole page'; $('#sq4l').classList.toggle('sq-hot', s.hot);
+  $('#sqH').textContent = s.n; $('#sqP').textContent = s.p;
+  $('#sqStatus').className = 'status ' + s.cls;
+  $('#sqStatus').innerHTML = `<span class="code">${esc(s.size)}</span><span class="txt">from GitLab Pages</span>`;
+  pressed($('#sqPick'), $(`#sqPick [data-i="${sqI}"]`));
+}
+$('#sqPick').innerHTML = SQ.map((s, i) => `<button class="b" data-i="${i}" aria-pressed="false">${esc(s.n)}</button>`).join('');
+$('#sqPick').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; sqI = +b.dataset.i; drawSq(); });
+
+/* =============== 3. COST =============== */
+const PAGE_KB = 91;   // the largest page measured
+function drawCost(){
+  const v = +$('#cV').value, d = +$('#cD').value, mb = v * d * PAGE_KB / 1024;
+  const s = (mb < 10 ? mb.toFixed(1) : Math.round(mb)) + ' MB';
+  $('#cVo').textContent = v; $('#cDo').textContent = d; $('#cG').textContent = s; $('#cY').textContent = s;
+  $('#cNote').textContent = `${v} visits × ${d} dashboards × ${PAGE_KB} KB (the largest page measured), so this is an upper limit. For scale, one phone photo is often 2 to 4 MB.`;
+}
+$('#cV').addEventListener('input', drawCost); $('#cD').addEventListener('input', drawCost);
+
+/* =============== 4. THE FIX =============== */
+let fx;
+const fxAddr = () => 'page.html' + (fx.tag ? '?v=visit-' + fx.visit : '');
+function fxInit(){ fx = {tag: fx ? fx.tag : true, visit: 1, server: 1, cache: {}, shown: 0, log: ['The server holds version 1. The drawer is empty.'], verdict: ['Press "Open the dashboard" to start.', '']}; drawFx(); }
+function drawFx(){
+  $('#fxTag').textContent = 'Per-visit tag: ' + (fx.tag ? 'on' : 'off'); $('#fxTag').setAttribute('aria-pressed', fx.tag);
+  $('#fxAddr').textContent = fxAddr();
+  const keys = Object.keys(fx.cache), stale = fx.shown && fx.shown < fx.server;
+  $('#fxState').innerHTML = `<div class="st new"><small>Server has</small><b>Version ${fx.server}</b></div>`
+    + `<div class="st ${fx.shown ? (stale ? 'old' : 'new') : ''}"><small>You see</small><b>${fx.shown ? 'Version ' + fx.shown + (stale ? ' (old)' : '') : 'Nothing yet'}</b></div>`
+    + `<div class="st"><small>Saved copies in the drawer</small><b>${keys.length ? keys.map(k => esc(k) + ' = v' + fx.cache[k]).join('<br>') : 'None'}</b></div>`;
+  $('#fxVerdict').className = 'readout ' + fx.verdict[1]; $('#fxVerdict').textContent = fx.verdict[0];
+  $('#fxLog').innerHTML = fx.log.slice().reverse().map(l => `<li>${esc(l)}</li>`).join('');
+}
+$('#fxTag').addEventListener('click', () => { fx.tag = !fx.tag; fx.log.push('Per-visit tag turned ' + (fx.tag ? 'on' : 'off') + '.'); drawFx(); });
+$('#fxOpen').addEventListener('click', () => {
+  const a = fxAddr();
+  if (a in fx.cache) { fx.shown = fx.cache[a]; fx.log.push(`Open ${a}: saved copy found (version ${fx.shown}). Server not asked.`); }
+  else { fx.cache[a] = fx.shown = fx.server; fx.log.push(`Open ${a}: no saved copy under that address. Server sends version ${fx.server}.`); }
+  fx.verdict = fx.shown < fx.server ? [`Old page: you see version ${fx.shown}, the server has version ${fx.server}.`, 'bad'] : [`Up to date: you see version ${fx.shown}.`, 'ok'];
+  drawFx();
+});
+$('#fxReload').addEventListener('click', () => { fx.visit++; fx.log.push(fx.tag ? `You reload the Lab. New visit, new tag: visit-${fx.visit}.` : 'You reload the Lab. No tag, so the address stays the same.'); fx.verdict = ['Lab reloaded. Now open the dashboard.', '']; drawFx(); });
+$('#fxDeploy').addEventListener('click', () => { fx.server++; fx.log.push(`Deploy: the server now holds version ${fx.server}.`); fx.verdict = ['New version deployed. Reload the Lab and open the dashboard to see what you get.', '']; drawFx(); });
+$('#fxReset').addEventListener('click', fxInit);
+
+/* =============== 5. QUIZ =============== */
+const QUIZ = [
+  {q:'A copy is 4 minutes old and the limit is 10 minutes. You reload. What does the browser send to the server?', o:['A request for the whole page', 'A short "has it changed?" question', 'Nothing'], a:2,
+    w:'Nothing. Inside the limit the browser trusts its copy without asking. The "has it changed?" question only starts once the copy has expired.'},
+  {q:'Why did a hard refresh of the Lab not update the dashboard inside it?', o:['The server was slow to deploy', 'The hard refresh covered the page in the address bar, and the dashboard in the frame loaded afterwards as a normal load', 'Hard refresh never works on HTTPS sites'], a:1,
+    w:'The deploy had finished. The dashboard is a second page that the Lab loads into a frame by script, so it came from the drawer as usual.'},
+  {q:'Why does adding ?v=visit-2 to the address get a fresh page?', o:['The server sees the tag and rebuilds the page', 'The browser has no saved copy under that exact address, so it has to ask', 'The tag turns caching off for the whole site'], a:1,
+    w:'Saved copies are found by exact address. The server ignores the tag and returns the same file it always would. Other pages are cached as before.'},
+  {q:'With the fix in place, who does extra work?', o:['Cloudflare, which now handles every page', 'GitLab Pages and the reader\'s connection, by one full page per dashboard per visit', 'Nobody, it is free'], a:1,
+    w:'GitLab Pages sends the whole page where it used to send nothing or "not changed", and the reader downloads it. On the Lab site Cloudflare only answers the name lookup, which doesn\'t change.'},
+  {q:'After the fix, which reader can still see a page up to 10 minutes old?', o:['Someone who opens a dashboard by its direct address', 'Someone who reloads the Lab home page', 'Nobody'], a:0,
+    w:'Only the Lab\'s home page adds the tag. A direct link uses the plain address, so the normal 10-minute copy still applies there.'}
+];
+let qRight = 0, qDone = 0;
+function buildQuiz(){
+  qRight = qDone = 0; $('#qS').textContent = `Answer all ${QUIZ.length} questions to check your understanding.`;
+  $('#qB').innerHTML = QUIZ.map((q, i) => `<div class="q" data-i="${i}"><b>${i + 1}. ${esc(q.q)}</b><div class="opts">${q.o.map((t, k) => `<button data-k="${k}">${esc(t)}</button>`).join('')}</div><p class="why" hidden></p></div>`).join('');
+}
+$('#qB').addEventListener('click', e => {
+  const b = e.target.closest('.opts button'); if (!b || b.disabled) return;
+  const box = b.closest('.q'), q = QUIZ[+box.dataset.i], pick = +b.dataset.k, btns = box.querySelectorAll('.opts button');
+  btns.forEach((x, k) => { x.disabled = true; if (k === q.a) x.classList.add('right'); else if (k === pick) x.classList.add('wrong'); });
+  const why = box.querySelector('.why'); why.hidden = false; why.textContent = (pick === q.a ? 'Right. ' : 'Not quite. ') + q.w;
+  qDone++; if (pick === q.a) qRight++;
+  $('#qS').textContent = qDone === QUIZ.length ? `You got ${qRight} of ${QUIZ.length} right.` + (qRight === QUIZ.length ? ' Well done.' : ' Reset to try again.') : `${qDone} of ${QUIZ.length} answered.`;
+});
+$('#qR').addEventListener('click', buildQuiz);
+
+drawStory(); drawSq(); drawCost(); fxInit(); buildQuiz();
+/* =============== THEME =============== */
+window.onThemeChange = () => {};
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>

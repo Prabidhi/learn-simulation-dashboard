@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-dtPJQ2ysgOEYPrA9T4UW5GIHPk7O8lIqf4WB24ph/Qw='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-07lB3wmuxiL0f16UDqeJORg3SfYPtwyCwpPb0Ml9Y1o='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -251,6 +251,16 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
       e.g. Languages → Korean, Languages → Nepali.
    ===================================================================== */
 const DASHBOARDS = [
+  {
+    title: 'Why You Saw the Old Page',
+    href: 'devops/gitlab/stale-page-after-deploy.html',
+    section: 'DevOps',
+    topic: 'gitlab',
+    added: '2026-11-12',
+    desc: 'You deploy, reload, and the old version is still there. See what the browser keeps, who it asks, what a fresh copy costs, and the one-line change that fixed the Lab.',
+    points: ['Step through a deploy minute by minute', 'See who is asked: Cloudflare or GitLab Pages', 'Flip the address tag and watch the saved copy miss'],
+    tags: ['cache', 'caching', 'max-age', 'hard refresh', 'deploy', 'pages', 'cloudflare']
+  },
   {
     title: 'Speakers & Amps',
     href: 'audio/speakers-and-amps.html',
@@ -613,6 +623,7 @@ function crumbs(d){
   const t = topicOf(d);
   $('#crumbs').innerHTML = (d.section ? `<span class="sep">/</span><span class="topic">${esc(d.section)}</span>` : '') + `<span class="sep">/</span><span class="topic"><i style="background:${t.color}"></i>${esc(t.label)}</span><span class="sep">/</span><span class="page" title="${esc(d.title)}">${esc(d.title)}</span>`;
 }
+const VISIT = Date.now().toString(36);   // changes on every load of this page
 function route(){
   const path = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const d = path ? DASHBOARDS.find(x => x.href === path) : null;   // only catalog pages can be opened
@@ -625,7 +636,9 @@ function route(){
       const bar = $('#loading'); bar.className = 'loading on';
       frame.dataset.href = d.href;
       // replace() swaps the page without adding a browser-history entry, so Back/Forward stay in step with the address bar
-      try { frame.contentWindow.location.replace(new URL(d.href, location.href).href); } catch (e) { frame.src = d.href; }
+      // the per-visit tag makes the address new to the browser, so it asks the server instead of reusing a saved copy
+      const fresh = d.href + '?v=' + VISIT;
+      try { frame.contentWindow.location.replace(new URL(fresh, location.href).href); } catch (e) { frame.src = fresh; }
     }
     $('#extBtn').hidden = false; $('#extBtn').href = d.href;
     document.title = `${d.title} · Learning Lab`;
