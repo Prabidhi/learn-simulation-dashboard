@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-C5wI+6FXbXkvrRJZix9LucFGk/kp0kYFZG8AhPS/iM0='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-Ij94wLFI0oAIbqRkioifgt4OvRMO92cCqXNANYj3cTU='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -251,6 +251,17 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
       e.g. Languages → Korean, Languages → Nepali.
    ===================================================================== */
 const DASHBOARDS = [
+  {
+    title: 'ORDS, Tomcat and APEX Lab',
+    href: 'oracle/ords/ords-tomcat-apex-lab.html',
+    section: 'Oracle',
+    topic: 'ords',
+    art: 'ords-arch',
+    added: '2026-11-11',
+    desc: 'One practice lab in three stages: ORDS by itself, ORDS inside Tomcat, then APEX on top. See where each piece runs, which database account answers each address, and what every error code meant.',
+    points: ['Step through the three stages on a map', 'Pick an address and see who answers', 'Flip four switches and see what breaks'],
+    tags: ['ords', 'tomcat', 'apex', 'install', 'status codes', 'oauth']
+  },
   {
     title: 'ORDS Architecture, Explained',
     href: 'oracle/ords/ords-architecture-explained.html',
