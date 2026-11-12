@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-N5oTGrDFAjulXDefmNpXy7Uj0Y2M7QSwNSF0m+t1f2Q='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interactive lab: how sound, speakers and amplifiers work, what ohms and sensitivity mean, series vs parallel wiring, and what a 200 W label really delivers.">
+<title>Speakers &amp; Amps</title>
+<style>
+:root{
+  --bg:#f6f3ec;--panel:#fffdf8;--panel2:#f1ece2;--fg:#1f1d1a;--muted:#6d675d;--line:#e2dacb;
+  --accent:#2b7a8c;--good:#2f9a5e;--bad:#d2493f;--warn:#cf8418;--pos:#d2603a;--neg:#8a857b;
+  --goodbg:rgba(47,154,94,.13);--badbg:rgba(210,73,63,.13);--warnbg:rgba(207,132,24,.15);--accbg:rgba(43,122,140,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 10px 30px -16px rgba(0,0,0,.25);--sky:none;
+}
+:root[data-theme="dark"]{
+  --bg:#0f1115;--panel:#161922;--panel2:#1d212c;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
+  --accent:#5cc1d6;--good:#54c98a;--bad:#f0736a;--warn:#e9aa48;--pos:#f08a62;--neg:#8d8a83;
+  --goodbg:rgba(84,201,138,.14);--badbg:rgba(240,115,106,.15);--warnbg:rgba(233,170,72,.15);--accbg:rgba(92,193,214,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -16px rgba(0,0,0,.8);--sky:none;
+}
+:root[data-theme="twilight"]{
+  --bg:#1d1838;--panel:#2a2148;--panel2:#352a58;--fg:#f3ebfa;--muted:#b9a9d2;--line:#45376a;
+  --accent:#ffb07a;--good:#7fdcae;--bad:#ff8a8a;--warn:#ffcb74;--pos:#ff9d7a;--neg:#a99bc4;
+  --goodbg:rgba(127,220,174,.14);--badbg:rgba(255,138,138,.16);--warnbg:rgba(255,203,116,.15);--accbg:rgba(255,176,122,.15);
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px -16px rgba(0,0,0,.7);--sky:linear-gradient(180deg,#3d2b66 0,#1d1838 520px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme]){
+    --bg:#0f1115;--panel:#161922;--panel2:#1d212c;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
+    --accent:#5cc1d6;--good:#54c98a;--bad:#f0736a;--warn:#e9aa48;--pos:#f08a62;--neg:#8d8a83;
+    --goodbg:rgba(84,201,138,.14);--badbg:rgba(240,115,106,.15);--warnbg:rgba(233,170,72,.15);--accbg:rgba(92,193,214,.14);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -16px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);background-image:var(--sky);background-repeat:no-repeat;color:var(--fg);
+  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 64px}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.crumb{font-size:13px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.themes{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel)}
+.themes button{border:0;background:none;color:var(--muted);font:inherit;font-size:13px;padding:6px 12px;cursor:pointer}
+.themes button[aria-pressed="true"]{background:var(--accbg);color:var(--accent)}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:12px 0 8px;letter-spacing:-.01em}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{color:var(--muted);max-width:62ch;margin:0 0 16px}
+nav.toc{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 24px}
+nav.toc a{font-size:13px;color:var(--fg);text-decoration:none;border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:999px}
+nav.toc a:hover{border-color:var(--accent);color:var(--accent)}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin:0 0 20px;box-shadow:var(--shadow)}
+section.card h2{font-size:21px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 16px;max-width:70ch}
+.analogy{border-left:3px solid var(--accent);background:var(--accbg);padding:10px 14px;margin:0 0 16px;border-radius:0 8px 8px 0;font-size:15px}
+.analogy b{color:var(--accent)}
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.viz{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px}
+.viz svg,.viz canvas{display:block;width:100%}
+.viz canvas{height:170px}
+.legend{font-size:12px;color:var(--muted);margin:8px 2px 0;display:flex;gap:14px;flex-wrap:wrap}
+.sw{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.row{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.row label{font-size:14px;color:var(--muted);min-width:92px}
+.row output{font-size:14px;font-weight:600;min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.seg button,.btn{font:inherit;font-size:14px;min-height:42px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.seg button:hover,.btn:hover{border-color:var(--accent)}
+.seg button[aria-pressed="true"]{background:var(--accbg);border-color:var(--accent);color:var(--accent);font-weight:600}
+.seg .wide{grid-column:1 / -1}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:4px 0 12px}
+.stat{background:var(--panel2);border-radius:10px;padding:10px 12px}
+.stat .k{font-size:12.5px;color:var(--muted);margin:0}
+.stat .v{font-size:22px;font-weight:650;margin:0;font-variant-numeric:tabular-nums;line-height:1.3}
+.stat .s{font-size:12.5px;color:var(--muted);margin:0}
+.badge{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;margin-top:4px}
+.b-you{background:var(--accbg);color:var(--accent)}
+.b-fix{background:var(--warnbg);color:var(--warn)}
+.b-res{background:var(--goodbg);color:var(--good)}
+.status{font-size:14px;margin:0;padding:10px 12px;border-radius:10px}
+.status.ok{background:var(--goodbg);color:var(--good)}
+.status.warn{background:var(--warnbg);color:var(--warn)}
+.status.bad{background:var(--badbg);color:var(--bad)}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.bar{position:relative;height:16px;background:var(--panel2);border-radius:5px;margin:0 0 4px}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--accent)}
+.bar b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg)}
+.barlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin:0 0 14px}
+.spec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px}
+.spec fieldset{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:0;min-width:0}
+.spec legend{font-size:12.5px;color:var(--muted);padding:0 4px}
+.spec .row{margin:0 0 4px}.spec .row label{min-width:44px;font-size:13px}.spec .row output{min-width:48px;font-size:13px}
+@media (max-width:560px){.spec{grid-template-columns:minmax(0,1fr)}}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.tile{background:var(--panel2);border-radius:12px;padding:14px}
+.tile h3{font-size:16px;margin:0 0 6px}
+.tile p,.tile ul{margin:0;font-size:14.5px}
+.tile ul{padding-left:18px}
+.tile li{margin:2px 0}
+.ch{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;margin:0 0 10px;background:var(--panel2)}
+.ch .dot{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:14px;color:transparent}
+.ch.done{border-color:var(--good)}
+.ch.done .dot{background:var(--good);border-color:var(--good);color:#fff}
+.ch p{margin:0;font-size:14.5px}
+.ch .hint{color:var(--muted);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12.5px;color:var(--muted);font-weight:600}
+code{background:var(--panel2);padding:1px 6px;border-radius:6px;font-size:13.5px}
+.lb{font-size:12px;fill:var(--muted)}
+.lh{font-size:14px;font-weight:600;fill:var(--fg)}
+.sh{fill:var(--panel);stroke:var(--muted);stroke-width:.75}
+.off{fill:none;stroke:var(--muted);stroke-width:.75;stroke-dasharray:4 4}
+.w{fill:none;stroke-width:2;stroke-dasharray:6 6}
+.fl{fill:none;stroke:var(--accent);stroke-dasharray:6 8}
+.arc{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round}
+@media (prefers-reduced-motion: no-preference){
+  .w.on{animation:flow var(--d,1s) linear infinite}
+  .fl.on{animation:flow2 var(--d,1s) linear infinite}
+}
+@keyframes flow{to{stroke-dashoffset:-12}}
+@keyframes flow2{to{stroke-dashoffset:-14}}
+footer{color:var(--muted);font-size:13px;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="crumb">Learning Lab · Audio</span>
+    <div class="themes" id="themes" role="group" aria-label="Colour mode">
+      <button data-k="day">Day</button><button data-k="twilight">Twilight</button><button data-k="dark">Dark</button>
+    </div>
+  </header>
+  <h1>Speakers &amp; amps: <em>push, pipes and loudness</em></h1>
+  <p class="lede">How sound is made, what an amplifier really does, what ohms and sensitivity mean, how to wire four speakers to a two-channel amp, and why a "200 W" amp delivers about 30. Everything below is live: drag, tap and watch the numbers.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#sound">1 Sound</a><a href="#pipe">2 Push and pipes</a><a href="#wiring">3 Wiring lab</a><a href="#label">4 The 200 W label</a><a href="#damage">5 What hurts speakers</a><a href="#challenges">6 Challenges</a><a href="#cheat">7 Cheat sheet</a>
+  </nav>
+
+  <section class="card" id="sound">
+    <h2>1 · Sound is air being pushed back and forth</h2>
+    <p class="sub">A speaker cone is a piston. It shoves the air forward and pulls it back, and that squeeze-and-stretch travels to your ear.</p>
+    <div class="analogy"><b>Analogy:</b> ripples on a pond. How close together the ripples are is the pitch; how tall they are is the loudness.</div>
+    <div class="cols">
+      <div class="viz"><canvas id="cvSound" aria-label="Animated air particles bunching and spreading as a sound wave passes"></canvas>
+        <div class="legend"><span>Dots: air particles</span><span><span class="sw" style="background:var(--accent)"></span>Line: air pressure</span></div></div>
+      <div>
+        <div class="row"><label for="sFreq">Pitch</label><input type="range" id="sFreq" min="0" max="100" step="1" value="40"><output id="sFreqO">220 Hz</output></div>
+        <div class="row"><label for="sAmp">Loudness</label><input type="range" id="sAmp" min="0" max="100" step="1" value="55"><output id="sAmpO">55%</output></div>
+        <button class="btn" id="sPlay" aria-pressed="false">Play this tone</button>
+        <p class="note">Faster wiggles are a higher note. Bigger wiggles are louder. The tone plays quietly through your device; it needs no internet.</p>
+        <div class="grid3" style="margin-top:14px">
+          <div class="tile"><h3>Passive speaker</h3><p>Just the drivers. Needs an external amp. A cart that needs a horse.</p></div>
+          <div class="tile"><h3>Active speaker</h3><p>Amp built in; plug in power and a signal. A car with its own engine.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="pipe">
+    <h2>2 · Push, pipes and loudness: one amp, one speaker</h2>
+    <p class="sub">The amp makes a stronger copy of the music signal. Three numbers decide what comes out, and only one of them is yours to set.</p>
+    <div class="analogy"><b>Analogy:</b> water. <b>Volts</b> are the pressure, <b>impedance (ohms)</b> is how narrow the pipe is, <b>current</b> is the flow, and <b>sensitivity</b> is how much sound the speaker makes from that flow, like miles per gallon.</div>
+    <div class="cols">
+      <div class="viz">
+        <svg viewBox="0 0 380 150" role="img" aria-label="Amp pushing current through a pipe into a speaker that emits sound arcs">
+          <text class="lb" x="20" y="30">Push = volts</text>
+          <text class="lb" x="320" y="30" text-anchor="end">Sound per watt = sensitivity</text>
+          <rect class="sh" x="20" y="48" width="80" height="64" rx="6"/>
+          <text class="lh" x="60" y="80" text-anchor="middle" dominant-baseline="central">Amp</text>
+          <rect id="pPipe" class="sh" x="100" y="71" width="150" height="18"/>
+          <line id="pFlow" class="fl" x1="104" y1="80" x2="246" y2="80" stroke-width="8"/>
+          <rect class="sh" x="250" y="44" width="60" height="72" rx="6"/>
+          <circle cx="280" cy="80" r="18" fill="none" stroke="var(--muted)" stroke-width=".75"/>
+          <circle cx="280" cy="80" r="6" fill="var(--muted)"/>
+          <path class="arc" id="pa1" d="M320 70 Q326 80 320 90"/>
+          <path class="arc" id="pa2" d="M330 62 Q340 80 330 98"/>
+          <path class="arc" id="pa3" d="M340 54 Q354 80 340 106"/>
+          <path class="arc" id="pa4" d="M350 46 Q368 80 350 114"/>
+          <text class="lb" x="175" y="136" text-anchor="middle">Pipe width = impedance</text>
+        </svg>
+      </div>
+      <div>
+        <div class="seg" id="pSpk"></div>
+        <div class="row"><label for="pVol">Volume</label><input type="range" id="pVol" min="0" max="100" step="1" value="40"><output id="pVolO">40%</output></div>
+        <div class="stats">
+          <div class="stat"><p class="k">Voltage (push)</p><p class="v" id="pV">0 V</p><span class="badge b-you">You set it</span></div>
+          <div class="stat"><p class="k">Impedance</p><p class="v" id="pR">8 Ω</p><span class="badge b-fix">Fixed in speaker</span></div>
+          <div class="stat"><p class="k">Current (flow)</p><p class="v" id="pI">0 A</p><span class="badge b-res">Result</span></div>
+          <div class="stat"><p class="k">Power</p><p class="v" id="pP">0 W</p><span class="badge b-res">Result</span></div>
+          <div class="stat"><p class="k">Sensitivity</p><p class="v" id="pS">91 dB</p><span class="badge b-fix">Fixed in speaker</span></div>
+          <div class="stat"><p class="k">Loudness at 1 m</p><p class="v" id="pD">0 dB</p><span class="badge b-res">Result</span></div>
+        </div>
+        <p class="note">Switch speakers at the same volume: the amber numbers change by themselves, because they belong to the speaker. Sensitivity is never a property of the amp.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="wiring">
+    <h2>3 · Wiring lab: four speakers on a two-channel amp</h2>
+    <p class="sub">Two channels means two separate amps in one box, left and right. To run four speakers you put two on each channel, either in a chain (series) or side by side (parallel).</p>
+    <div class="analogy"><b>Analogy:</b> <b>series</b> joins two pipes end to end, so the flow is squeezed twice and the ohms add up. <b>Parallel</b> lays two pipes side by side, so more flows and the ohms drop.</div>
+    <div class="cols">
+      <div>
+        <div class="viz">
+          <svg viewBox="0 0 380 304" role="img" aria-label="Wiring diagram of the amp and speakers for the selected wiring">
+            <rect class="sh" x="130" y="14" width="120" height="66" rx="6"/>
+            <text class="lh" x="190" y="36" text-anchor="middle" dominant-baseline="central">Amp</text>
+            <text class="lb" x="145" y="66" text-anchor="middle" dominant-baseline="central">+</text>
+            <text class="lb" x="160" y="66" text-anchor="middle" dominant-baseline="central">L</text>
+            <text class="lb" x="175" y="66" text-anchor="middle" dominant-baseline="central">−</text>
+            <text class="lb" x="205" y="66" text-anchor="middle" dominant-baseline="central">−</text>
+            <text class="lb" x="220" y="66" text-anchor="middle" dominant-baseline="central">R</text>
+            <text class="lb" x="235" y="66" text-anchor="middle" dominant-baseline="central">+</text>
+            <text class="lh" x="190" y="170" text-anchor="middle" dominant-baseline="central">Each channel</text>
+            <text class="lb" id="wCL" x="190" y="192" text-anchor="middle" dominant-baseline="central"></text>
+            <text class="lb" id="wCI" x="190" y="210" text-anchor="middle" dominant-baseline="central"></text>
+            <g id="wDyn"></g>
+          </svg>
+          <div class="legend"><span><span class="sw" style="background:var(--pos)"></span>Positive wire</span><span><span class="sw" style="background:var(--neg)"></span>Negative wire</span><span>Dash speed = current</span></div>
+        </div>
+        <p class="note">Series, per channel: amp + to first speaker +, first speaker − to second speaker +, second speaker − back to amp −. Never join a left wire to a right wire.</p>
+      </div>
+      <div>
+        <div class="seg" id="wMode"></div>
+        <div class="row"><label for="wVol">Volume</label><input type="range" id="wVol" min="0" max="100" step="1" value="40"><output id="wVolO">40%</output></div>
+        <div class="stats">
+          <div class="stat"><p class="k">Load per channel</p><p class="v" id="wL">8 Ω</p><p class="s" id="wLs"></p></div>
+          <div class="stat"><p class="k">Amp power per channel</p><p class="v" id="wP">0 W</p><p class="s" id="wPs"></p></div>
+          <div class="stat"><p class="k" id="wAk">Each Polk</p><p class="v" id="wA">0 dB</p><p class="s" id="wAs"></p></div>
+          <div class="stat"><p class="k" id="wBk">Each Sony</p><p class="v" id="wB">0 dB</p><p class="s" id="wBs"></p></div>
+        </div>
+        <p class="status ok" id="wSt"></p>
+        <div class="spec" style="margin-top:14px">
+          <fieldset><legend>Speaker A</legend>
+            <div class="row"><label for="aR">Ohms</label><input type="range" id="aR" min="2" max="16" step="1" value="8"><output id="aRO">8 Ω</output></div>
+            <div class="row"><label for="aS">Sens.</label><input type="range" id="aS" min="80" max="100" step="1" value="91"><output id="aSO">91 dB</output></div>
+          </fieldset>
+          <fieldset><legend>Speaker B</legend>
+            <div class="row"><label for="bR">Ohms</label><input type="range" id="bR" min="2" max="16" step="1" value="6"><output id="bRO">6 Ω</output></div>
+            <div class="row"><label for="bS">Sens.</label><input type="range" id="bS" min="80" max="100" step="1" value="87"><output id="bSO">87 dB</output></div>
+          </fieldset>
+        </div>
+        <button class="btn" id="wReset">Reset to Polk 8 Ω / 91 dB and Sony 6 Ω / 87 dB</button>
+        <p class="note">The sliders let you try other speakers. Real speakers can't be changed: ohms and sensitivity are built in at the factory.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="label">
+    <h2>4 · The "200 W" label against real watts</h2>
+    <p class="sub">The amp's push has a ceiling set by its power supply. Past it, the wave tops are cut flat. That is clipping, and it is where the harsh sound and the tweeter damage come from.</p>
+    <div class="analogy"><b>Analogy:</b> a ceiling in a room. Jump as hard as you like; once your head touches it you go no higher. "200 W" is a car's brochure top speed: both channels added, lowest-ohm load, peak, downhill with a tailwind.</div>
+    <div class="cols">
+      <div>
+        <div class="viz"><canvas id="cvClip" aria-label="Output wave growing with volume and flattening at the amp's limit"></canvas>
+          <div class="legend"><span>Dashed lines: the amp's limit</span><span>Wave: signal to one channel</span></div></div>
+        <p style="font-size:13px;color:var(--muted);margin:14px 0 6px">Power per channel, on a 0 to 100 W scale</p>
+        <div class="bar"><i id="lBar"></i><b id="lMark"></b></div>
+        <div class="barlab"><span id="lBarL">Marker: clean max</span><span>100 W label</span></div>
+      </div>
+      <div>
+        <div class="seg" id="lLoad"></div>
+        <div class="row"><label for="lVol">Volume</label><input type="range" id="lVol" min="0" max="100" step="1" value="40"><output id="lVolO">40%</output></div>
+        <div class="stats">
+          <div class="stat"><p class="k">Push right now</p><p class="v" id="lV">0 V</p></div>
+          <div class="stat"><p class="k">Power right now</p><p class="v" id="lP">0 W</p></div>
+          <div class="stat"><p class="k">Clean max at this load</p><p class="v" id="lM">28 W</p></div>
+          <div class="stat"><p class="k">Loudest speaker at 1 m</p><p class="v" id="lD">0 dB</p><p class="s" id="lDs"></p></div>
+        </div>
+        <p class="status ok" id="lSt"></p>
+        <p class="note">Power = volts² ÷ ohms. This model assumes about 15 V of clean push, estimated from a 24 V supply (Douk ST-01 Pro: rated 100 W + 100 W max into 4 Ω, 3 to 8 Ω loads). It is an estimate, not a measured spec.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="damage">
+    <h2>5 · What hurts a speaker</h2>
+    <p class="sub">A speaker is a hair-thin coil of wire glued to a cone, sitting inside a magnet. That gives it exactly two weak points.</p>
+    <div class="grid3">
+      <div class="tile"><h3>Heat</h3><p>Most of the power becomes heat in the coil, not sound. Too much for too long and the wire or its glue burns, like a bulb filament. Tweeter coils are the thinnest, so they go first.</p></div>
+      <div class="tile"><h3>Travel</h3><p>The cone hangs on a rubber edge that only stretches so far. Heavy bass shoves it past the limit and it tears or bangs the magnet, like a spring pulled too far.</p></div>
+      <div class="tile"><h3>Avoid</h3><ul><li>Playing through harsh, crunchy distortion</li><li>Heavy bass boost at high volume</li><li>Plugging cables with the amp on</li><li>Speaker wires touching each other</li><li>Feedback squeals and test tones, loud</li></ul></div>
+      <div class="tile"><h3>Harmless</h3><ul><li>A small amp, kept below distortion</li><li>A big amp, at sensible volume</li><li>Series or parallel wiring itself</li><li>One speaker wired + and − reversed (thin bass, easy fix)</li></ul></div>
+    </div>
+    <p class="note">Warning signs: fuzzy or crackling sound, popping from the woofer, a hot smell. Turn it down straight away.</p>
+  </section>
+
+  <section class="card" id="challenges">
+    <h2>6 · Challenges</h2>
+    <p class="sub">Each one ticks itself when you manage it in the sections above.</p>
+    <div class="ch" id="c1"><span class="dot">✓</span><div><p><b>Chain reaction.</b> In the wiring lab, make each channel see exactly 14 Ω.</p><p class="hint">Hint: in a chain, ohms add.</p></div></div>
+    <div class="ch" id="c2"><span class="dot">✓</span><div><p><b>Loud and clean.</b> In section 4, get the Polk alone to 100 dB or more without clipping.</p><p class="hint">Hint: how many watts did that take? Fewer than you'd think.</p></div></div>
+    <div class="ch" id="c3"><span class="dot">✓</span><div><p><b>Too greedy.</b> In the wiring lab, build a load under 3 Ω that would put the amp at risk.</p><p class="hint">Hint: lower both speakers' ohms and lay the pipes side by side.</p></div></div>
+    <div class="ch" id="c4"><span class="dot">✓</span><div><p><b>Fair fight.</b> Wire both in parallel and make speaker B exactly as loud as speaker A.</p><p class="hint">Hint: in parallel both get the same push, so only one number separates them.</p></div></div>
+  </section>
+
+  <section class="card" id="cheat">
+    <h2>7 · Cheat sheet</h2>
+    <div style="overflow-x:auto">
+    <table>
+      <tr><th>Thing</th><th>Who decides it</th><th>Analogy</th><th>Why it matters</th></tr>
+      <tr><td>Volts (push)</td><td>You, with the volume knob, up to the amp's ceiling</td><td>Water pressure</td><td>Everything else follows from it</td></tr>
+      <tr><td>Impedance (Ω)</td><td>The speaker, fixed; wiring combines them</td><td>Pipe narrowness</td><td>Sets how hard the amp works. Too low overheats it</td></tr>
+      <tr><td>Sensitivity (dB)</td><td>The speaker, fixed</td><td>Miles per gallon</td><td>+3 dB is worth double the amp power</td></tr>
+      <tr><td>Current, watts, loudness</td><td>Nobody: they are results</td><td>Flow and splash</td><td>What you actually hear and what heats the coil</td></tr>
+      <tr><td>Max push, minimum load</td><td>The amp and its power supply, fixed</td><td>The ceiling</td><td>Go past it and the signal clips</td></tr>
+    </table>
+    </div>
+    <div class="grid3" style="margin-top:14px">
+      <div class="tile"><h3>Formulas</h3><p><code>watts = volts² ÷ ohms</code><br><code>series = R1 + R2</code><br><code>parallel = R1×R2 ÷ (R1+R2)</code><br><code>dB = sensitivity + 20·log(volts ÷ 2.83)</code></p></div>
+      <div class="tile"><h3>Rules of thumb</h3><ul><li>Double the power is only +3 dB</li><li>+10 dB sounds about twice as loud</li><li>Normal listening uses 1 to 5 W</li><li>In series the higher-ohm speaker takes the bigger share</li></ul></div>
+      <div class="tile"><h3>Reading a label</h3><ul><li>Peak or "max" watts: a sprint</li><li>Continuous (RMS) watts: cruising speed</li><li>A speaker's watt rating is what it survives, not what it draws</li></ul></div>
+    </div>
+  </section>
+  <footer>Standalone page: no internet, no libraries. Numbers are a simplified model for learning, not a measurement of any product.</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var AMP={vclean:15,minLoad:3,over:18.75};
+var S={A:{name:'Polk',r:8,s:91},B:{name:'Sony',r:6,s:87}};
+var st={pSpk:'A',pVol:40,wMode:'A',wVol:40,lLoad:'A',lVol:40};
+var done={c1:false,c2:false,c3:false,c4:false};
+var still=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+function fmtW(p){return (p<10?p.toFixed(1):Math.round(p))+' W'}
+function fmtR(r){return (Math.abs(r-Math.round(r))<0.005?Math.round(r):r.toFixed(1))+' Ω'}
+function dB(sens,v){return v>0.05?sens+20*Math.log10(v/2.83):null}
+function fmtD(d){return d===null?'Silent':Math.round(d)+' dB'}
+function calc(mode,V){
+  var a=S.A,b=S.B,load,vA=0,vB=0;
+  if(mode==='A'){load=a.r;vA=V}
+  else if(mode==='B'){load=b.r;vB=V}
+  else if(mode==='series'){load=a.r+b.r;vA=V*a.r/load;vB=V*b.r/load}
+  else{load=a.r*b.r/(a.r+b.r);vA=V;vB=V}
+  return {load:load,I:V/load,P:V*V/load,vA:vA,vB:vB,pA:vA*vA/a.r,pB:vB*vB/b.r,dA:dB(a.s,vA),dB:dB(b.s,vB),hasA:mode!=='B',hasB:mode!=='A'};
+}
+function dur(I,k){return (I>0?Math.max(0.15,Math.min(3,k/I)):1).toFixed(2)}
+function seg(el,opts,cur,cb){
+  el.innerHTML='';
+  opts.forEach(function(o){var b=document.createElement('button');b.textContent=o.label;b.dataset.v=o.v;if(o.wide)b.className='wide';
+    b.setAttribute('aria-pressed',String(o.v===cur));b.addEventListener('click',function(){cb(o.v)});el.appendChild(b)});
+}
+
+/* ---------- 2: pipe ---------- */
+function updPipe(){
+  var o=S[st.pSpk],V=AMP.vclean*st.pVol/100,I=V/o.r,P=V*I,h=Math.max(8,Math.min(60,Math.round(144/o.r)));
+  seg($('pSpk'),[{v:'A',label:S.A.name+' · '+fmtR(S.A.r)+' · '+S.A.s+' dB'},{v:'B',label:S.B.name+' · '+fmtR(S.B.r)+' · '+S.B.s+' dB'}],st.pSpk,function(v){st.pSpk=v;updPipe()});
+  $('pPipe').setAttribute('height',h);$('pPipe').setAttribute('y',80-h/2);
+  var f=$('pFlow');f.setAttribute('stroke-width',Math.max(2,h-8));f.setAttribute('class','fl'+(I>0?' on':''));
+  f.style.setProperty('--d',dur(I,0.9)+'s');f.style.opacity=I>0?1:0.25;
+  var L=dB(o.s,V);[70,80,90,100].forEach(function(t,i){$('pa'+(i+1)).style.opacity=(L!==null&&L>=t)?1:0.14});
+  $('pVolO').textContent=st.pVol+'%';$('pV').textContent=V.toFixed(1)+' V';$('pR').textContent=fmtR(o.r);
+  $('pI').textContent=I.toFixed(2)+' A';$('pP').textContent=fmtW(P);$('pS').textContent=o.s+' dB';$('pD').textContent=fmtD(L);
+}
+
+/* ---------- 3: wiring ---------- */
+function mx(x,s){return s?380-x:x}
+function pl(a,s,c,on,d){return '<polyline class="w'+(on?' on':'')+'" style="--d:'+d+'s" stroke="var(--'+c+')" points="'+a.map(function(p){return mx(p[0],s)+','+p[1]}).join(' ')+'"/>'}
+function spk(s,y,o){var x0=s?280:20;
+  return '<rect class="sh" x="'+x0+'" y="'+y+'" width="80" height="60" rx="6"/><circle cx="'+(x0+16)+'" cy="'+(y+30)+'" r="10" fill="none" stroke="var(--muted)" stroke-width=".75"/><circle cx="'+(x0+16)+'" cy="'+(y+30)+'" r="4" fill="var(--muted)"/>'+
+  '<text class="lh" x="'+(x0+54)+'" y="'+(y+24)+'" text-anchor="middle" dominant-baseline="central">'+o.name+(s?' R':' L')+'</text><text class="lb" x="'+(x0+54)+'" y="'+(y+42)+'" text-anchor="middle" dominant-baseline="central">'+fmtR(o.r)+'</text>'+
+  '<circle cx="'+mx(45,s)+'" cy="'+y+'" r="3" fill="var(--pos)"/><circle cx="'+mx(75,s)+'" cy="'+(y+60)+'" r="3" fill="var(--neg)"/>'}
+function side(s,on,d){var m=st.wMode,h=pl([[145,80],[145,95],[45,95],[45,130]],s,'pos',on,d);
+  if(m==='A'||m==='B'){h+=pl([[75,190],[75,200],[115,200],[115,110],[175,110],[175,80]],s,'neg',on,d)+spk(s,130,S[m])}
+  if(m==='series'){h+=pl([[75,190],[75,205],[45,205],[45,220]],s,'neg',on,d)+pl([[75,280],[75,292],[115,292],[115,110],[175,110],[175,80]],s,'neg',on,d)+spk(s,130,S.A)+spk(s,220,S.B)}
+  if(m==='parallel'){h+=pl([[45,95],[10,95],[10,205],[45,205],[45,220]],s,'pos',on,d)+pl([[75,190],[75,200],[115,200]],s,'neg',on,d)+pl([[75,280],[75,292],[115,292],[115,110],[175,110],[175,80]],s,'neg',on,d)+spk(s,130,S.A)+spk(s,220,S.B)}
+  return h}
+function loadStatus(load){
+  if(load<AMP.minLoad)return ['bad',fmtR(load)+' is too low. This amp needs 3 Ω or more, so it may overheat or shut down.'];
+  if(load<4)return ['warn',fmtR(load)+' is just inside the amp\'s range. Fine at moderate volume; it may run hot if pushed.'];
+  if(load>8)return ['warn',fmtR(load)+' is safe for the amp, but the narrow path limits how many watts it can deliver.'];
+  return ['ok',fmtR(load)+' is a comfortable load for the amp.'];
+}
+function updWire(){
+  var V=AMP.vclean*st.wVol/100,c=calc(st.wMode,V),d=dur(c.I,1.2);
+  seg($('wMode'),[{v:'A',label:S.A.name+' only'},{v:'B',label:S.B.name+' only'},{v:'series',label:'Both in series'},{v:'parallel',label:'Both in parallel'}],st.wMode,function(v){st.wMode=v;updWire();updLabel()});
+  $('wDyn').innerHTML=side(0,c.I>0,d)+side(1,c.I>0,d);
+  $('wCL').textContent=fmtR(c.load)+' load';$('wCI').textContent=c.I.toFixed(2)+' A flowing';
+  $('wVolO').textContent=st.wVol+'%';
+  $('wL').textContent=fmtR(c.load);
+  $('wLs').textContent=st.wMode==='series'?fmtR(S.A.r)+' + '+fmtR(S.B.r):st.wMode==='parallel'?'Side by side':'One speaker';
+  $('wP').textContent=fmtW(c.P);$('wPs').textContent='Clean max '+fmtW(AMP.vclean*AMP.vclean/c.load);
+  $('wAk').textContent='Each '+S.A.name+' · '+S.A.s+' dB';$('wBk').textContent='Each '+S.B.name+' · '+S.B.s+' dB';
+  $('wA').textContent=c.hasA?fmtD(c.dA):'Off';$('wAs').textContent=c.hasA?'Gets '+c.vA.toFixed(1)+' V · '+fmtW(c.pA):'Not connected';
+  $('wB').textContent=c.hasB?fmtD(c.dB):'Off';$('wBs').textContent=c.hasB?'Gets '+c.vB.toFixed(1)+' V · '+fmtW(c.pB):'Not connected';
+  var s=loadStatus(c.load),t=s[1];
+  if(c.hasA&&c.hasB&&c.dA!==null&&c.dB!==null){var df=c.dA-c.dB;if(Math.abs(df)>=1)t+=' The '+(df>0?S.B.name:S.A.name)+'s play about '+Math.round(Math.abs(df))+' dB quieter.'}
+  $('wSt').className='status '+s[0];$('wSt').textContent=t;
+  $('aRO').textContent=fmtR(S.A.r);$('aSO').textContent=S.A.s+' dB';$('bRO').textContent=fmtR(S.B.r);$('bSO').textContent=S.B.s+' dB';
+  check();
+}
+
+/* ---------- 4: label ---------- */
+var clip={amp:0,on:false};
+function lLoadR(){return st.lLoad==='T'?4:calc(st.lLoad,1).load}
+function updLabel(){
+  var R=lLoadR(),Vr=AMP.over*st.lVol/100,cl=Vr>AMP.vclean+0.01,V=Math.min(Vr,AMP.vclean),P=V*V/R,M=AMP.vclean*AMP.vclean/R;
+  clip.amp=Vr/AMP.vclean;clip.on=cl;
+  seg($('lLoad'),[{v:'A',label:S.A.name+' · '+fmtR(S.A.r)},{v:'B',label:S.B.name+' · '+fmtR(S.B.r)},{v:'series',label:'Series · '+fmtR(S.A.r+S.B.r)},{v:'parallel',label:'Parallel · '+fmtR(calc('parallel',1).load)},{v:'T',label:'Label test load · 4 Ω',wide:true}],st.lLoad,function(v){st.lLoad=v;updLabel()});
+  $('lVolO').textContent=st.lVol+'%';$('lV').textContent=V.toFixed(1)+' V';$('lP').textContent=fmtW(P);$('lM').textContent=fmtW(M);
+  var d=null,who='';
+  if(st.lLoad!=='T'){var c=calc(st.lLoad,V);if(c.hasA&&(!c.hasB||c.dA>=c.dB)){d=c.dA;who=S.A.name}else{d=c.dB;who=S.B.name}}
+  $('lD').textContent=st.lLoad==='T'?'n/a':fmtD(d);$('lDs').textContent=st.lLoad==='T'?'Test resistor, no speaker':who;
+  $('lBar').style.width=Math.min(100,P).toFixed(1)+'%';$('lBar').style.background=cl?'var(--bad)':'var(--accent)';
+  $('lMark').style.left=Math.min(100,M).toFixed(1)+'%';$('lBarL').textContent='Marker: clean max '+fmtW(M);
+  var k,t;
+  if(cl){k='bad';t='Clipping. The amp has run out of push, so the wave tops are cut flat. This is the harsh sound that can burn tweeters.'}
+  else if(R<AMP.minLoad){k='bad';t='Clean wave, but '+fmtR(R)+' is below the amp\'s 3 Ω floor. It would overheat or shut down.'}
+  else if(R<4&&st.lLoad!=='T'){k='warn';t='Clean, but this load is close to the amp\'s 3 Ω floor, so it runs hot at high volume.'}
+  else{k='ok';t='Clean signal. The wave fits inside the amp\'s limit, using '+Math.round(P)+'% of the 100 W label.'}
+  $('lSt').className='status '+k;$('lSt').textContent=t;
+  st._l={R:R,V:V,P:P,clip:cl,d:d};
+  if(still)drawClip(0);
+  check();
+}
+
+/* ---------- canvases ---------- */
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function fit(cv){var r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1,w=Math.max(10,Math.round(r.width*dpr)),h=Math.max(10,Math.round(r.height*dpr));
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}var g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return {g:g,w:r.width,h:r.height}}
+var snd={f:40,a:55};
+function sndHz(){return Math.round(60*Math.pow(2,snd.f/100*5))}
+function drawSound(t){
+  var c=fit($('cvSound')),g=c.g,w=c.w,h=c.h;g.clearRect(0,0,w,h);
+  var k=(1.5+snd.f/100*7)*2*Math.PI/w,A=snd.a/100,om=t*0.004,mu=css('--muted'),ac=css('--accent');
+  g.fillStyle=mu;
+  var cols=Math.max(24,Math.floor(w/9)),rows=5,top=14,rh=(h*0.5-top)/rows;
+  for(var i=0;i<cols;i++){var x0=(i+0.5)*w/cols,dx=A*11*Math.sin(k*x0-om);
+    for(var j=0;j<rows;j++){g.beginPath();g.arc(x0+dx,top+j*rh+rh/2,1.8,0,6.283);g.fill()}}
+  var mid=h*0.76,amp=h*0.17*A;
+  g.strokeStyle=css('--line');g.lineWidth=1;g.beginPath();g.moveTo(0,mid);g.lineTo(w,mid);g.stroke();
+  g.strokeStyle=ac;g.lineWidth=2;g.beginPath();
+  for(var x=0;x<=w;x+=2){var y=mid-amp*Math.cos(k*x-om);if(x===0)g.moveTo(x,y);else g.lineTo(x,y)}g.stroke();
+}
+function drawClip(t){
+  var c=fit($('cvClip')),g=c.g,w=c.w,h=c.h;g.clearRect(0,0,w,h);
+  var mid=h/2,rail=h*0.34,mu=css('--muted');
+  g.strokeStyle=mu;g.lineWidth=1;g.setLineDash([5,5]);
+  g.beginPath();g.moveTo(0,mid-rail);g.lineTo(w,mid-rail);g.moveTo(0,mid+rail);g.lineTo(w,mid+rail);g.stroke();g.setLineDash([]);
+  g.strokeStyle=css('--line');g.beginPath();g.moveTo(0,mid);g.lineTo(w,mid);g.stroke();
+  g.strokeStyle=clip.on?css('--bad'):css('--accent');g.lineWidth=2.25;g.lineJoin='round';g.beginPath();
+  var ph=t*0.005;
+  for(var x=0;x<=w;x+=2){var y=clip.amp*rail*Math.sin(x/w*4*Math.PI-ph);if(y>rail)y=rail;if(y<-rail)y=-rail;if(x===0)g.moveTo(x,mid-y);else g.lineTo(x,mid-y)}
+  g.stroke();
+}
+function loop(t){drawSound(t);drawClip(t);requestAnimationFrame(loop)}
+
+/* ---------- tone ---------- */
+var au=null;
+function tone(){
+  if(au&&au.on){au.gain.gain.setTargetAtTime(0,au.ctx.currentTime,0.03);au.on=false;$('sPlay').textContent='Play this tone';$('sPlay').setAttribute('aria-pressed','false');return}
+  try{
+    if(!au){var C=window.AudioContext||window.webkitAudioContext;var ctx=new C(),o=ctx.createOscillator(),gn=ctx.createGain();gn.gain.value=0;o.connect(gn);gn.connect(ctx.destination);o.start();au={ctx:ctx,osc:o,gain:gn,on:false}}
+    au.ctx.resume();au.on=true;setTone();$('sPlay').textContent='Stop the tone';$('sPlay').setAttribute('aria-pressed','true');
+  }catch(e){$('sPlay').textContent='Sound is not available here'}
+}
+function setTone(){if(au&&au.on){au.osc.frequency.setTargetAtTime(sndHz(),au.ctx.currentTime,0.02);au.gain.gain.setTargetAtTime(0.12*snd.a/100,au.ctx.currentTime,0.03)}}
+function updSound(){$('sFreqO').textContent=sndHz()+' Hz';$('sAmpO').textContent=snd.a+'%';setTone();if(still)drawSound(0)}
+
+/* ---------- challenges ---------- */
+function check(){
+  var w=calc(st.wMode,AMP.vclean*st.wVol/100),l=st._l;
+  if(Math.abs(w.load-14)<0.01&&st.wMode==='series')done.c1=true;
+  if(l&&st.lLoad==='A'&&!l.clip&&l.d!==null&&l.d>=100)done.c2=true;
+  if(w.load<AMP.minLoad)done.c3=true;
+  if(st.wMode==='parallel'&&st.wVol>0&&w.dA!==null&&w.dB!==null&&Math.abs(w.dA-w.dB)<0.5)done.c4=true;
+  Object.keys(done).forEach(function(k){$(k).classList.toggle('done',done[k])});
+}
+
+/* ---------- theme ---------- */
+function themeNow(){var t=document.documentElement.dataset.theme;if(t)return t;return (window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'day'}
+function paintTheme(){var t=themeNow();document.querySelectorAll('#themes button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.k===t))});if(still){drawSound(0);drawClip(0)}}
+document.querySelectorAll('#themes button').forEach(function(b){b.addEventListener('click',function(){document.documentElement.dataset.theme=b.dataset.k;try{localStorage.setItem('lab-theme',b.dataset.k)}catch(e){}paintTheme()})});
+window.addEventListener('storage',function(e){if(e.key==='lab-theme'&&e.newValue){var t=e.newValue==='light'?'day':e.newValue;if(t==='day'||t==='twilight'||t==='dark'){document.documentElement.dataset.theme=t;paintTheme()}}});
+
+/* ---------- wiring up ---------- */
+function bind(id,fn){$(id).addEventListener('input',function(){fn(+$(id).value)})}
+bind('sFreq',function(v){snd.f=v;updSound()});bind('sAmp',function(v){snd.a=v;updSound()});
+$('sPlay').addEventListener('click',tone);
+bind('pVol',function(v){st.pVol=v;updPipe()});
+bind('wVol',function(v){st.wVol=v;updWire()});
+bind('lVol',function(v){st.lVol=v;updLabel()});
+function specs(){updPipe();updLabel();updWire()}
+bind('aR',function(v){S.A.r=v;specs()});bind('aS',function(v){S.A.s=v;specs()});
+bind('bR',function(v){S.B.r=v;specs()});bind('bS',function(v){S.B.s=v;specs()});
+$('wReset').addEventListener('click',function(){S.A.r=8;S.A.s=91;S.B.r=6;S.B.s=87;$('aR').value=8;$('aS').value=91;$('bR').value=6;$('bS').value=87;specs()});
+window.addEventListener('resize',function(){if(still){drawSound(0);drawClip(0)}});
+
+updSound();updPipe();updLabel();updWire();paintTheme();
+if(still){drawSound(0);drawClip(0)}else requestAnimationFrame(loop);
+window.__lab={S:S,st:st,AMP:AMP,calc:calc,done:done,refresh:specs};
+})();
+</script>
+</body>
+</html>
