@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-07lB3wmuxiL0f16UDqeJORg3SfYPtwyCwpPb0Ml9Y1o='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-9dtO77j433oD86heL5z8Z7a7OOrDLWAP7hNOzqiAnig='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -272,6 +272,17 @@ const DASHBOARDS = [
     tags: ['speakers', 'amplifier', 'ohms', 'impedance', 'watts', 'clipping', 'sensitivity']
   },
   {
+    title: 'APEX Lab Tour',
+    href: 'oracle/apex/apex-lab-tour.html',
+    section: 'Oracle',
+    topic: 'apex',
+    art: 'apex',
+    added: '2026-11-12',
+    desc: 'Follow a click through a first Oracle APEX app: browser, ORDS in Tomcat, the APEX engine and your own tables, plus a settings table, confirmation numbers and public-domain BLS data fetched two ways.',
+    points: ['Step through five scenarios on a live map', 'Watch settings and counter rows change', 'Compare copying data in with asking each time'],
+    tags: ['apex', 'low-code', 'ords', 'rest data source', 'bls', 'settings', 'oracle']
+  },
+  {
     title: 'ORDS, Tomcat and APEX Lab',
     href: 'oracle/ords/ords-tomcat-apex-lab.html',
     section: 'Oracle',
@@ -422,6 +433,7 @@ const TOPICS = {
   'mental-models': { label: 'Mental Models', color: 'var(--mental)' },
   quantum: { label: 'Quantum', color: 'var(--quantum)' },
   ords:    { label: 'ORDS',    color: 'var(--oracle)' },
+  apex:    { label: 'APEX',    color: 'var(--oracle)' },
   security: { label: 'Security', color: 'var(--security)' },
 };
 
@@ -489,6 +501,15 @@ const ART = {
     <path class="flow" d="M196 108 H58" stroke="${c}" stroke-width="2.5" opacity=".35" stroke-dasharray="6 6"/>
     <text x="66" y="60" font-family="ui-monospace,Menlo,monospace" font-size="13" fill="${c}">POST</text>
     <text x="66" y="128" font-family="ui-monospace,Menlo,monospace" font-size="22" font-weight="700" fill="${c}">403</text>
+  </svg>`,
+  apex: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect x="22" y="30" width="96" height="110" rx="8" fill="var(--panel)" stroke="${c}" stroke-width="2.5"/>
+    <rect x="34" y="46" width="72" height="10" rx="3" fill="${c}" fill-opacity=".5"/>
+    <rect x="34" y="66" width="72" height="8" rx="3" fill="${c}" fill-opacity=".2"/><rect x="34" y="82" width="72" height="8" rx="3" fill="${c}" fill-opacity=".2"/><rect x="34" y="98" width="72" height="8" rx="3" fill="${c}" fill-opacity=".2"/>
+    <rect x="66" y="118" width="40" height="12" rx="4" fill="${c}"/>
+    <path class="flow" d="M130 85 H212" stroke="${c}" stroke-width="2.5" opacity=".9"/><path d="M204 78 L214 85 L204 92" fill="none" stroke="${c}" stroke-width="2.5"/>
+    <g fill="var(--panel)" stroke="${c}" stroke-width="2.5"><path d="M232 52 V118 A38 12 0 0 0 308 118 V52"/><ellipse cx="270" cy="52" rx="38" ry="12"/></g>
+    <text x="270" y="92" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="${c}">ROWS</text>
   </svg>`,
   'ords-arch': c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <rect x="20" y="64" width="58" height="42" rx="8" fill="var(--panel)" stroke="${c}" stroke-width="2.5"/>
