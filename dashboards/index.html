@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-HX/cDRbtu/Hj5Wrds7yM1VHPY9HIdzY9b2Lrp7eVfLw='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-sZgQ7K8dGyIxN1vuiodG3HgjcTyWQ1ap7ST7u9QUOig='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -11,7 +11,7 @@
 :root{
   --bg:#f5f3ef;--bg2:#ece8e1;--panel:#fffdf9;--fg:#1c1a17;--muted:#6b665d;--line:#ddd7cc;
   --grid:rgba(28,26,23,.05);--shadow:0 1px 2px rgba(28,26,23,.06),0 8px 24px -12px rgba(28,26,23,.18);
-  --git:#e5532d;--quantum:#7a4fe0;--ai:#0f8a6c;--korean:#c2410c;--oracle:#c74634;--security:#2563eb;--audio:#0e7490;--cloud:#b45f06;--mental:#b0307a;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
+  --git:#e5532d;--quantum:#7a4fe0;--ai:#0f8a6c;--korean:#c2410c;--oracle:#c74634;--security:#2563eb;--audio:#0e7490;--cloud:#b45f06;--mental:#b0307a;--web:#5f7a00;--default:#2f7d6d;--on-c:#ffffff;--sky:none;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Charter,"Book Antiqua",Georgia,serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -20,19 +20,19 @@
 :root[data-theme="dark"]{
   --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
   --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-  --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--audio:#5cc1d6;--cloud:#f5b04c;--mental:#e86aae;--default:#4fc1a6;--on-c:#14161c;
+  --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--audio:#5cc1d6;--cloud:#f5b04c;--mental:#e86aae;--web:#b5d33c;--default:#4fc1a6;--on-c:#14161c;
 }
 :root[data-theme="twilight"]{
   --bg:#231f38;--bg2:#332c50;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;
   --grid:rgba(246,235,230,.05);--shadow:0 1px 2px rgba(10,6,25,.35),0 14px 34px -14px rgba(10,6,25,.75);
-  --git:#ff9b6e;--quantum:#c7aaff;--ai:#7ee2c0;--korean:#ffb08a;--oracle:#ff8f86;--security:#9cc2ff;--audio:#7fd3e6;--cloud:#ffcf7a;--mental:#ec74b6;--default:#ffc47d;--on-c:#211b33;
+  --git:#ff9b6e;--quantum:#c7aaff;--ai:#7ee2c0;--korean:#ffb08a;--oracle:#ff8f86;--security:#9cc2ff;--audio:#7fd3e6;--cloud:#ffcf7a;--mental:#ec74b6;--web:#d6ec7a;--default:#ffc47d;--on-c:#211b33;
   --sky:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme]){
     --bg:#0f1115;--bg2:#1b1f29;--panel:#161922;--fg:#ece9e3;--muted:#9a978f;--line:#272b36;
     --grid:rgba(236,233,227,.045);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.7);
-    --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--audio:#5cc1d6;--cloud:#f5b04c;--mental:#e86aae;--default:#4fc1a6;--on-c:#14161c;
+    --git:#ff7a52;--quantum:#a98bff;--ai:#3fcf9e;--korean:#ff8a5c;--oracle:#ff7b6b;--security:#7aa7ff;--audio:#5cc1d6;--cloud:#f5b04c;--mental:#e86aae;--web:#b5d33c;--default:#4fc1a6;--on-c:#14161c;
   }
 }
 *{box-sizing:border-box}
@@ -343,6 +343,16 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
       e.g. Languages → Korean, Languages → Nepali.
    ===================================================================== */
 const DASHBOARDS = [
+  {
+    title: 'How the Transit Map Is Drawn',
+    href: 'web-design/transit-map-explained.html',
+    topic: 'web-design',
+    added: '2026-11-18',
+    related: ['security/csp-explained.html'],   // drawn as interchanges on the transit map
+    desc: 'The Lab\'s home page is a transit map drawn from a plain list of pages. Add pages, link topics and squeeze the width to watch the rules redraw it.',
+    points: ['Add pages and links, watch the map redraw', 'Count crossings: alphabetical vs smart order', 'Drag the width to the route-card switch'],
+    tags: ['transit map', 'svg', 'data-driven', 'accessibility']
+  },
   /* Pages from topic repos (see topics.json), such as Oracle, are added here by scripts/build_site.py. */
   {
     title: 'Your Own Domain on GitLab Pages',
@@ -504,10 +514,17 @@ const TOPICS = {
   ords:    { label: 'ORDS',    color: 'var(--oracle)' },
   apex:    { label: 'APEX',    color: 'var(--oracle)' },
   security: { label: 'Security', color: 'var(--security)' },
+  'web-design': { label: 'Web Design', color: 'var(--web)' },
 };
 
 /* ---------- card illustrations ---------- */
 const ART = {
+  'web-design': c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <path d="M30 60 H150 L190 100 H310" fill="none" stroke="${c}" stroke-width="8" stroke-linecap="round"/>
+    <path d="M30 120 H130 L190 100 L230 60 H310" fill="none" stroke="${c}" stroke-width="8" stroke-linecap="round" opacity=".45"/>
+    ${[[80,60],[260,100],[80,120],[270,60]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9" fill="var(--panel)" stroke="${c}" stroke-width="4"/>`).join('')}
+    <circle cx="190" cy="100" r="12" fill="var(--panel)" stroke="var(--fg)" stroke-width="4.5"/>
+  </svg>`,
   korean: c => `<svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <text x="170" y="82" text-anchor="middle" font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif" font-size="46" font-weight="700" fill="${c}">한국어</text>
     ${[['문장',38,'.9'],['을',118,'.55'],['분석',160,'.9'],['합니다',228,'.55']].map(([t,x,o])=>`<g opacity="${o}"><rect x="${x}" y="104" width="${t.length*20+16}" height="30" rx="8" fill="${c}" fill-opacity=".14" stroke="${c}" stroke-width="1.5"/><text x="${x+8+t.length*10}" y="125" text-anchor="middle" font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif" font-size="17" fill="${c}">${t}</text></g>`).join('')}

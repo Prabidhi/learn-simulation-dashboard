@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-cOd3HgWH/8V9xwDysw6wcpHZrMtnHLTRxc60OVQa1A8='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the Transit Map Is Drawn</title>
+<meta name="description" content="The Learning Lab's home page is a transit map drawn from a plain list of pages. Add pages, link topics and squeeze the width, and watch the same rules redraw it.">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --a:#0d7d74;--a-soft:#dcf2ef;--ok:#1a7f37;--ok-soft:#e3f5e8;--bad:#cf222e;--bad-soft:#fde8e8;--warn:#9a5b06;--warn-soft:#fdf0e2;--on-a:#ffffff;
+  --new:#a3336b;--new-soft:#fbe6f0;--code-bg:#13151b;--code-fg:#e6e8ee;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
+  --a:#7ee2d6;--a-soft:#24404a;--ok:#7ee2a8;--ok-soft:#24394a;--bad:#ff8f86;--bad-soft:#4a2b3f;--warn:#ffc27a;--warn-soft:#4a3040;--on-a:#211b33;--new:#ffa3cf;--new-soft:#4a2a44;--code-bg:#17142a}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 14px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
+header p{margin:0;color:var(--muted);max-width:820px}
+.thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:900px}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+:root[data-theme="twilight"] nav{background:#2a2444}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--a)}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
+section{margin:30px 0 8px;scroll-margin-top:var(--navh,60px)}
+section>h2{font-size:1.28rem;margin:0 0 4px}
+section>p.lead{margin:0 0 12px;color:var(--muted);max-width:860px}
+.analogy{border-left:3px solid var(--a);background:var(--a-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:900px}
+.wide{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card .sub{color:var(--muted);font-size:.84rem;margin:0 0 10px}
+.card p{margin:6px 0;font-size:.9rem}
+.gap{margin-top:14px}
+code{font-family:var(--mono);font-size:.84em;background:var(--chip);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+button.b{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.b:hover:not(:disabled){border-color:var(--fg)}
+button.b[aria-pressed="true"]{background:var(--a-soft);border-color:var(--a);font-weight:600}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.lbl{font-size:.8rem;color:var(--muted);margin:12px 0 4px;font-weight:600}
+.readout{font-size:.9rem;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--chip);overflow-wrap:anywhere}
+.readout.ok{background:var(--ok-soft)}
+.readout.bad{background:var(--bad-soft)}
+.readout.warn{background:var(--warn-soft)}
+.note{font-size:.78rem;color:var(--muted);margin:6px 0 0}
+pre{font-family:var(--mono);font-size:.78rem;line-height:1.5;margin:6px 0 0;padding:10px 12px;border-radius:8px;background:var(--code-bg);color:var(--code-fg);overflow-x:auto;white-space:pre}
+.ev{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;padding:1px 8px;border-radius:999px;vertical-align:1px}
+.ev.t{background:var(--ok-soft);color:var(--ok)}
+.ev.r{background:var(--warn-soft);color:var(--warn)}
+.danger{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:.88rem;margin-top:8px}
+/* toggles */
+.tg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:start;padding:7px 0;border-top:1px solid var(--line);cursor:pointer}
+.tg:first-of-type{border-top:0}
+.tg input{margin:3px 0 0;width:16px;height:16px;accent-color:var(--a)}
+.tg small{grid-column:2;color:var(--muted);font-size:.8rem}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.rng{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;font-size:.9rem}
+.rng input{width:100%;accent-color:var(--a);grid-column:1/-1}
+.rng output{font-weight:700}
+/* browser mock */
+.mock{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.mock .bar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--chip);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.8rem;min-width:0}
+.mock .lock{font-family:var(--sans);font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.lock.ok{background:var(--ok-soft);color:var(--ok)}
+.lock.bad{background:var(--bad-soft);color:var(--bad)}
+.lock.warn{background:var(--warn-soft);color:var(--warn)}
+.mock .url{overflow-wrap:anywhere;min-width:0}
+.mock .view{padding:18px 16px;min-height:150px;display:grid;align-content:center;gap:6px;text-align:center}
+.mock .big{font-size:1.9rem;font-weight:800;font-family:var(--mono);line-height:1.1}
+.mock .big.ok{color:var(--ok)}.mock .big.bad{color:var(--bad)}.mock .big.warn{color:var(--warn)}
+.mock .view p{margin:0;font-size:.9rem;color:var(--muted)}
+.chk{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px;font-size:.86rem}
+.chk li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px}
+.chk li b{font-family:var(--mono);text-align:center}
+.chk li.y b{color:var(--ok)}.chk li.n b{color:var(--bad)}.chk li.w b{color:var(--warn)}
+/* diagram */
+svg.gx{width:100%;height:auto;display:block}
+.gx-t{font:600 12px var(--sans);fill:var(--fg)}
+.gx-s{font:10.5px var(--sans);fill:var(--muted)}
+.gx-m{font:10.5px var(--mono);fill:var(--fg)}
+.gb rect{fill:var(--panel);stroke:var(--muted);stroke-width:1.2}
+.gb.hi rect{fill:var(--a-soft);stroke:var(--a);stroke-width:2}
+.gb.dns rect{fill:var(--warn-soft);stroke:var(--warn)}
+.gb.gl rect{fill:var(--ok-soft);stroke:var(--ok)}
+.gb[data-p]{cursor:pointer}
+.gb[data-p]:hover rect,.gb[data-p]:focus-visible rect{stroke-width:2.4}
+.gb:focus{outline:none}
+.gx-l{fill:none;stroke:var(--muted);stroke-width:1.4}
+.gx-head{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+/* rollout */
+.servers{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:10px}
+.srv{aspect-ratio:1;border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:.7rem;font-weight:700;border:1px solid var(--line);background:var(--chip);color:var(--muted);transition:background .25s,border-color .25s}
+.srv.new{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.srv.hit{box-shadow:0 0 0 3px var(--fg)}
+.bars{display:grid;gap:6px;margin-top:10px}
+.brow{display:grid;grid-template-columns:150px minmax(0,1fr) 54px;gap:10px;align-items:center;font-size:.84rem}
+.brow .track{height:14px;border-radius:7px;background:var(--chip);overflow:hidden}
+.brow .fill{height:100%;background:var(--ok);border-radius:7px}
+.brow b{font-family:var(--mono);text-align:right}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.q{padding:10px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.q>b{display:block;font-size:.93rem;margin-bottom:6px}
+.q .opts{display:flex;flex-direction:column;gap:6px}
+.q .opts button{font:inherit;font-size:.87rem;text-align:left;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.q .opts button:disabled{cursor:default;color:var(--fg)}
+.q .opts button.right{background:var(--ok-soft);border-color:var(--ok)}
+.q .opts button.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.q .why{font-size:.84rem;margin:6px 0 0;color:var(--muted)}
+details{font-size:.86rem;color:var(--muted);margin-top:14px}
+details a{color:var(--a)}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);font-size:.8rem}
+footer a{color:inherit}
+@media (max-width:900px){.wide{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}pre{font-size:.7rem}.brow{grid-template-columns:96px minmax(0,1fr) 46px}.servers{gap:4px}}
+@media (prefers-reduced-motion:reduce){.srv{transition:none}}
+pre .tk{color:#56d364}
+pre .tb{color:#79c0ff}
+pre .td{color:#8b949e}
+pre .tn{color:#f08bb8}
+.facts{margin:6px 0 0;padding-left:20px;font-size:.9rem}
+.facts li{margin:5px 0}
+:root{--l1:#c2410c;--l2:#2563eb;--l3:#b45f06;--l4:#b91c1c;--l5:#0f8a6c;--l6:#7a4fe0;--l7:#0e7490;--on-l:#ffffff}
+:root[data-theme="dark"]{--l1:#ff7a52;--l2:#7aa7ff;--l3:#f5b04c;--l4:#ff7b6b;--l5:#3fcf9e;--l6:#a98bff;--l7:#5cc1d6;--on-l:#14161c}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--l1:#ff7a52;--l2:#7aa7ff;--l3:#f5b04c;--l4:#ff7b6b;--l5:#3fcf9e;--l6:#a98bff;--l7:#5cc1d6;--on-l:#14161c}}
+:root[data-theme="twilight"]{--l1:#ff9b6e;--l2:#9cc2ff;--l3:#ffcf7a;--l4:#ff8f86;--l5:#7ee2c0;--l6:#c7aaff;--l7:#7fd3e6;--on-l:#211b33}
+.mapbox{margin-top:10px}
+.mscroll{overflow-x:auto}
+.mscroll svg{display:block}
+.ml{fill:none;stroke-width:8;stroke-linecap:round}
+.lb{font:600 10.5px var(--mono);letter-spacing:.06em;fill:var(--on-l)}
+.mx{fill:none;stroke:var(--fg);stroke-width:3;stroke-dasharray:1 6;stroke-linecap:round;opacity:.5}
+.st{cursor:default;outline:none}
+.st circle{fill:var(--panel);stroke-width:4}
+.st.x circle{stroke:var(--fg)!important}
+.st:focus-visible circle,.st:hover circle{stroke-width:6}
+.tt{font:600 12px var(--sans);fill:var(--fg)}
+.ss{font:10px var(--mono);fill:var(--muted);letter-spacing:.04em}
+.nw{font:700 9.5px var(--mono);letter-spacing:.08em}
+.halo{paint-order:stroke;stroke:var(--panel);stroke-width:5px;stroke-linejoin:round}
+svg.gx text{font:600 13px var(--sans);fill:var(--fg)}
+.routes{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.route{--c:var(--muted);border:1px solid var(--line);border-radius:12px;padding:10px 12px 6px}
+.rh{display:inline-block;font:600 .72rem var(--mono);letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:var(--on-l);padding:2px 9px;border-radius:999px}
+.route ol{list-style:none;margin:8px 0 0;padding:0}
+.route li{position:relative;padding:3px 0 8px 22px;font-size:.88rem}
+.route li::before{content:"";position:absolute;left:4px;top:0;bottom:0;width:4px;background:var(--c)}
+.route li::after{content:"";position:absolute;left:0;top:5px;width:9px;height:9px;border-radius:50%;background:var(--panel);border:3px solid var(--c)}
+.route li.x::after{border-color:var(--fg)}
+.state{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.st2{background:var(--chip);border-radius:10px;padding:10px 12px;border-left:3px solid var(--line);min-width:0}
+.st2.good{border-left-color:var(--ok);background:var(--ok-soft)}
+.st2.bad{border-left-color:var(--bad);background:var(--bad-soft)}
+.st2 small{display:block;color:var(--muted);font-size:.78rem}
+.st2 b{font-size:.98rem;overflow-wrap:anywhere}
+.rng output{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<header>
+  <h1>How the transit map is drawn</h1>
+  <p>The Lab's home page shows every dashboard as a station on a coloured line. Nobody draws it by hand: a few rules turn a plain list of pages into the map each time the page loads. Poke the rules here.</p>
+  <div class="thesis"><b>Key idea:</b> the map is data plus rules. Change the data (a new page, a new link) and the same rules draw a new map, so the picture can never fall out of date.</div>
+</header>
+<nav><div>
+  <a href="#data">1. Data in</a>
+  <a href="#poke">2. Poke the map</a>
+  <a href="#order">3. Ordering the lines</a>
+  <a href="#fit">4. When it doesn't fit</a>
+  <a href="#read">5. Readable for everyone</a>
+  <a href="#quiz">6. Quiz</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+<main>
+<div class="danger"><b>A small copy.</b> The map on this page uses the same rules as the Lab's home page, but on 9 sample pages so the changes are easy to see.</div>
+
+<section id="data">
+  <h2>1. Data in: one entry per page</h2>
+  <p class="lead">Every dashboard already has an entry in the Lab's page list for the menu. The map reads four of its fields.</p>
+  <div class="analogy"><b>Analogy:</b> a real transit authority keeps a timetable, and the map printer turns it into a diagram. Here the page list is the timetable and the home page is the printer, reprinting every time someone opens it.</div>
+  <div class="wide">
+    <div class="card">
+<pre>{
+  title:   <span class="tk">'GitLab Pages and CI'</span>,
+  href:    <span class="tk">'devops/gitlab/gitlab-pages-ci.html'</span>,
+  section: <span class="tb">'DevOps'</span>,    <span class="td">// which line</span>
+  topic:   <span class="tb">'gitlab'</span>,    <span class="td">// small label under the station</span>
+  added:   <span class="tn">'2026-10-31'</span>, <span class="td">// order along the line, and "NEW"</span>
+  related: [<span class="tb">'security/csp-explained.html'</span>]  <span class="td">// interchange</span>
+}</pre>
+    </div>
+    <div class="card">
+      <h3>Field by field</h3>
+      <ul class="facts">
+        <li><b>section</b>, or <b>topic</b> when there's no section, picks the <b>line</b>. DevOps is one line holding both Git and GitLab pages.</li>
+        <li><b>added</b> orders stations along a line, oldest first, like a journey from basics onward. Pages from the last 14 days show <b>NEW</b>.</li>
+        <li><b>related</b> is optional. Each link to a page on another line becomes an <b>interchange</b>: a ringed station joined by a dotted transfer.</li>
+        <li>Separate sites, like Hangul Study, come from a short list of outside links and hang off the end of their topic's line as a dashed spur.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="poke">
+  <h2>2. Poke the map</h2>
+  <p class="lead">Change the data and watch the map redraw. Hover or tab to a station to read its name.</p>
+  <div class="card">
+    <div class="controls" role="group" aria-label="Change the data">
+      <button class="b" id="pAdd">Add a page to Oracle</button>
+      <button class="b" id="pLink" aria-pressed="false">Link ORDS 403 to CSP</button>
+      <button class="b" id="pLine" aria-pressed="false">Open an Audio line</button>
+      <button class="b" id="pReset">Reset</button>
+    </div>
+    <div class="mapbox" id="mapA"></div>
+    <div class="readout" id="pOut" aria-live="polite">Hover or tab to a station.</div>
+    <div class="state" id="pStats" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="order">
+  <h2>3. Ordering the lines</h2>
+  <p class="lead">A transfer between two lines that aren't neighbours has to cross the lines in between. The home page orders lines to keep transfers short. Compare it with plain alphabetical order.</p>
+  <div class="analogy"><b>Analogy:</b> seating guests at a long table. Put people who talk to each other side by side, and nobody has to shout across three others.</div>
+  <div class="card">
+    <div class="controls" role="group" aria-label="Line order">
+      <button class="b" data-o="alpha" aria-pressed="false">Alphabetical</button>
+      <button class="b" data-o="smart" aria-pressed="true">Connected lines together</button>
+    </div>
+    <div class="mapbox" id="mapB"></div>
+    <div class="state" id="oStats" aria-live="polite"></div>
+    <p class="note" id="oNote" aria-live="polite"></p>
+    <details><summary>How "connected lines together" works</summary>
+      <ol class="facts">
+        <li>Count the links between every pair of lines.</li>
+        <li>Start with the line that has the most links in total.</li>
+        <li>Next, take the line with the most links to the one just placed. If none link to it, take the one with the most links to any placed line, then the biggest line.</li>
+        <li>Repeat until every line is placed.</li>
+      </ol>
+      <p>This is a simple "greedy" rule: it makes the best next choice without planning ahead. It isn't guaranteed to find the very best order, but with a handful of lines it's quick and usually right.</p>
+    </details>
+  </div>
+</section>
+
+<section id="fit">
+  <h2>4. When it doesn't fit</h2>
+  <p class="lead">Each station needs room for its name. When the longest line can't fit across the screen, the home page switches to route cards instead of making you scroll sideways. Drag the width.</p>
+  <div class="card">
+    <div class="rng"><label for="fW">Space for the map</label><output id="fWo" for="fW"></output><input type="range" id="fW" min="320" max="1200" step="10" value="1000"></div>
+    <pre id="fRule"></pre>
+    <div class="mapbox" id="mapC"></div>
+  </div>
+</section>
+
+<section id="read">
+  <h2>5. Readable for everyone</h2>
+  <p class="lead">A map that only works with a mouse, or only for good eyesight, leaves people out. Three small choices make it work more widely.</p>
+  <div class="grid4">
+    <div class="card"><h3>Stations are real links</h3><p>Each station is a link you can reach with the Tab key, with a name like "CSP, Explained, Security line, interchange" for screen readers. Focusing a station shows the same details as hovering.</p></div>
+    <div class="card"><h3>Not colour alone</h3><p>Every line carries its name on a label, interchanges have a thicker ring, and separate sites are squares on a dashed spur. Colour helps, but you never need it to tell things apart.</p></div>
+    <div class="card"><h3>A halo behind text</h3><p>Transfers sometimes pass under station names. Each name is drawn with an outline in the background colour first, so the dots stop short of the letters. Try it:</p>
+      <div class="controls"><button class="b" id="hBtn" aria-pressed="true">Halo: on</button></div>
+      <svg class="gx" viewBox="0 0 260 70" role="img" aria-label="A station name with a dotted line passing behind it"><path class="mx" d="M10 40 H250"/><text id="hTxt" class="halo" x="130" y="44" text-anchor="middle">GitLab Pages and CI</text></svg>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>6. Quiz</h2>
+  <p class="lead" id="qS"></p>
+  <div class="card"><div id="qB"></div><div class="controls"><button class="b" id="qR">Reset quiz</button></div></div>
+  <details><summary>Where this comes from</summary>
+    <p>The rules and numbers on this page are the ones in the Lab's own home page (<code>index.html</code>), copied here and run on sample data. Nothing is loaded from elsewhere, and the map is plain inline SVG with no drawing library.</p>
+  </details>
+</section>
+</main>
+<footer>Everything on this page runs in your browser. Related pages: <a href="../security/csp-explained.html">CSP, Explained</a> · <a href="../devops/git/two-remotes-and-mirrors.html">One Repo, Two Homes</a></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const navBar = document.querySelector('nav');
+const setNavH = () => document.documentElement.style.setProperty('--navh', (navBar.offsetHeight + 12) + 'px');
+if ('ResizeObserver' in window) new ResizeObserver(setNavH).observe(navBar); else { setNavH(); addEventListener('resize', setNavH); }
+
+/* =============== SAMPLE DATA =============== */
+const COLORS = { DevOps: 'var(--l1)', Security: 'var(--l2)', Cloud: 'var(--l3)', Oracle: 'var(--l4)', AI: 'var(--l5)', Quantum: 'var(--l6)', Audio: 'var(--l7)' };
+const BASE = [
+  { t: 'Git Cheat Sheet', line: 'DevOps', sub: 'Git', added: '2026-10-24' },
+  { t: 'GitLab Pages and CI', line: 'DevOps', sub: 'GitLab', added: '2026-10-31' },
+  { t: 'Your Own Domain', line: 'DevOps', sub: 'GitLab', added: '2026-11-18' },
+  { t: 'CSP, Explained', line: 'Security', added: '2026-11-02', rel: ['GitLab Pages and CI'] },
+  { t: 'Cloudflare and R2', line: 'Cloud', added: '2026-11-03', rel: ['Your Own Domain', 'GitLab Pages and CI'] },
+  { t: 'ORDS 403', line: 'Oracle', sub: 'ORDS', added: '2026-11-06' },
+  { t: 'Hardened Grants', line: 'Oracle', sub: 'ORDS', added: '2026-11-07' },
+  { t: 'How AI Models Are Made', line: 'AI', added: '2026-10-28' },
+  { t: 'AI Meets Quantum', line: 'Quantum', added: '2026-10-27', rel: ['How AI Models Are Made'] }
+];
+let data, extra = 0;
+function reset(){ data = BASE.map(p => ({ ...p, rel: (p.rel || []).slice() })); extra = 0; }
+
+/* =============== THE RULES (same as the Lab's home page) =============== */
+function links(){
+  const seen = new Map();
+  data.forEach(p => (p.rel || []).forEach(t => { const o = data.find(x => x.t === t); if (!o || o === p) return; const k = [p.t, o.t].sort().join('|'); if (!seen.has(k)) seen.set(k, [p, o]); }));
+  return [...seen.values()];
+}
+function lines(order){
+  const g = {};
+  data.forEach(p => (g[p.line] = g[p.line] || []).push(p));
+  const L = Object.keys(g).map(k => ({ k, pages: g[k].sort((a, b) => (a.sub || '').localeCompare(b.sub || '') || a.added.localeCompare(b.added)) }));
+  if (order === 'alpha') return L.sort((a, b) => a.k.localeCompare(b.k));
+  const ls = links(), w = (a, b) => ls.filter(([x, y]) => (x.line === a.k && y.line === b.k) || (x.line === b.k && y.line === a.k)).length;
+  const deg = l => L.reduce((n, o) => n + (o === l ? 0 : w(l, o)), 0);
+  const left = L.slice().sort((a, b) => deg(b) - deg(a) || b.pages.length - a.pages.length || a.k.localeCompare(b.k));
+  const out = [left.shift()];
+  while (left.length) {
+    const last = out[out.length - 1];
+    left.sort((a, b) => w(b, last) - w(a, last) || out.reduce((n, o) => n + w(b, o), 0) - out.reduce((n, o) => n + w(a, o), 0) || b.pages.length - a.pages.length || a.k.localeCompare(b.k));
+    out.push(left.shift());
+  }
+  return out;
+}
+function best(){
+  const L = lines('alpha'); let min = Infinity, top = null;
+  const perm = (arr, k) => { if (k === arr.length) { const c = crossings(arr); if (c < min) { min = c; top = arr.slice(); } return; }
+    for (let i = k; i < arr.length; i++) { [arr[k], arr[i]] = [arr[i], arr[k]]; perm(arr, k + 1); [arr[k], arr[i]] = [arr[i], arr[k]]; } };
+  if (L.length <= 8) perm(L, 0);
+  return { min, top };
+}
+const crossings = L => links().reduce((n, [a, b]) => n + Math.max(0, Math.abs(L.findIndex(l => l.k === a.line) - L.findIndex(l => l.k === b.line)) - 1), 0);
+function wrap(t, max){ const out = []; let cur = ''; t.split(' ').forEach(w => { if ((cur + ' ' + w).trim().length > max && cur) { out.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }); if (cur) out.push(cur); return out; }
+const isNew = p => (new Date('2026-11-18') - new Date(p.added)) / 864e5 <= 14;
+function sizes(L){ const labelW = Math.max(110, Math.max(...L.map(l => l.k.length + 2)) * 7.4 + 44), maxN = Math.max(...L.map(l => l.pages.length)); return { labelW, maxN, need: labelW + 118 * maxN + 16 }; }
+
+function draw(box, order, W){
+  const L = lines(order), { labelW, maxN, need } = sizes(L);
+  if (need > W) {
+    box.innerHTML = `<div class="routes">${L.map(l => `<div class="route" style="--c:${COLORS[l.k]}"><b class="rh">${esc(l.k)}</b><ol>${l.pages.map(p => `<li class="${links().some(k => k.includes(p)) ? 'x' : ''}">${esc(p.t)}</li>`).join('')}</ol></div>`).join('')}</div>`;
+    return { L, mode: 'cards', need };
+  }
+  const colW = Math.max(118, Math.floor((W - labelW - 16) / maxN)), rowH = 92, top = 26, svgW = labelW + colW * maxN + 10, svgH = top + rowH * L.length - 14;
+  const pos = new Map(); L.forEach((l, i) => l.pages.forEach((p, j) => pos.set(p, { x: labelW + colW * (j + .5), y: top + i * rowH, c: COLORS[l.k] })));
+  let g = '';
+  L.forEach((l, i) => { const y = top + i * rowH, lw = 20 + (l.k.length + 2) * 7.4;
+    g += `<path class="ml" d="M${labelW - 8} ${y} H${labelW + colW * (l.pages.length - .5)}" style="stroke:${COLORS[l.k]}"/><rect x="${labelW - 12 - lw}" y="${y - 11}" width="${lw}" height="22" rx="11" style="fill:${COLORS[l.k]}"/><text class="lb" x="${labelW - 12 - lw + 10}" y="${y + 4}">${esc(l.k.toUpperCase())} ${l.pages.length}</text>`; });
+  links().forEach(([a, b]) => { const p = pos.get(a), q = pos.get(b), [u, v] = p.y < q.y ? [p, q] : [q, p], dy = v.y - u.y;
+    g += `<path class="mx" d="M${u.x} ${u.y + 11} C${u.x} ${u.y + dy * .55},${v.x} ${v.y - dy * .55},${v.x} ${v.y - 11}"/>`; });
+  const chars = Math.floor((colW - 14) / 7);
+  pos.forEach((p, d) => { const x = links().some(k => k.includes(d)), words = wrap(d.t, chars);
+    g += `<g class="st${x ? ' x' : ''}" tabindex="0" role="img" aria-label="${esc(d.t)}, ${esc(d.line)} line${x ? ', interchange' : ''}" data-t="${esc(d.t)}"><circle cx="${p.x}" cy="${p.y}" r="${x ? 10 : 8}" style="stroke:${p.c}"/>`
+      + (isNew(d) ? `<text class="nw halo" x="${p.x}" y="${p.y - 16}" text-anchor="middle" style="fill:${p.c}">NEW</text>` : '')
+      + words.map((w, k) => `<text class="tt halo" x="${p.x}" y="${p.y + 27 + k * 14}" text-anchor="middle">${esc(w)}</text>`).join('')
+      + (d.sub ? `<text class="ss halo" x="${p.x}" y="${p.y + 27 + words.length * 14}" text-anchor="middle">${esc(d.sub.toUpperCase())}</text>` : '') + `</g>`; });
+  box.innerHTML = `<div class="mscroll"><svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" role="group" aria-label="Sample transit map">${g}</svg></div>`;
+  box.querySelectorAll('.st').forEach(s => { const say = () => { const d = data.find(x => x.t === s.dataset.t), o = links().filter(k => k.includes(d)).map(k => k[0] === d ? k[1] : k[0]);
+    $('#pOut').textContent = `${d.t} · ${d.line} line${d.sub ? ' · ' + d.sub : ''}` + (o.length ? `. Change here for: ${o.map(x => x.t + ' (' + x.line + ')').join(', ')}.` : '.'); };
+    s.addEventListener('mouseenter', say); s.addEventListener('focus', say); });
+  return { L, mode: 'map', need };
+}
+const boxW = el => Math.max(300, el.clientWidth || 900);
+
+/* =============== 2. POKE =============== */
+function drawPoke(){
+  const r = draw($('#mapA'), 'smart', boxW($('#mapA')));
+  const ls = links().length;
+  $('#pStats').innerHTML = `<div class="st2"><small>Lines</small><b>${r.L.length}</b></div><div class="st2"><small>Stations</small><b>${data.length}</b></div><div class="st2"><small>Interchange links</small><b>${ls}</b></div><div class="st2"><small>Lines crossed by transfers</small><b>${crossings(r.L)}</b></div>`;
+  $('#pLink').setAttribute('aria-pressed', !!data.find(p => p.t === 'ORDS 403').rel.length);
+  $('#pLine').setAttribute('aria-pressed', data.some(p => p.line === 'Audio'));
+  drawOrder(); drawFit();
+}
+$('#pAdd').addEventListener('click', () => { extra++; data.push({ t: 'New Oracle Page ' + extra, line: 'Oracle', sub: 'APEX', added: '2026-11-18', rel: [] }); $('#pOut').textContent = `Added "New Oracle Page ${extra}". The Oracle line grew by one station${data.filter(p => p.line === 'Oracle').length > 3 ? ' and is now the longest line, so every column got narrower' : ''}.`; drawPoke(); });
+$('#pLink').addEventListener('click', () => { const p = data.find(x => x.t === 'ORDS 403'), before = lines('smart').map(l => l.k).join(' · '); p.rel = p.rel.length ? [] : ['CSP, Explained']; const after = lines('smart').map(l => l.k).join(' · '); $('#pOut').textContent = (p.rel.length ? 'ORDS 403 now lists CSP, Explained as related, so both became interchanges joined by a dotted transfer.' : 'Link removed. ORDS 403 is a plain station again.') + (before === after ? ' The line order stayed the same.' : ` The line order changed to ${after}.`); drawPoke(); });
+$('#pLine').addEventListener('click', () => { if (data.some(p => p.line === 'Audio')) data = data.filter(p => p.line !== 'Audio'); else data.push({ t: 'Speakers and Amps', line: 'Audio', added: '2026-11-12', rel: [] }); $('#pOut').textContent = data.some(p => p.line === 'Audio') ? 'A new topic opened a new line. It has no links, so it goes after the connected lines.' : 'The Audio line closed.'; drawPoke(); });
+$('#pReset').addEventListener('click', () => { reset(); $('#pOut').textContent = 'Back to the sample data.'; drawPoke(); });
+
+/* =============== 3. ORDER =============== */
+let order = 'smart';
+function drawOrder(){
+  const r = draw($('#mapB'), order, boxW($('#mapB')));
+  const a = crossings(lines('alpha')), s = crossings(lines('smart')), bs = best();
+  document.querySelectorAll('[data-o]').forEach(b => b.setAttribute('aria-pressed', b.dataset.o === order));
+  $('#oStats').innerHTML = `<div class="st2 ${order === 'alpha' ? 'bad' : ''}"><small>Alphabetical</small><b>${a} line${a === 1 ? '' : 's'} crossed</b></div><div class="st2 ${order === 'smart' ? 'good' : ''}"><small>Connected lines together</small><b>${s} line${s === 1 ? '' : 's'} crossed</b></div><div class="st2"><small>Best possible (tries every order)</small><b>${bs.min} line${bs.min === 1 ? '' : 's'} crossed</b></div><div class="st2"><small>Order shown</small><b>${r.L.map(l => esc(l.k)).join(' · ')}</b></div>`;
+  $('#oNote').textContent = s > bs.min ? `The quick rule is ${s - bs.min} crossing${s - bs.min === 1 ? '' : 's'} short of the best order (${bs.top.map(l => l.k).join(' · ')}). Trying every order takes ${bs.top.length}! = ${[...Array(bs.top.length)].reduce((n, _, i) => n * (i + 1), 1).toLocaleString()} tries here; with 15 lines it would be over a trillion, which is why the home page uses the quick rule.` : 'Here the quick rule already finds the best possible order.';
+}
+document.querySelectorAll('[data-o]').forEach(b => b.addEventListener('click', () => { order = b.dataset.o; drawOrder(); }));
+
+/* =============== 4. FIT =============== */
+function drawFit(){
+  const W = +$('#fW').value; $('#fWo').textContent = W + ' px';
+  const r = draw($('#mapC'), 'smart', W), { labelW, maxN } = sizes(r.L);
+  $('#fRule').textContent = `needed = label column + 118 px × longest line + margin\n       = ${Math.round(labelW)} + 118 × ${maxN} + 16 = ${Math.round(r.need)} px\nspace  = ${W} px  →  ${r.mode === 'map' ? 'it fits: draw the full map' : 'too narrow: show route cards'}`;
+}
+$('#fW').addEventListener('input', drawFit);
+
+/* =============== 5. HALO =============== */
+$('#hBtn').addEventListener('click', () => { const on = $('#hBtn').getAttribute('aria-pressed') !== 'true'; $('#hBtn').setAttribute('aria-pressed', on); $('#hBtn').textContent = 'Halo: ' + (on ? 'on' : 'off'); $('#hTxt').classList.toggle('halo', on); });
+
+/* =============== 6. QUIZ =============== */
+const QUIZ = [
+  {q:'You add a new dashboard to the page list. What do you need to change on the map?', o:['Draw the new station by hand', 'Nothing: the rules draw it from the list', 'Edit the line order'], a:1, w:'The map is redrawn from the list every time the home page opens.'},
+  {q:'What turns a station into an interchange?', o:['Being the newest page', 'A related link to a page on another line', 'Having a long title'], a:1, w:'Each related link to another line adds a ringed station at both ends and a dotted transfer between them.'},
+  {q:'Why does the home page put connected lines next to each other?', o:['So transfers cross fewer lines', 'So the map is alphabetical', 'So lines are the same length'], a:0, w:'A transfer between neighbours crosses nothing. Every line in between is one more crossing over station names.'},
+  {q:'The screen is too narrow for the longest line. What happens?', o:['The map scrolls sideways', 'The station names shrink until they fit', 'Each line becomes a route card'], a:2, w:'Route cards list each line\'s stops down a coloured rail, so there\'s no sideways scrolling.'},
+  {q:'How can someone without a mouse use the map?', o:['They can\'t', 'Tab to each station, which is a real link with a spoken name', 'Only through the Cards view'], a:1, w:'Focusing a station shows the same details as hovering, and Enter opens it.'}
+];
+let qRight = 0, qDone = 0;
+function buildQuiz(){
+  qRight = qDone = 0; $('#qS').textContent = `Answer all ${QUIZ.length} questions to check your understanding.`;
+  $('#qB').innerHTML = QUIZ.map((q, i) => `<div class="q" data-i="${i}"><b>${i + 1}. ${esc(q.q)}</b><div class="opts">${q.o.map((t, k) => `<button data-k="${k}">${esc(t)}</button>`).join('')}</div><p class="why" hidden></p></div>`).join('');
+}
+$('#qB').addEventListener('click', e => {
+  const b = e.target.closest('.opts button'); if (!b || b.disabled) return;
+  const box = b.closest('.q'), q = QUIZ[+box.dataset.i], pick = +b.dataset.k, btns = box.querySelectorAll('.opts button');
+  btns.forEach((x, k) => { x.disabled = true; if (k === q.a) x.classList.add('right'); else if (k === pick) x.classList.add('wrong'); });
+  const why = box.querySelector('.why'); why.hidden = false; why.textContent = (pick === q.a ? 'Right. ' : 'Not quite. ') + q.w;
+  qDone++; if (pick === q.a) qRight++;
+  $('#qS').textContent = qDone === QUIZ.length ? `You got ${qRight} of ${QUIZ.length} right.` + (qRight === QUIZ.length ? ' Well done.' : ' Reset to try again.') : `${qDone} of ${QUIZ.length} answered.`;
+});
+$('#qR').addEventListener('click', buildQuiz);
+
+reset(); drawPoke(); buildQuiz();
+if ('ResizeObserver' in window) { let w0 = 0; new ResizeObserver(es => { const w = Math.round(es[0].contentRect.width); if (w && w !== w0) { w0 = w; drawPoke(); } }).observe($('#mapA')); }
+/* =============== THEME =============== */
+window.onThemeChange = () => {};
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>

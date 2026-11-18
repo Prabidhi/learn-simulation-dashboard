@@ -201,9 +201,16 @@ a **topic repo** the Lab pulls in when it builds.
      added: 'YYYY-MM-DD',        // today; pages under 14 days old show "New"
      desc: 'One sentence on what the reader will learn.',
      points: ['Three short', 'hands-on things', 'to try'],
-     tags: ['search', 'words']
+     tags: ['search', 'words'],
+     related: ['security/csp-explained.html'] // optional: pages on other topics
    },
    ```
+
+   The home page is a transit map built from this list: each section (or topic)
+   is a line and each page a station, ordered by `added`. Add `related` only
+   for a real link between topics, such as a page that relies on or explains the
+   other. Each one draws an interchange between the two lines. See the Lab's
+   "How the Transit Map Is Drawn" page.
 
 3. Optional: give the topic a nice name and colour in `TOPICS`, adding its CSS
    variable to each of the four theme blocks at the top of `index.html`. Optionally
