@@ -3,6 +3,8 @@
 
   python3 scripts/update_csp.py          add or refresh the policy in every page
   python3 scripts/update_csp.py --check  fail if a policy is missing or stale (CI)
+  --root DIR                              work on DIR instead of dashboards/
+                                          (topic repos use this on their own pages)
 
 A page's scripts stop running if their hash is not in its policy, so run this
 after editing any inline <script>, which includes adding to DASHBOARDS.
@@ -60,13 +62,17 @@ def updated(html):
 
 
 def main():
-    check = '--check' in sys.argv[1:]
+    args = sys.argv[1:]
+    check = '--check' in args
+    root = pathlib.Path(args[args.index('--root') + 1]).resolve() if '--root' in args else DASHBOARDS
     stale = []
-    for path in sorted(DASHBOARDS.rglob('*.html')):
+    for path in sorted(root.rglob('*.html')):
+        if '.git' in path.parts:
+            continue
         html = path.read_text(encoding='utf-8')
         new = updated(html)
         if new != html:
-            stale.append(path.relative_to(DASHBOARDS.parent))
+            stale.append(path.relative_to(root.parent))
             if not check:
                 path.write_text(new, encoding='utf-8')
     for path in stale:

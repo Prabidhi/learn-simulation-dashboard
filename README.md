@@ -4,13 +4,23 @@ Interactive, standalone, offline HTML learning dashboards, published with GitLab
 
 ## How it works
 
-Every merge to `main` runs the `pages` job in `.gitlab-ci.yml`:
+Every merge to `main` runs the `pages` job in `.gitlab-ci.yml`, which runs
+`scripts/build_site.py`:
 
 1. Everything in `dashboards/` is copied to `public/`.
-2. If `dashboards/index.html` exists, it is used as the home page.
-   Otherwise the `pages` job generates a plain searchable list
-   linking to every dashboard (using each file's path).
-3. GitLab Pages publishes `public/`.
+2. Each **topic repo** listed in `topics.json` is downloaded into its folder, e.g.
+   [learn-oracle](https://gitlab.com/Prabidhi/learn-oracle) into `public/oracle/`.
+   Its `pages.json` entries are added to the menu.
+3. GitLab Pages publishes `public/` at https://learn.prabidhis.com.
+
+A push to a topic repo's `main` triggers this pipeline, so its pages go live too.
+
+## Topic repos
+
+Big topics live in their own repo but share this one website, so the theme, menu,
+search and addresses stay the same. Today that's Oracle (`learn-oracle`). To add
+another, create the repo with its pages and a `pages.json`, then add it to
+`topics.json`. Small topics stay as folders in `dashboards/`.
 
 ## Learning dashboards for other projects
 
@@ -49,6 +59,14 @@ Usually `https://<namespace>.gitlab.io/<project-name>/`.
 ## Run locally
 
 ```bash
-python3 -m http.server -d dashboards 8000
-# open http://localhost:8000
+python3 scripts/build_site.py          # builds public/, downloading topic repos
+python3 -m http.server -d public 8000  # open http://localhost:8000
 ```
+
+Use `python3 scripts/build_site.py --local oracle=../learn-oracle` to preview a
+local copy of a topic repo.
+
+## Copies
+
+GitLab is the main copy and runs the website. A copy is kept at
+[github.com/Prabidhi/learn-simulation-dashboard](https://github.com/Prabidhi/learn-simulation-dashboard).

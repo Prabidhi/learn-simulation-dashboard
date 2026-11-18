@@ -175,7 +175,15 @@ These follow the owner's global rules and are not optional.
 
 ## 7. Add it to the Learning Lab
 
-The page can be built anywhere, but it's published from the Lab repository.
+The page can be built anywhere, but it's published from the Lab repository, or from
+a **topic repo** the Lab pulls in when it builds.
+
+> **Oracle pages go in the `learn-oracle` repo, not here.** Put the file in its
+> `ords/` or `apex/` folder, add an entry to its `pages.json` (same fields as below,
+> with `href` relative to that repo), and run
+> `python3 ../learn-simulation-dashboard/scripts/update_csp.py --root .` there.
+> The Lab's `topics.json` lists every topic repo. The steps below are for every
+> other topic.
 
 1. Put the file in the Lab under `dashboards/`, in folders that **match its place in
    the side menu**:
@@ -203,8 +211,10 @@ The page can be built anywhere, but it's published from the Lab repository.
    default look.
 4. Run `python3 scripts/update_csp.py`. This refreshes the new page and
    `index.html`, whose hash changes whenever `DASHBOARDS` changes.
-5. Test locally: `python3 -m http.server -d dashboards 8000`, then open
-   `http://localhost:8000`.
+5. Test locally: `python3 scripts/build_site.py`, which builds the whole site in
+   `public/` (downloading topic repos), then `python3 -m http.server -d public 8000`
+   and open `http://localhost:8000`. To try a local copy of a topic repo, add
+   `--local oracle=../learn-oracle`.
 6. Publish with a branch, a commit, a push and a merge to `main`. The pipeline runs
    `csp-check` and then deploys. **Ask the owner before each step: commit, push
    and merge are approved one at a time.**
