@@ -392,7 +392,7 @@
     <div class="reasons" id="reasons">
       <div class="reason"><b>No leftovers</b><p>Each job starts from a clean state, so files from earlier jobs can't leak in, and a pass or fail means the same thing every time.</p></div>
       <div class="reason"><b>No tool conflicts</b><p>One project needs Node 18 and another needs Node 22, or Java 11 versus Java 21. Each container brings its own.</p></div>
-      <div class="reason"><b>Security</b><p>A job runs whatever a <code>.gitlab-ci.yml</code> says. A throwaway container limits what it can read or damage. FedRAMP/FISMA-style environments usually expect this.</p></div>
+      <div class="reason"><b>Security</b><p>A job runs whatever a <code>.gitlab-ci.yml</code> says. A throwaway container limits what it can read or damage. Strict security environments usually expect this.</p></div>
       <div class="reason"><b>Parallel jobs</b><p>Several jobs can run at once without stepping on each other.</p></div>
       <div class="reason"><b>Reproducible</b><p>"It ran in alpine:latest" is precise. "It ran on that one box with whatever was installed" isn't.</p></div>
       <div class="reason"><b>When shell is fine</b><p>A dedicated runner for one trusted project, or a job that needs something only that host has. You then have to keep that machine clean yourself.</p></div>

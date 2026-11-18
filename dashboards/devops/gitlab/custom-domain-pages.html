@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-+uB9O0+SAgubcBVcqcoCxJflXrpCyfi5tOE9AkwzM3s='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Own Domain on GitLab Pages</title>
+<meta name="description" content="How learn.prabidhis.com came to serve the Learning Lab: two DNS records, an ownership check, a free certificate, and why the first few minutes looked broken. Set it up yourself in a simulator.">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --a:#0d7d74;--a-soft:#dcf2ef;--ok:#1a7f37;--ok-soft:#e3f5e8;--bad:#cf222e;--bad-soft:#fde8e8;--warn:#9a5b06;--warn-soft:#fdf0e2;--on-a:#ffffff;
+  --new:#a3336b;--new-soft:#fbe6f0;--code-bg:#13151b;--code-fg:#e6e8ee;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
+  --a:#7ee2d6;--a-soft:#24404a;--ok:#7ee2a8;--ok-soft:#24394a;--bad:#ff8f86;--bad-soft:#4a2b3f;--warn:#ffc27a;--warn-soft:#4a3040;--on-a:#211b33;--new:#ffa3cf;--new-soft:#4a2a44;--code-bg:#17142a}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 14px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
+header p{margin:0;color:var(--muted);max-width:820px}
+.thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:900px}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+:root[data-theme="twilight"] nav{background:#2a2444}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--a)}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
+section{margin:30px 0 8px;scroll-margin-top:var(--navh,60px)}
+section>h2{font-size:1.28rem;margin:0 0 4px}
+section>p.lead{margin:0 0 12px;color:var(--muted);max-width:860px}
+.analogy{border-left:3px solid var(--a);background:var(--a-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:900px}
+.wide{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card .sub{color:var(--muted);font-size:.84rem;margin:0 0 10px}
+.card p{margin:6px 0;font-size:.9rem}
+.gap{margin-top:14px}
+code{font-family:var(--mono);font-size:.84em;background:var(--chip);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+button.b{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.b:hover:not(:disabled){border-color:var(--fg)}
+button.b[aria-pressed="true"]{background:var(--a-soft);border-color:var(--a);font-weight:600}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.lbl{font-size:.8rem;color:var(--muted);margin:12px 0 4px;font-weight:600}
+.readout{font-size:.9rem;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--chip);overflow-wrap:anywhere}
+.readout.ok{background:var(--ok-soft)}
+.readout.bad{background:var(--bad-soft)}
+.readout.warn{background:var(--warn-soft)}
+.note{font-size:.78rem;color:var(--muted);margin:6px 0 0}
+pre{font-family:var(--mono);font-size:.78rem;line-height:1.5;margin:6px 0 0;padding:10px 12px;border-radius:8px;background:var(--code-bg);color:var(--code-fg);overflow-x:auto;white-space:pre}
+.ev{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;padding:1px 8px;border-radius:999px;vertical-align:1px}
+.ev.t{background:var(--ok-soft);color:var(--ok)}
+.ev.r{background:var(--warn-soft);color:var(--warn)}
+.danger{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:.88rem;margin-top:8px}
+/* toggles */
+.tg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:start;padding:7px 0;border-top:1px solid var(--line);cursor:pointer}
+.tg:first-of-type{border-top:0}
+.tg input{margin:3px 0 0;width:16px;height:16px;accent-color:var(--a)}
+.tg small{grid-column:2;color:var(--muted);font-size:.8rem}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.rng{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;font-size:.9rem}
+.rng input{width:100%;accent-color:var(--a);grid-column:1/-1}
+.rng output{font-weight:700}
+/* browser mock */
+.mock{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.mock .bar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--chip);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.8rem;min-width:0}
+.mock .lock{font-family:var(--sans);font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.lock.ok{background:var(--ok-soft);color:var(--ok)}
+.lock.bad{background:var(--bad-soft);color:var(--bad)}
+.lock.warn{background:var(--warn-soft);color:var(--warn)}
+.mock .url{overflow-wrap:anywhere;min-width:0}
+.mock .view{padding:18px 16px;min-height:150px;display:grid;align-content:center;gap:6px;text-align:center}
+.mock .big{font-size:1.9rem;font-weight:800;font-family:var(--mono);line-height:1.1}
+.mock .big.ok{color:var(--ok)}.mock .big.bad{color:var(--bad)}.mock .big.warn{color:var(--warn)}
+.mock .view p{margin:0;font-size:.9rem;color:var(--muted)}
+.chk{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px;font-size:.86rem}
+.chk li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px}
+.chk li b{font-family:var(--mono);text-align:center}
+.chk li.y b{color:var(--ok)}.chk li.n b{color:var(--bad)}.chk li.w b{color:var(--warn)}
+/* diagram */
+svg.gx{width:100%;height:auto;display:block}
+.gx-t{font:600 12px var(--sans);fill:var(--fg)}
+.gx-s{font:10.5px var(--sans);fill:var(--muted)}
+.gx-m{font:10.5px var(--mono);fill:var(--fg)}
+.gb rect{fill:var(--panel);stroke:var(--muted);stroke-width:1.2}
+.gb.hi rect{fill:var(--a-soft);stroke:var(--a);stroke-width:2}
+.gb.dns rect{fill:var(--warn-soft);stroke:var(--warn)}
+.gb.gl rect{fill:var(--ok-soft);stroke:var(--ok)}
+.gb[data-p]{cursor:pointer}
+.gb[data-p]:hover rect,.gb[data-p]:focus-visible rect{stroke-width:2.4}
+.gb:focus{outline:none}
+.gx-l{fill:none;stroke:var(--muted);stroke-width:1.4}
+.gx-head{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+/* rollout */
+.servers{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:10px}
+.srv{aspect-ratio:1;border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:.7rem;font-weight:700;border:1px solid var(--line);background:var(--chip);color:var(--muted);transition:background .25s,border-color .25s}
+.srv.new{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.srv.hit{box-shadow:0 0 0 3px var(--fg)}
+.bars{display:grid;gap:6px;margin-top:10px}
+.brow{display:grid;grid-template-columns:150px minmax(0,1fr) 54px;gap:10px;align-items:center;font-size:.84rem}
+.brow .track{height:14px;border-radius:7px;background:var(--chip);overflow:hidden}
+.brow .fill{height:100%;background:var(--ok);border-radius:7px}
+.brow b{font-family:var(--mono);text-align:right}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.q{padding:10px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.q>b{display:block;font-size:.93rem;margin-bottom:6px}
+.q .opts{display:flex;flex-direction:column;gap:6px}
+.q .opts button{font:inherit;font-size:.87rem;text-align:left;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.q .opts button:disabled{cursor:default;color:var(--fg)}
+.q .opts button.right{background:var(--ok-soft);border-color:var(--ok)}
+.q .opts button.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.q .why{font-size:.84rem;margin:6px 0 0;color:var(--muted)}
+details{font-size:.86rem;color:var(--muted);margin-top:14px}
+details a{color:var(--a)}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);font-size:.8rem}
+footer a{color:inherit}
+@media (max-width:900px){.wide{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}pre{font-size:.7rem}.brow{grid-template-columns:96px minmax(0,1fr) 46px}.servers{gap:4px}}
+@media (prefers-reduced-motion:reduce){.srv{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Your own domain on GitLab Pages</h1>
+  <p>How the Learning Lab moved from a long <code>gitlab.io</code> address to <code>learn.prabidhis.com</code>, for free: two DNS records, an ownership check, and a certificate. Then why the first few minutes looked broken even though nothing was wrong.</p>
+  <div class="thesis"><b>Key idea:</b> one record sends visitors to GitLab, a second record proves the name is yours, and only then will GitLab answer for it and fetch a certificate. Each step waits on the one before.</div>
+</header>
+<nav><div>
+  <a href="#map">1. The pieces</a>
+  <a href="#sim">2. Set it up</a>
+  <a href="#records">3. Each setting</a>
+  <a href="#rollout">4. The certificate rollout</a>
+  <a href="#after">5. After it works</a>
+  <a href="#quiz">6. Quiz</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+<main>
+<div class="danger"><b>Simulated.</b> Nothing here contacts a server. Results marked <span class="ev t">Seen</span> happened while setting up <code>learn.prabidhis.com</code> on 2026-11-07. <span class="ev r">Expected</span> means it follows from how the parts work but wasn't tried.</div>
+
+<section id="map">
+  <h2>1. The pieces</h2>
+  <p class="lead">Four parties take part when someone types <code>learn.prabidhis.com</code>. Tap any of them.</p>
+  <div class="analogy"><b>Analogy:</b> you rent a new street sign that points to an existing shop. The <b>CNAME</b> is the sign. The shop (GitLab) won't serve anyone who comes because of the sign until you show proof you own the street name, which is the <b>TXT</b> record. Once it believes you, it orders a <b>lock for the door</b>, the certificate, from Let's Encrypt.</div>
+  <div class="wide">
+    <div class="card">
+      <svg class="gx" viewBox="0 0 520 230" role="img" aria-labelledby="mapAlt"><title id="mapAlt">The browser asks Cloudflare DNS where learn.prabidhis.com is, gets prabidhi.gitlab.io, then asks GitLab Pages for the page. GitLab Pages checks the TXT record and gets a certificate from Let's Encrypt.</title>
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="gx-head" d="M2 1L8 5L2 9"/></marker></defs>
+        <g class="gb" data-p="browser" tabindex="0" role="button" aria-label="Browser"><rect x="8" y="88" width="120" height="54" rx="9"/><text class="gx-t" x="68" y="108" text-anchor="middle">Visitor's browser</text><text class="gx-s" x="68" y="126" text-anchor="middle">types the address</text></g>
+        <g class="gb dns" data-p="dns" tabindex="0" role="button" aria-label="Cloudflare DNS"><rect x="176" y="8" width="226" height="70" rx="9"/><text class="gx-t" x="289" y="28" text-anchor="middle">Cloudflare DNS</text><text class="gx-m" x="289" y="46" text-anchor="middle">CNAME learn → prabidhi.gitlab.io</text><text class="gx-m" x="289" y="62" text-anchor="middle">TXT  proof code</text></g>
+        <g class="gb gl" data-p="gitlab" tabindex="0" role="button" aria-label="GitLab Pages"><rect x="196" y="150" width="150" height="70" rx="9"/><text class="gx-t" x="271" y="172" text-anchor="middle">GitLab Pages</text><text class="gx-s" x="271" y="190" text-anchor="middle">knows learn.prabidhis.com</text><text class="gx-s" x="271" y="206" text-anchor="middle">belongs to the Lab project</text></g>
+        <g class="gb" data-p="le" tabindex="0" role="button" aria-label="Let's Encrypt"><rect x="392" y="150" width="120" height="70" rx="9"/><text class="gx-t" x="452" y="178" text-anchor="middle">Let's Encrypt</text><text class="gx-s" x="452" y="196" text-anchor="middle">free certificate</text></g>
+        <path class="gx-l" d="M100,88 L176,52" marker-end="url(#ah)"/><text class="gx-s" x="62" y="62">1 where is it?</text>
+        <path class="gx-l" d="M100,142 L196,180" marker-end="url(#ah)"/><text class="gx-s" x="98" y="182">2 send the page</text>
+        <path class="gx-l" d="M300,150 L300,78" marker-end="url(#ah)"/><text class="gx-s" x="306" y="118">checks TXT</text>
+        <path class="gx-l" d="M346,185 L392,185" marker-end="url(#ah)"/>
+      </svg>
+    </div>
+    <div class="card" aria-live="polite"><h3 id="mapH"></h3><p id="mapP"></p></div>
+  </div>
+</section>
+
+<section id="sim">
+  <h2>2. Set it up yourself</h2>
+  <p class="lead">Turn on each step in any order and see what a visitor gets. The order that worked on 2026-11-07 is the one listed.</p>
+  <div class="wide">
+    <div class="card">
+      <div class="lbl">In GitLab</div>
+      <label class="tg"><input type="checkbox" id="sAdd"><span>Add the domain under Deploy → Pages</span><small>GitLab shows the CNAME target and a verification code</small></label>
+      <div class="lbl">In Cloudflare DNS</div>
+      <label class="tg"><input type="checkbox" id="sCname"><span>CNAME <code>learn</code> → <code>prabidhi.gitlab.io</code></span><small>Sends visitors to GitLab's servers</small></label>
+      <label class="tg"><input type="checkbox" id="sProxy"><span>Proxied (orange cloud) instead of DNS only</span><small>Puts Cloudflare in the middle of every visit</small></label>
+      <label class="tg"><input type="checkbox" id="sTxt"><span>TXT <code>_gitlab-pages-verification-code.learn</code></span><small>The proof that you own the name</small></label>
+      <div class="lbl">Back in GitLab</div>
+      <label class="tg"><input type="checkbox" id="sVerify"><span>Click ↻ next to "Unverified"</span><small>GitLab looks up the TXT record</small></label>
+      <div class="rng gap"><label for="sMin">Minutes since it said Verified</label><output id="sMinO" for="sMin">0</output><input type="range" id="sMin" min="0" max="15" step="1" value="0"></div>
+      <label class="tg"><input type="checkbox" id="sForce"><span>Force HTTPS</span><small>Plain http:// addresses get redirected to https://</small></label>
+      <div class="controls"><button class="b" id="sAll">Do it all, the right way</button><button class="b" id="sReset">Start over</button></div>
+    </div>
+    <div class="card">
+      <div class="seg" role="group" aria-label="Address typed"><button class="b" data-s="https" aria-pressed="true">https://learn.prabidhis.com</button><button class="b" data-s="http" aria-pressed="false">http://learn.prabidhis.com</button></div>
+      <div class="mock gap" aria-live="polite">
+        <div class="bar"><span class="lock" id="mLock"></span><span class="url" id="mUrl"></span></div>
+        <div class="view"><div class="big" id="mBig"></div><p id="mMsg"></p></div>
+      </div>
+      <p id="mWhy" class="gap" style="font-size:.9rem"></p>
+      <p><span class="ev" id="mEv"></span></p>
+      <ul class="chk" id="mChk"></ul>
+    </div>
+  </div>
+</section>
+
+<section id="records">
+  <h2>3. What each setting does</h2>
+  <p class="lead">Four small settings. Each card says what breaks if it is missing or later removed.</p>
+  <div class="grid4">
+    <div class="card"><h3>CNAME record</h3><p class="sub">The street sign</p><pre>learn  CNAME  prabidhi.gitlab.io</pre><p>"learn.prabidhis.com is another name for prabidhi.gitlab.io." Browsers follow it to GitLab's servers. It points at your user's Pages host, not at the project's long unique address.</p><p><b>Without it:</b> the name leads nowhere and browsers say the site can't be reached.</p></div>
+    <div class="card"><h3>TXT record</h3><p class="sub">The proof of ownership</p><pre>_gitlab-pages-verification-code.learn
+  TXT  gitlab-pages-verification-code=…</pre><p>A random code only someone who controls the DNS could publish. Without this check, anyone could claim your name for their own GitLab project.</p><p><b>Keep it:</b> GitLab checks again from time to time and turns the domain off if the code is gone.</p></div>
+    <div class="card"><h3>DNS only, not proxied</h3><p class="sub">Cloudflare's grey cloud</p><p>With the orange cloud, Cloudflare answers visitors itself and shows its own certificate. GitLab then can't complete its own certificate check, which commonly makes setup fail.</p><p><b>Grey cloud:</b> Cloudflare only answers "where is it?" and visitors talk to GitLab directly.</p></div>
+    <div class="card"><h3>Let's Encrypt and Force HTTPS</h3><p class="sub">The lock on the door</p><p>After verification, GitLab asks Let's Encrypt for a free certificate and renews it automatically. The one issued on 2026-11-07 is valid until 5 Feb 2027.</p><p><b>Force HTTPS</b> then sends anyone typing <code>http://</code> to the locked <code>https://</code> version.</p></div>
+  </div>
+</section>
+
+<section id="rollout">
+  <h2>4. Why it worked only sometimes at first</h2>
+  <p class="lead">GitLab Pages answers from many servers. A new certificate reaches them one by one, so for a few minutes each visit is a coin toss. Each visit lands on one server; press the button to try.</p>
+  <div class="wide">
+    <div class="card">
+      <div class="rng"><label for="rMin">Minutes after the certificate was issued</label><output id="rMinO" for="rMin">0</output><input type="range" id="rMin" min="0" max="10" step="1" value="0"></div>
+      <div class="servers" id="rSrv" aria-hidden="true"></div>
+      <div class="controls gap"><button class="b" id="rTry">Visit the site</button></div>
+      <div class="readout" id="rOut" aria-live="polite">Press "Visit the site".</div>
+      <p class="note">Illustrative: the order servers update in is made up, and the share at each minute is a smooth guess drawn through the samples on the right.</p>
+    </div>
+    <div class="card">
+      <h3>What was measured</h3>
+      <p class="sub">Connections that got the new certificate, per sample on 2026-11-07. Green bar = share out of 100%.</p>
+      <div class="bars" id="rBars"></div>
+      <details><summary>Show as a table</summary><div class="tablewrap"><table id="rTable" aria-label="Measured certificate samples"><thead><tr><th>Sample</th><th>New certificate</th></tr></thead><tbody></tbody></table></div></details>
+      <p class="note">Every connection without the new certificate got GitLab's general <code>*.gitlab.io</code> one, which browsers reject for <code>learn.prabidhis.com</code>. That is the privacy error a visitor would have seen.</p>
+    </div>
+  </div>
+</section>
+
+<section id="after">
+  <h2>5. After it works</h2>
+  <p class="lead">Small surprises that are normal, not faults.</p>
+  <div class="grid4">
+    <div class="card"><h3>Both addresses keep working</h3><p>The old <code>…gitlab.io</code> address still serves the same files. Nothing about the project moved; it simply answers to a second name.</p></div>
+    <div class="card"><h3>A short delay after deploys</h3><p>After the next deploy, <code>learn.prabidhis.com</code> showed the old files for about 45 seconds while the <code>gitlab.io</code> address was already new. GitLab's servers cache each name separately. <span class="ev t">Seen</span></p></div>
+    <div class="card"><h3>Saved choices start fresh</h3><p>Browsers keep saved settings, like the Lab's Day/Twilight/Dark choice, per address. On the new address it starts unset once. <span class="ev r">Expected</span></p></div>
+    <div class="card"><h3>The domain must stay paid</h3><p>The certificate renews itself, but the domain name doesn't. If <code>prabidhis.com</code> lapses, the new address stops and the <code>gitlab.io</code> one keeps working.</p></div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>6. Quiz</h2>
+  <p class="lead" id="qS"></p>
+  <div class="card"><div id="qB"></div><div class="controls"><button class="b" id="qR">Reset quiz</button></div></div>
+  <details><summary>Sources</summary>
+    <p>Custom domains, the verification TXT record and Let's Encrypt on GitLab Pages: <a href="https://docs.gitlab.com/user/project/pages/custom_domains_ssl_tls_certification/" target="_blank" rel="noopener noreferrer">GitLab docs, custom domains and SSL/TLS certificates</a> (address checked 2026-11-18).</p>
+    <p>The 401 page, the timings, the certificate dates and the samples in section 4 are not from a document. They were seen while setting up <code>learn.prabidhis.com</code> on 2026-11-07.</p>
+  </details>
+</section>
+</main>
+<footer>Everything on this page runs in your browser. Related pages: <a href="gitlab-pages-ci.html">GitLab Pages and CI</a> · <a href="stale-page-after-deploy.html">Why You Saw the Old Page</a> · <a href="../git/two-remotes-and-mirrors.html">One Repo, Two Homes</a></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const navBar = document.querySelector('nav');
+const setNavH = () => document.documentElement.style.setProperty('--navh', (navBar.offsetHeight + 12) + 'px');
+if ('ResizeObserver' in window) new ResizeObserver(setNavH).observe(navBar); else { setNavH(); addEventListener('resize', setNavH); }
+
+/* =============== 1. MAP =============== */
+const PARTS = {
+  browser: ['Visitor\'s browser', 'It knows only the name someone typed. First it asks DNS where that name lives, then it connects there and asks for the page. It also checks the certificate matches the name before showing a lock.'],
+  dns: ['Cloudflare DNS', 'Holds the records for prabidhis.com. The CNAME answers "where is learn?" with prabidhi.gitlab.io. The TXT record sits there for GitLab to read. With the grey cloud, this is all Cloudflare does: it never sees the pages.'],
+  gitlab: ['GitLab Pages', 'Receives the visit, looks at which name was asked for, and serves the project that has verified that name. Before verification it doesn\'t know which project to serve, so it treats the visit as private and asks the visitor to sign in.'],
+  le: ['Let\'s Encrypt', 'A free, non-profit certificate authority. GitLab asks it for a certificate for learn.prabidhis.com once the name is verified, and renews it before it expires.']
+};
+function showPart(k){
+  $('#mapH').textContent = PARTS[k][0]; $('#mapP').textContent = PARTS[k][1];
+  document.querySelectorAll('.gb[data-p]').forEach(g => g.classList.toggle('hi', g.dataset.p === k));
+}
+document.querySelectorAll('.gb[data-p]').forEach(g => {
+  g.addEventListener('click', () => showPart(g.dataset.p));
+  g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showPart(g.dataset.p); } });
+});
+
+/* =============== 2. SIMULATOR =============== */
+let scheme = 'https';
+const S = () => ({ add: $('#sAdd').checked, cname: $('#sCname').checked, proxy: $('#sProxy').checked, txt: $('#sTxt').checked,
+  verify: $('#sVerify').checked, min: +$('#sMin').value, force: $('#sForce').checked });
+function outcome(s){
+  const verified = s.add && s.txt && s.verify;
+  if (!s.cname) return { lock:['No site','bad'], big:['Can\'t be reached','bad'], msg:'The browser found no address for this name.', why:'DNS has no record for learn.prabidhis.com, so the browser has nowhere to go. Everything else can be perfect and nobody arrives.', ev:'r' };
+  if (s.proxy) return { lock:['Cloudflare in the middle','warn'], big:['Unreliable','warn'], msg:'Visitors reach Cloudflare, not GitLab.', why:'With the orange cloud, Cloudflare answers with its own certificate and forwards the visit. GitLab can\'t complete its own certificate check behind it, which commonly makes setup fail. Switch to DNS only.', ev:'r' };
+  if (!verified) {
+    const miss = !s.add ? 'GitLab doesn\'t have this domain yet.' : !s.txt ? 'GitLab can\'t find the TXT proof, so it can\'t verify.' : 'The proof is there, but nobody asked GitLab to check it yet.';
+    if (scheme === 'https') return { lock:['Not secure','bad'], big:['Privacy error','bad'], msg:'The certificate is for *.gitlab.io, not for this name.', why: miss + ' Without verification GitLab won\'t request a certificate, so it can only show its general *.gitlab.io one, and the browser refuses it. Some browsers instead offer to fall back to plain http, which leads to the 401 page.', ev: s.add ? 't' : 'r' };
+    return { lock:['Not secure','bad'], big:['401','bad'], msg:'"You don\'t have permission to access the resource." (a GitLab sign-in page)', why: miss + ' The visit reaches GitLab, which doesn\'t know which project the name belongs to, treats it as private and sends you to sign in.', ev: s.add ? 't' : 'r' };
+  }
+  if (scheme === 'http' && s.force && s.min >= 4) return { lock:['Redirected','ok'], big:['→ https','ok'], msg:'Sent to https://learn.prabidhis.com', why:'Force HTTPS turns every plain visit into a locked one.', ev:'r' };
+  if (scheme === 'http') return { lock:['Not secure','warn'], big:['200','warn'], msg:'The Lab loads, but unencrypted.', why:'Verified, so GitLab serves the project. Without Force HTTPS, plain http stays allowed.', ev:'t' };
+  if (s.min < 4) return { lock:['Not secure','bad'], big:['Privacy error','bad'], msg:'GitLab is still getting the certificate.', why:'Verified. GitLab has asked Let\'s Encrypt for a certificate, which took about 3½ minutes here. Until it arrives, visitors still get the general *.gitlab.io one.', ev:'t' };
+  if (s.min < 11) return { lock:['Sometimes','warn'], big:['200 or privacy error','warn'], msg:'Reload a few times and it changes.', why:'The certificate exists but is still reaching GitLab\'s servers. Section 4 shows this in detail. The minute marks in this simulator are approximate.', ev:'t' };
+  return { lock:['Secure','ok'], big:['200','ok'], msg:'The Lab, over https.', why:'Every server has the certificate. Done. The minute marks in this simulator are approximate.', ev:'t' };
+}
+function drawSim(){
+  const s = S(), o = outcome(s);
+  $('#sMinO').textContent = s.min; $('#sMin').disabled = !s.verify;
+  $('#mUrl').textContent = scheme + '://learn.prabidhis.com';
+  $('#mLock').className = 'lock ' + o.lock[1]; $('#mLock').textContent = o.lock[0];
+  $('#mBig').className = 'big ' + o.big[1]; $('#mBig').textContent = o.big[0];
+  $('#mMsg').textContent = o.msg; $('#mWhy').textContent = o.why;
+  $('#mEv').className = 'ev ' + o.ev; $('#mEv').textContent = o.ev === 't' ? 'Seen on 2026-11-07' : 'Expected, not tried';
+  const verified = s.add && s.txt && s.verify;
+  const items = [
+    [s.cname && !s.proxy, 'Visitors reach GitLab', s.cname && s.proxy],
+    [s.add, 'GitLab knows the domain'],
+    [verified, 'Ownership verified'],
+    [verified && s.min >= 4, 'Certificate issued'],
+    [verified && s.min >= 11, 'Certificate on every server', verified && s.min >= 4],
+    [s.force, 'Force HTTPS on']
+  ];
+  $('#mChk').innerHTML = items.map(([y, t, w]) => `<li class="${y ? 'y' : w ? 'w' : 'n'}"><b>${y ? '✓' : w ? '~' : '✗'}</b><span>${esc(t)}</span></li>`).join('');
+}
+['#sAdd','#sCname','#sProxy','#sTxt','#sVerify','#sForce'].forEach(id => $(id).addEventListener('change', drawSim));
+$('#sMin').addEventListener('input', drawSim);
+document.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => {
+  scheme = b.dataset.s; document.querySelectorAll('[data-s]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawSim();
+}));
+$('#sAll').addEventListener('click', () => { ['#sAdd','#sCname','#sTxt','#sVerify','#sForce'].forEach(id => $(id).checked = true); $('#sProxy').checked = false; $('#sMin').value = 15; drawSim(); });
+$('#sReset').addEventListener('click', () => { document.querySelectorAll('#sim input[type=checkbox]').forEach(i => i.checked = false); $('#sMin').value = 0; drawSim(); });
+
+/* =============== 4. ROLLOUT =============== */
+const SAMPLES = [['Round 1', 6, 8], ['Round 2', 7, 8], ['Round 3', 6, 8], ['Round 4', 6, 8], ['Round 5', 5, 8], ['Round 6', 7, 8], ['Round 7', 6, 8], ['Round 8', 8, 8], ['Later check', 15, 20]];
+$('#rBars').innerHTML = SAMPLES.map(([n, k, t]) => `<div class="brow"><span>${n}</span><div class="track"><div class="fill" style="width:${(k / t * 100).toFixed(0)}%"></div></div><b>${k}/${t}</b></div>`).join('');
+$('#rTable tbody').innerHTML = SAMPLES.map(([n, k, t]) => `<tr><td>${n}</td><td>${k} of ${t} (${Math.round(k / t * 100)}%)</td></tr>`).join('');
+const ORDER = [3,11,7,15,0,19,9,5,13,1,17,8,2,14,6,18,10,4,12,16];   // made-up order servers update in
+const share = m => m <= 0 ? 0 : Math.min(1, 0.7 + 0.03 * m);       // smooth guess through the samples
+let hit = -1;
+function drawSrv(){
+  const m = +$('#rMin').value, n = Math.round(share(m) * 20), upd = new Set(ORDER.slice(0, n));
+  $('#rMinO').textContent = m;
+  $('#rSrv').innerHTML = Array.from({length: 20}, (_, i) => `<div class="srv${upd.has(i) ? ' new' : ''}${i === hit ? ' hit' : ''}">${upd.has(i) ? '✓' : '·'}</div>`).join('');
+  return upd;
+}
+$('#rMin').addEventListener('input', () => { hit = -1; drawSrv(); $('#rOut').className = 'readout'; $('#rOut').textContent = 'Press "Visit the site".'; });
+$('#rTry').addEventListener('click', () => {
+  hit = Math.floor(Math.random() * 20); const upd = drawSrv(), ok = upd.has(hit);
+  $('#rOut').className = 'readout ' + (ok ? 'ok' : 'bad');
+  $('#rOut').textContent = `Your visit landed on server ${hit + 1}. ` + (ok ? 'It has the new certificate: the lock shows and the Lab loads.' : 'It still has only the general *.gitlab.io certificate: the browser shows a privacy error. Reloading may land on another server.');
+});
+
+/* =============== 6. QUIZ =============== */
+const QUIZ = [
+  {q:'Which record sends visitors to GitLab?', o:['The TXT record', 'The CNAME record', 'The Let\'s Encrypt certificate'], a:1, w:'The CNAME says learn.prabidhis.com is another name for prabidhi.gitlab.io. The TXT record only proves ownership.'},
+  {q:'Before verification, http://learn.prabidhis.com showed a GitLab 401 sign-in page. Why?', o:['The Lab project was private', 'GitLab received the visit but didn\'t yet know which project the name belonged to', 'Cloudflare blocked the visit'], a:1, w:'The Lab was public all along. An unverified name isn\'t linked to any project, so GitLab treated the visit as one to something private.'},
+  {q:'Why set the Cloudflare record to DNS only (grey cloud)?', o:['So visitors connect to GitLab directly and GitLab can get its own certificate', 'Because grey records are free and orange ones cost money', 'So Cloudflare caches the pages'], a:0, w:'With the orange cloud Cloudflare stands in the middle with its own certificate, which commonly breaks GitLab\'s certificate setup.'},
+  {q:'A few minutes after the certificate was issued, some visits worked and some showed a privacy error. What was happening?', o:['The certificate was faulty', 'The certificate was still reaching all of GitLab\'s servers', 'The TXT record had been deleted'], a:1, w:'Each visit lands on one of many servers. Until all had the new certificate, some still showed only the general *.gitlab.io one.'},
+  {q:'Can you delete the TXT record once the domain says Verified?', o:['Yes, it is only needed once', 'No, GitLab checks again later and turns the domain off if it is gone'], a:1, w:'Keep it. It costs nothing and GitLab re-checks ownership from time to time.'}
+];
+let qRight = 0, qDone = 0;
+function buildQuiz(){
+  qRight = qDone = 0; $('#qS').textContent = `Answer all ${QUIZ.length} questions to check your understanding.`;
+  $('#qB').innerHTML = QUIZ.map((q, i) => `<div class="q" data-i="${i}"><b>${i + 1}. ${esc(q.q)}</b><div class="opts">${q.o.map((t, k) => `<button data-k="${k}">${esc(t)}</button>`).join('')}</div><p class="why" hidden></p></div>`).join('');
+}
+$('#qB').addEventListener('click', e => {
+  const b = e.target.closest('.opts button'); if (!b || b.disabled) return;
+  const box = b.closest('.q'), q = QUIZ[+box.dataset.i], pick = +b.dataset.k, btns = box.querySelectorAll('.opts button');
+  btns.forEach((x, k) => { x.disabled = true; if (k === q.a) x.classList.add('right'); else if (k === pick) x.classList.add('wrong'); });
+  const why = box.querySelector('.why'); why.hidden = false; why.textContent = (pick === q.a ? 'Right. ' : 'Not quite. ') + q.w;
+  qDone++; if (pick === q.a) qRight++;
+  $('#qS').textContent = qDone === QUIZ.length ? `You got ${qRight} of ${QUIZ.length} right.` + (qRight === QUIZ.length ? ' Well done.' : ' Reset to try again.') : `${qDone} of ${QUIZ.length} answered.`;
+});
+$('#qR').addEventListener('click', buildQuiz);
+
+showPart('dns'); drawSim(); drawSrv(); buildQuiz();
+/* =============== THEME =============== */
+window.onThemeChange = () => {};
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>

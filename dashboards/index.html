@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-AwlAckeNHlRQLycMwJm7D/TRyZ2GChI7sRGIsQfymCg='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-EgO9r1XeBj7RTEEJoDolglyx3lIKE0cYPcwmsyDHgRU='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -81,6 +81,10 @@ button{font:inherit;color:inherit}
 .navlink.active{background:color-mix(in srgb,var(--c) 15%,transparent);box-shadow:inset 3px 0 0 var(--c);font-weight:600}
 .navlink .dot{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
 .navlink .t{flex:1;min-width:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.navlink.ext .t{color:var(--muted)}
+.navlink.ext:hover .t{color:var(--fg)}
+.navlink.ext svg{width:13px;height:13px;flex:none;color:var(--muted)}
 .navlink .new{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:var(--on-c);padding:1px 6px;border-radius:999px}
 .navsec{margin:12px 0 2px}
 .navsec summary{list-style:none;display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 10px;border-radius:8px;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -231,7 +235,7 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
       </div>
       <main class="grid" id="grid" aria-live="polite"></main>
       <footer>
-        <span>Built for me and my team · hosted on GitLab Pages</span>
+        <span>Built for learning · hosted on GitLab Pages</span>
         <span>Add a page: put the HTML file in <code>dashboards/</code> and add one entry to <code>DASHBOARDS</code> in index.html</span>
       </footer>
     </div>
@@ -251,6 +255,26 @@ footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--muted);f
       e.g. Languages → Korean, Languages → Nepali.
    ===================================================================== */
 const DASHBOARDS = [
+  {
+    title: 'Your Own Domain on GitLab Pages',
+    href: 'devops/gitlab/custom-domain-pages.html',
+    section: 'DevOps',
+    topic: 'gitlab',
+    added: '2026-11-18',
+    desc: 'How learn.prabidhis.com came to serve the Lab for free: a CNAME, a TXT proof, a certificate, and why the first minutes looked broken.',
+    points: ['Set up the domain step by step', 'Watch the certificate reach every server', 'Decode the 401 and privacy errors'],
+    tags: ['dns', 'cname', 'lets encrypt', 'custom domain']
+  },
+  {
+    title: 'One Repo, Two Homes',
+    href: 'devops/git/two-remotes-and-mirrors.html',
+    section: 'DevOps',
+    topic: 'git',
+    added: '2026-11-18',
+    desc: 'Keep one project on GitLab and GitHub: pushing to both versus letting GitLab mirror, and why topic repos still share one website.',
+    points: ['Push from different places and watch both homes', 'See why only a mirror needs a token', 'Compare separate sites with one site'],
+    tags: ['git remote', 'mirror', 'github', 'monorepo']
+  },
   {
     title: 'Why You Saw the Old Page',
     href: 'devops/gitlab/stale-page-after-deploy.html',
@@ -431,6 +455,11 @@ const DASHBOARDS = [
   },
 ];
 
+/* Related sites that live outside the Lab, listed in the menu under their topic and opened in a new tab. */
+const LINKS = {
+  korean: [{ title: 'Hangul Study', href: 'https://hangul.prabidhis.com/', tags: ['hangul', 'alphabet', '한글'] }],
+};
+
 /* Topic labels and colours for the menu and cards. A new topic works without this; add it here for a nicer name/colour. */
 DASHBOARDS.sort((a, b) => (b.added || '').localeCompare(a.added || '') || a.title.localeCompare(b.title));
 
@@ -558,6 +587,9 @@ const groupKey = d => d.section ? 'sec:' + d.section : d.topic;
 const groupLabel = k => k.startsWith('sec:') ? k.slice(4) : topicOf({topic:k}).label;
 const groupColor = k => k.startsWith('sec:') ? (topicOf(DASHBOARDS.find(d => groupKey(d) === k) || {}).color) : topicOf({topic:k}).color;
 const navLink = (d, color) => `<a class="navlink ${current === d ? 'active' : ''}" href="${esc(routeOf(d))}" style="--c:${color}"><span class="dot"></span><span class="t">${esc(d.title)}</span>${isNew(d) ? '<span class="new">New</span>' : ''}</a>`;
+const EXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+const extLinks = (tk, color, q) => (LINKS[tk] || []).filter(l => !q || (l.title + ' ' + (l.tags || []).join(' ')).toLowerCase().includes(q))
+  .map(l => `<a class="navlink ext" href="${esc(l.href)}" target="_blank" rel="noopener" style="--c:${color}" title="Opens ${esc(l.title)}, a separate site, in a new tab"><span class="dot"></span><span class="t">More: ${esc(l.title)}</span>${EXT_ICON}<span class="sr"> (opens a separate site in a new tab)</span></a>`).join('');
 const SEC_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
 let openSecs = {};
 try { openSecs = JSON.parse(localStorage.getItem('lab-nav-sections') || '{}') || {}; } catch (e) { openSecs = {}; }
@@ -614,7 +646,7 @@ function renderNav(){
     const items = groups[k];
     if (!k.startsWith('sec:')) {
       const t = topicOf({topic:k});
-      html += `<div class="navgroup"><h4><span>${esc(t.label)}</span><span>${items.length}</span></h4>` + items.map(d => navLink(d, t.color)).join('') + `</div>`;
+      html += `<div class="navgroup"><h4><span>${esc(t.label)}</span><span>${items.length}</span></h4>` + items.map(d => navLink(d, t.color)).join('') + extLinks(k, t.color, q) + `</div>`;
       return;
     }
     // section → topics → pages
@@ -626,7 +658,7 @@ function renderNav(){
       Object.keys(byTopic).sort((a,b) => topicOf({topic:a}).label.localeCompare(topicOf({topic:b}).label)).map(tk => {
         const t = topicOf({topic:tk}), subKey = sec + '/' + tk;
         const subOpen = q || byTopic[tk].includes(current) || openSecs[subKey] !== false;
-        return `<details class="navsub" data-sec="${esc(subKey)}" ${subOpen ? 'open' : ''}><summary><span class="chev">${SEC_ICON}</span><span class="sl">${esc(t.label)}</span><span class="n">${byTopic[tk].length}</span></summary>` + byTopic[tk].map(d => navLink(d, t.color)).join('') + `</details>`;
+        return `<details class="navsub" data-sec="${esc(subKey)}" ${subOpen ? 'open' : ''}><summary><span class="chev">${SEC_ICON}</span><span class="sl">${esc(t.label)}</span><span class="n">${byTopic[tk].length}</span></summary>` + byTopic[tk].map(d => navLink(d, t.color)).join('') + extLinks(tk, t.color, q) + `</details>`;
       }).join('') + `</details>`;
   });
   if (q && !list.length) html = `<div class="navempty">No dashboard matches “${esc(q)}”.</div>`;

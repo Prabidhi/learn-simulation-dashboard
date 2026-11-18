@@ -2,7 +2,7 @@
 <html lang="en" data-theme="day">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sGHndAG8uZeDTazGykBWLxrS9PM/eA2OskQg/ziHMVM='; style-src 'sha256-bb5JJKzDOGr0NORi/Lwwgkf7OOJCCuaXNgiEZs9cb3k=' 'sha256-QSDRGcqk4iKKhwVYgUtiBzZhjbOCn1aeoy8ph7wEdXU='; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Xwxf99oIyhdY8bxW34MEW/5RMlOqS5RPbesIl0GiGxE='; style-src 'sha256-bb5JJKzDOGr0NORi/Lwwgkf7OOJCCuaXNgiEZs9cb3k=' 'sha256-QSDRGcqk4iKKhwVYgUtiBzZhjbOCn1aeoy8ph7wEdXU='; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>Cloudflare and R2</title>
@@ -213,7 +213,7 @@
     <p class="muted m0">Cloudflare runs data centers in hundreds of cities. When a domain uses Cloudflare, visitors reach the <b>nearest Cloudflare edge</b>, not your server. The edge answers from its cache when it can, filters attacks, and goes to your server (the <b>origin</b>) only when it has to.</p>
     <div class="row mt">
       <span class="small muted">Visitor in:</span>
-      <div class="seg" id="citySeg"><button data-v="rockville" class="on">Rockville, MD</button><button data-v="kathmandu">Kathmandu</button><button data-v="london">London</button></div>
+      <div class="seg" id="citySeg"><button data-v="newyork" class="on">New York</button><button data-v="kathmandu">Kathmandu</button><button data-v="london">London</button></div>
     </div>
     <div class="row mt">
       <span class="small muted">DNS record:</span>
@@ -228,7 +228,7 @@
       <path class="edge dash off" id="eVO" d="M85 128 Q385 205 685 128"/>
       <text class="elabel" x="230" y="90" id="lblVE">short hop</text>
       <text class="elabel" x="540" y="90" id="lblEO">only on a MISS</text>
-      <g class="node"><rect x="20" y="72" width="130" height="56" rx="10"/><text x="85" y="96" id="cityName">Rockville</text><text class="s" x="85" y="113">visitor</text></g>
+      <g class="node"><rect x="20" y="72" width="130" height="56" rx="10"/><text x="85" y="96" id="cityName">New York</text><text class="s" x="85" y="113">visitor</text></g>
       <g class="node cf" id="edgeNode"><rect x="310" y="62" width="150" height="76" rx="10"/><text x="385" y="88">Cloudflare edge</text><text class="s" x="385" y="105" id="edgeSub">nearest data center</text><text class="s" x="385" y="121">cache · WAF · TLS</text></g>
       <circle class="cache-ok hidden" id="cacheDot" cx="452" cy="70" r="6"/>
       <g class="node"><rect x="620" y="72" width="130" height="56" rx="10"/><text x="685" y="96">Origin</text><text class="s" x="685" y="113">your server / R2</text></g>
@@ -465,10 +465,10 @@
   <div class="card">
     <h2>Before you use this at work</h2>
     <div class="caution">
-      <b>Public means the whole internet.</b> GitLab Pages access control protects your <i>pages</i>, not files in a public R2 bucket. Anyone with an R2 URL can open that file. Never put SSP content, internal data or anything sensitive in a public bucket.
+      <b>Public means the whole internet.</b> GitLab Pages access control protects your <i>pages</i>, not files in a public R2 bucket. Anyone with an R2 URL can open that file. Never put security plans, internal data or anything sensitive in a public bucket.
     </div>
     <ul class="small">
-      <li>Check with your ISSO or security team before sending work data to a third-party cloud. Confirm whether Cloudflare R2 is inside your authorization boundary.</li>
+      <li>Check with your security team before sending work data to a third-party cloud, and confirm Cloudflare R2 is approved for that kind of data.</li>
       <li>Your self-hosted runner needs outbound access to <code>&lt;ACCOUNT_ID&gt;.r2.cloudflarestorage.com</code>. Corporate firewalls often block it.</li>
       <li>Limit the API token to <b>Object Read &amp; Write</b> on <b>one bucket</b>, store it as a masked, protected CI variable, and rotate it if it leaks.</li>
       <li>For files the team should see only temporarily, use presigned URLs (up to 7 days) instead of making the bucket public.</li>
@@ -513,9 +513,9 @@
   showTab(store('cfr2-tab') || 'cf');
 
   /* ---------- 1. Edge simulator ---------- */
-  var city='rockville', proxy='proxied', cache='miss', cfBusy=false;
+  var city='newyork', proxy='proxied', cache='miss', cfBusy=false;
   var cities={
-    rockville:{n:'Rockville', ve:8, eo:6, vo:12},
+    newyork:{n:'New York', ve:8, eo:6, vo:12},
     kathmandu:{n:'Kathmandu', ve:12, eo:240, vo:250},
     london:{n:'London', ve:9, eo:80, vo:85}
   };
@@ -713,7 +713,7 @@
     {n:'logo.svg (4 KB)', a:'pages', w:'Tiny, so keep it in Git. Inline it if you want the page to stay fully offline.'},
     {n:'intro.mp4 (412 MB)', a:'r2', w:'Large binary, bad for Git and great for R2 with free egress.'},
     {n:'properties-2026.csv (1.8 GB)', a:'r2', w:'Large public dataset. R2 handles it with multipart upload.'},
-    {n:'SSP draft.docx', a:'neither', w:'Sensitive compliance content should never go in a public bucket, and probably not in a third-party cloud without approval. Keep it on internal systems.'},
+    {n:'Security plan draft.docx', a:'neither', w:'Sensitive compliance content should never go in a public bucket, and probably not in a third-party cloud without approval. Keep it on internal systems.'},
     {n:'team-only metrics.json', a:'neither', w:'A public R2 bucket would expose it. Keep it behind GitLab Pages access control, or use presigned URLs or Cloudflare Access only if your security team approves.'}
   ];
   var selFile=null, ib=$('sortItems');
@@ -789,7 +789,7 @@
     {q:'What does the CI upload job need?', o:['A public bucket','An API token\'s keys stored as masked, protected CI/CD variables','Cloudflare Pages'], a:1, w:'The S3 API with keys works on a private bucket.'},
     {q:'Your page does fetch() of JSON from R2 and it fails. CSP allows the domain. What\'s missing?', o:['A CORS policy on the bucket allowing your Pages origin','A bigger bucket','Infrequent Access storage'], a:0, w:'fetch() needs both the page\'s CSP and the bucket\'s CORS. <img> and <video> only need CSP.'},
     {q:'Why use rclone copy instead of rclone sync in CI?', o:['It\'s faster','sync deletes bucket files that aren\'t in the folder, including files you uploaded from your Mac'], a:1, w:'copy only adds and updates files.'},
-    {q:'Does GitLab Pages access control protect files in a public R2 bucket?', o:['Yes','No, anyone with the URL can open them'], a:1, w:'Never put sensitive or SSP content in a public bucket.'},
+    {q:'Does GitLab Pages access control protect files in a public R2 bucket?', o:['Yes','No, anyone with the URL can open them'], a:1, w:'Never put sensitive content, like security plans, in a public bucket.'},
     {q:'When is Infrequent Access a good fit?', o:['Dashboard images viewed daily','Archives you rarely read'], a:1, w:'IA has no free tier, charges per GB read and has a 30-day minimum.'},
     {q:'How long can a presigned URL last at most?', o:['1 hour','7 days','Forever'], a:1, w:'Up to 604,800 seconds, and only on the S3 endpoint.'}
   ];

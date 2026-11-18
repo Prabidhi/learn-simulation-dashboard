@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-KDRpsYytKjh8WCb89tTwiyNYxITZ7AqWvDChdBtR2n8='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Repo, Two Homes</title>
+<meta name="description" content="Keep one Git project on GitLab and GitHub at once: what a remote is, pushing to both versus letting GitLab mirror, and why the Lab splits topics into repos but keeps one website.">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--chip:#eef1f4;
+  --a:#0d7d74;--a-soft:#dcf2ef;--ok:#1a7f37;--ok-soft:#e3f5e8;--bad:#cf222e;--bad-soft:#fde8e8;--warn:#9a5b06;--warn-soft:#fdf0e2;--on-a:#ffffff;
+  --new:#a3336b;--new-soft:#fbe6f0;--code-bg:#13151b;--code-fg:#e6e8ee;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;
+  --a:#2fd4c2;--a-soft:#0f3330;--ok:#3fb950;--ok-soft:#10301b;--bad:#f85149;--bad-soft:#3d1518;--warn:#e3a84a;--warn-soft:#3a2312;--on-a:#0d1117;--new:#f08bb8;--new-soft:#3a1528;--code-bg:#0a0c10}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;
+  --a:#7ee2d6;--a-soft:#24404a;--ok:#7ee2a8;--ok-soft:#24394a;--bad:#ff8f86;--bad-soft:#4a2b3f;--warn:#ffc27a;--warn-soft:#4a3040;--on-a:#211b33;--new:#ffa3cf;--new-soft:#4a2a44;--code-bg:#17142a}
+:root[data-theme="twilight"] body{background:linear-gradient(180deg,#4a3463 0%,#3a2d58 22%,#2a2444 55%,#1d1a30 100%) fixed}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+header{padding:28px 20px 14px;max-width:1180px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:1.65rem;line-height:1.2}
+header p{margin:0;color:var(--muted);max-width:820px}
+.thesis{margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line);max-width:900px}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+:root[data-theme="twilight"] nav{background:#2a2444}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+nav a:hover{border-color:var(--a)}
+.themes{display:flex;gap:2px;padding:3px;border:1px solid var(--line);background:var(--panel);border-radius:999px;margin-left:auto}
+.themes button{font:inherit;font-size:.78rem;display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button:hover{color:var(--fg)}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.themes svg{width:15px;height:15px;flex:none}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 50px}
+section{margin:30px 0 8px;scroll-margin-top:var(--navh,60px)}
+section>h2{font-size:1.28rem;margin:0 0 4px}
+section>p.lead{margin:0 0 12px;color:var(--muted);max-width:860px}
+.analogy{border-left:3px solid var(--a);background:var(--a-soft);padding:8px 12px;margin:0 0 14px;font-size:.9rem;max-width:900px}
+.wide{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card .sub{color:var(--muted);font-size:.84rem;margin:0 0 10px}
+.card p{margin:6px 0;font-size:.9rem}
+.gap{margin-top:14px}
+code{font-family:var(--mono);font-size:.84em;background:var(--chip);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+button.b{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.b:hover:not(:disabled){border-color:var(--fg)}
+button.b[aria-pressed="true"]{background:var(--a-soft);border-color:var(--a);font-weight:600}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.lbl{font-size:.8rem;color:var(--muted);margin:12px 0 4px;font-weight:600}
+.readout{font-size:.9rem;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--chip);overflow-wrap:anywhere}
+.readout.ok{background:var(--ok-soft)}
+.readout.bad{background:var(--bad-soft)}
+.readout.warn{background:var(--warn-soft)}
+.note{font-size:.78rem;color:var(--muted);margin:6px 0 0}
+pre{font-family:var(--mono);font-size:.78rem;line-height:1.5;margin:6px 0 0;padding:10px 12px;border-radius:8px;background:var(--code-bg);color:var(--code-fg);overflow-x:auto;white-space:pre}
+.ev{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;padding:1px 8px;border-radius:999px;vertical-align:1px}
+.ev.t{background:var(--ok-soft);color:var(--ok)}
+.ev.r{background:var(--warn-soft);color:var(--warn)}
+.danger{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:.88rem;margin-top:8px}
+/* toggles */
+.tg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:start;padding:7px 0;border-top:1px solid var(--line);cursor:pointer}
+.tg:first-of-type{border-top:0}
+.tg input{margin:3px 0 0;width:16px;height:16px;accent-color:var(--a)}
+.tg small{grid-column:2;color:var(--muted);font-size:.8rem}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.rng{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;font-size:.9rem}
+.rng input{width:100%;accent-color:var(--a);grid-column:1/-1}
+.rng output{font-weight:700}
+/* browser mock */
+.mock{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.mock .bar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--chip);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.8rem;min-width:0}
+.mock .lock{font-family:var(--sans);font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.lock.ok{background:var(--ok-soft);color:var(--ok)}
+.lock.bad{background:var(--bad-soft);color:var(--bad)}
+.lock.warn{background:var(--warn-soft);color:var(--warn)}
+.mock .url{overflow-wrap:anywhere;min-width:0}
+.mock .view{padding:18px 16px;min-height:150px;display:grid;align-content:center;gap:6px;text-align:center}
+.mock .big{font-size:1.9rem;font-weight:800;font-family:var(--mono);line-height:1.1}
+.mock .big.ok{color:var(--ok)}.mock .big.bad{color:var(--bad)}.mock .big.warn{color:var(--warn)}
+.mock .view p{margin:0;font-size:.9rem;color:var(--muted)}
+.chk{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px;font-size:.86rem}
+.chk li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px}
+.chk li b{font-family:var(--mono);text-align:center}
+.chk li.y b{color:var(--ok)}.chk li.n b{color:var(--bad)}.chk li.w b{color:var(--warn)}
+/* diagram */
+svg.gx{width:100%;height:auto;display:block}
+.gx-t{font:600 12px var(--sans);fill:var(--fg)}
+.gx-s{font:10.5px var(--sans);fill:var(--muted)}
+.gx-m{font:10.5px var(--mono);fill:var(--fg)}
+.gb rect{fill:var(--panel);stroke:var(--muted);stroke-width:1.2}
+.gb.hi rect{fill:var(--a-soft);stroke:var(--a);stroke-width:2}
+.gb.dns rect{fill:var(--warn-soft);stroke:var(--warn)}
+.gb.gl rect{fill:var(--ok-soft);stroke:var(--ok)}
+.gb[data-p]{cursor:pointer}
+.gb[data-p]:hover rect,.gb[data-p]:focus-visible rect{stroke-width:2.4}
+.gb:focus{outline:none}
+.gx-l{fill:none;stroke:var(--muted);stroke-width:1.4}
+.gx-head{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+/* rollout */
+.servers{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:10px}
+.srv{aspect-ratio:1;border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:.7rem;font-weight:700;border:1px solid var(--line);background:var(--chip);color:var(--muted);transition:background .25s,border-color .25s}
+.srv.new{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.srv.hit{box-shadow:0 0 0 3px var(--fg)}
+.bars{display:grid;gap:6px;margin-top:10px}
+.brow{display:grid;grid-template-columns:150px minmax(0,1fr) 54px;gap:10px;align-items:center;font-size:.84rem}
+.brow .track{height:14px;border-radius:7px;background:var(--chip);overflow:hidden}
+.brow .fill{height:100%;background:var(--ok);border-radius:7px}
+.brow b{font-family:var(--mono);text-align:right}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.q{padding:10px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.q>b{display:block;font-size:.93rem;margin-bottom:6px}
+.q .opts{display:flex;flex-direction:column;gap:6px}
+.q .opts button{font:inherit;font-size:.87rem;text-align:left;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.q .opts button:disabled{cursor:default;color:var(--fg)}
+.q .opts button.right{background:var(--ok-soft);border-color:var(--ok)}
+.q .opts button.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.q .why{font-size:.84rem;margin:6px 0 0;color:var(--muted)}
+details{font-size:.86rem;color:var(--muted);margin-top:14px}
+details a{color:var(--a)}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 28px;color:var(--muted);font-size:.8rem}
+footer a{color:inherit}
+@media (max-width:900px){.wide{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){nav{position:static}section{scroll-margin-top:12px}.themes button span{display:none}.themes button{padding:6px 8px}header,main,footer{padding-left:14px;padding-right:14px}nav>div{padding-left:14px;padding-right:14px}pre{font-size:.7rem}.brow{grid-template-columns:96px minmax(0,1fr) 46px}.servers{gap:4px}}
+@media (prefers-reduced-motion:reduce){.srv{transition:none}}
+.gx-dash{stroke-dasharray:5 4}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.tile{background:var(--chip);border-radius:10px;padding:10px 12px;border-left:3px solid var(--line);min-width:0}
+.tile.new{border-left-color:var(--ok);background:var(--ok-soft)}
+.tile.old{border-left-color:var(--bad);background:var(--bad-soft)}
+.tile small{display:block;color:var(--muted);font-size:.78rem}
+.tile b{display:block;font-size:1rem}
+.tile span{font-size:.8rem;color:var(--muted)}
+.log{font-family:var(--mono);font-size:.78rem;margin:8px 0 0;padding:0;list-style:none;max-height:360px;overflow-y:auto}
+.log li{padding:5px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.addrs{display:grid;gap:6px}
+.addr{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center;font-size:.86rem}
+.addr small{color:var(--muted)}
+td .yes{color:var(--ok);font-weight:700}
+td .no{color:var(--bad);font-weight:700}
+button.b:disabled{opacity:.45;cursor:default}
+@media (max-width:560px){.tiles{grid-template-columns:minmax(0,1fr)}.addr{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>One repo, two homes</h1>
+  <p>The Learning Lab lives on GitLab, which runs its website, and has a copy on GitHub. This page shows how a project keeps two homes in step, the two ways to do it, and why splitting topics into separate repos still leaves one website.</p>
+  <div class="thesis"><b>Key idea:</b> one home is the main copy and the other is a copy of it. The only question is <i>who</i> carries each change across: your computer, every time it pushes, or GitLab, every time it receives anything.</div>
+</header>
+<nav><div>
+  <a href="#remotes">1. What a remote is</a>
+  <a href="#sim">2. Keep them in step</a>
+  <a href="#needs">3. What each way needs</a>
+  <a href="#hub">4. Many repos, one site</a>
+  <a href="#where">5. Where the copy lives</a>
+  <a href="#quiz">6. Quiz</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+<main>
+<div class="danger"><b>Simulated.</b> Nothing here contacts GitLab or GitHub. The settings shown are the Lab's real ones from 2026-11-18.</div>
+
+<section id="remotes">
+  <h2>1. What a remote is</h2>
+  <p class="lead">Your computer holds the project. A <b>remote</b> is a saved name for another copy somewhere else, plus where to fetch from and where to push to.</p>
+  <div class="analogy"><b>Analogy:</b> you keep a notebook at home. GitLab is the library that holds the official copy and shows it to the public. GitHub is a friend's house holding a photocopy. A remote is an entry in your address book: "origin: the library". One address-book entry can list two places to deliver to.</div>
+  <div class="wide">
+    <div class="card">
+      <svg class="gx" viewBox="0 0 520 210" role="img" aria-labelledby="rAlt"><title id="rAlt">This Mac pushes to GitLab and to GitHub. GitLab could instead copy to GitHub by mirroring, shown as a dashed arrow. GitLab also publishes the website.</title>
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="gx-head" d="M2 1L8 5L2 9"/></marker></defs>
+        <g class="gb hi"><rect x="8" y="78" width="120" height="54" rx="9"/><text class="gx-t" x="68" y="100" text-anchor="middle">This Mac</text><text class="gx-s" x="68" y="118" text-anchor="middle">where work happens</text></g>
+        <g class="gb gl"><rect x="220" y="10" width="150" height="58" rx="9"/><text class="gx-t" x="295" y="34" text-anchor="middle">GitLab (main)</text><text class="gx-s" x="295" y="52" text-anchor="middle">runs the pipeline</text></g>
+        <g class="gb"><rect x="220" y="142" width="150" height="58" rx="9"/><text class="gx-t" x="295" y="166" text-anchor="middle">GitHub (copy)</text><text class="gx-s" x="295" y="184" text-anchor="middle">same code, no website</text></g>
+        <g class="gb dns"><rect x="392" y="10" width="124" height="58" rx="9"/><text class="gx-t" x="454" y="34" text-anchor="middle">The website</text><text class="gx-s" x="454" y="52" text-anchor="middle">learn.prabidhis.com</text></g>
+        <path class="gx-l" d="M128,92 L220,46" marker-end="url(#ah)"/><text class="gx-s" x="132" y="62">push</text>
+        <path class="gx-l" d="M128,118 L220,166" marker-end="url(#ah)"/><text class="gx-s" x="132" y="160">push (today)</text>
+        <path class="gx-l gx-dash" d="M330,68 L330,142" marker-end="url(#ah)"/><text class="gx-s" x="336" y="110">mirror (later)</text>
+        <path class="gx-l" d="M370,39 L392,39" marker-end="url(#ah)"/>
+      </svg>
+    </div>
+    <div class="card">
+      <h3>The Lab's real settings</h3>
+      <p class="sub">From <code>git remote -v</code> in the project folder</p>
+<pre>origin  gitlab.com/Prabidhi/…  (fetch)
+origin  gitlab.com/Prabidhi/…  (push)
+origin  github.com/Prabidhi/…  (push)</pre>
+      <p>One fetch line: downloads come only from GitLab. Two push lines: every <code>git push</code> goes to both. Set with:</p>
+<pre>git remote set-url --add --push \
+    origin &lt;gitlab address&gt;
+git remote set-url --add --push \
+    origin &lt;github address&gt;</pre>
+      <p class="note">The first command matters: once you add any push address, git stops using the fetch address for pushing, so GitLab has to be listed again.</p>
+    </div>
+  </div>
+</section>
+
+<section id="sim">
+  <h2>2. Keep them in step</h2>
+  <p class="lead">Pick a way, then make changes from different places. Watch which homes get each change.</p>
+  <div class="seg" id="mode" role="group" aria-label="How the copy is kept">
+    <button class="b" data-m="none" aria-pressed="false">Only GitLab</button>
+    <button class="b" data-m="both" aria-pressed="true">Push to both from this Mac</button>
+    <button class="b" data-m="mirror" aria-pressed="false">GitLab mirrors to GitHub</button>
+  </div>
+  <div class="wide gap">
+    <div class="card">
+      <div class="lbl">Make a change</div>
+      <div class="controls">
+        <button class="b" id="aMac">Push from this Mac</button>
+        <button class="b" id="aSession">Another Claude session pushes from this Mac</button>
+        <button class="b" id="aWeb">Edit on GitLab's website</button>
+        <button class="b" id="aOther">Push from another computer</button>
+      </div>
+      <div class="lbl">Housekeeping</div>
+      <div class="controls">
+        <button class="b" id="aPull">Pull on this Mac</button>
+        <button class="b" id="aToken" aria-pressed="false">GitHub token expired</button>
+        <button class="b" id="aReset">Start over</button>
+      </div>
+      <div class="tiles" id="tiles" aria-live="polite"></div>
+      <div class="readout" id="verdict" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <h3>What happened</h3>
+      <p class="sub">Newest first. Each change is one commit, numbered.</p>
+      <ul class="log" id="log"></ul>
+    </div>
+  </div>
+</section>
+
+<section id="needs">
+  <h2>3. What each way needs</h2>
+  <p class="lead">Creating the GitHub repo is the same in both. The difference is who carries changes across, and whether that someone needs a key.</p>
+  <div class="tablewrap card"><table>
+    <thead><tr><th></th><th>Push to both from this Mac</th><th>GitLab mirrors to GitHub</th></tr></thead>
+    <tbody>
+      <tr><td>Who copies</td><td>Your computer, during each push</td><td>GitLab, a few minutes after anything reaches it</td></tr>
+      <tr><td>Setup on GitHub</td><td>An empty repo</td><td>An empty repo, plus a token with permission to write to it</td></tr>
+      <tr><td>Setup on GitLab</td><td>Nothing</td><td>Settings → Repository → Mirroring repositories: GitHub address, direction Push, the token as the password</td></tr>
+      <tr><td>Setup on the computer</td><td>Two push addresses on <code>origin</code></td><td>Nothing</td></tr>
+      <tr><td>Covers website edits and other computers</td><td><span class="no">No</span>, until this Mac next pulls and pushes</td><td><span class="yes">Yes</span></td></tr>
+      <tr><td>Ongoing care</td><td>None</td><td>Make a new token when the old one expires</td></tr>
+    </tbody>
+  </table></div>
+  <div class="analogy gap"><b>Why only the mirror needs a token:</b> your computer already has its own keys to both houses, because you signed in to both. A mirror means GitLab walks to GitHub's house by itself, so it needs a key of its own. The token is that key, and only the account owner can cut it.</div>
+</section>
+
+<section id="hub">
+  <h2>4. Many repos, one site</h2>
+  <p class="lead">The plan is to give big topics, starting with Oracle, their own repo. Compare that with giving each topic its own website.</p>
+  <div class="seg" id="hubMode" role="group" aria-label="Design">
+    <button class="b" data-h="sites" aria-pressed="false">Each topic its own website</button>
+    <button class="b" data-h="one" aria-pressed="true">Topic repos, one website</button>
+  </div>
+  <div class="wide gap">
+    <div class="card">
+      <div class="addrs" id="hubAddr"></div>
+      <ul class="chk" id="hubChk"></ul>
+    </div>
+    <div class="card"><h3 id="hubH"></h3><p id="hubP"></p>
+      <div class="analogy"><b>Why the address matters:</b> a browser keeps each website's saved settings in a separate locked drawer, one per address, and lets a page reach into another page only if both share the drawer. One address means one drawer for every topic.</div>
+    </div>
+  </div>
+</section>
+
+<section id="where">
+  <h2>5. Where the copy lives</h2>
+  <p class="lead">Any Git host can be the second home. The Lab's rules prefer open-source services, so it's worth knowing the choice.</p>
+  <div class="grid4">
+    <div class="card"><h3>GitHub</h3><p class="sub">Used for the Lab today</p><p>Free for public repos, and where most people look for code. The service itself is not open source, so under the Lab's rules it is flagged, with an open alternative named.</p></div>
+    <div class="card"><h3>Codeberg</h3><p class="sub">The open alternative</p><p>Free, run by a non-profit, and built on Forgejo, which is open source. It can receive pushes or a GitLab mirror in exactly the same way.</p></div>
+    <div class="card"><h3>GitLab</h3><p class="sub">The main copy</p><p>Its core is open source, and it runs the pipeline and the website. Whatever the second home is, this one stays the source of truth.</p></div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>6. Quiz</h2>
+  <p class="lead" id="qS"></p>
+  <div class="card"><div id="qB"></div><div class="controls"><button class="b" id="qR">Reset quiz</button></div></div>
+  <details><summary>Sources</summary>
+    <p>Several push addresses on one remote: <a href="https://git-scm.com/docs/git-remote" target="_blank" rel="noopener noreferrer">git remote documentation</a>. Push mirroring: <a href="https://docs.gitlab.com/user/project/repository/mirror/push/" target="_blank" rel="noopener noreferrer">GitLab docs, push mirroring</a> (addresses checked 2026-11-18).</p>
+    <p>The Lab's remote settings and its GitHub copy were read from the project on 2026-11-18.</p>
+  </details>
+</section>
+</main>
+<footer>Everything on this page runs in your browser. Related pages: <a href="git-simulator.html">Git Cheat Sheet &amp; Simulator</a> · <a href="../gitlab/custom-domain-pages.html">Your Own Domain on GitLab Pages</a> · <a href="../gitlab/gitlab-pages-ci.html">GitLab Pages and CI</a></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const navBar = document.querySelector('nav');
+const setNavH = () => document.documentElement.style.setProperty('--navh', (navBar.offsetHeight + 12) + 'px');
+if ('ResizeObserver' in window) new ResizeObserver(setNavH).observe(navBar); else { setNavH(); addEventListener('resize', setNavH); }
+
+/* =============== 2. SIMULATOR =============== */
+let mode = 'both', st;
+function init(){ st = { mac: 1, gitlab: 1, github: 1, next: 2, expired: false, log: ['All three homes have commit 1.'] }; draw(); }
+function toGithub(why){
+  if (mode === 'mirror') {
+    if (st.expired) { st.log.push('GitLab tries to mirror, but the GitHub token has expired. GitHub is not updated.'); return; }
+    st.github = st.gitlab; st.log.push(`GitLab mirrors to GitHub a few minutes later. GitHub now has commit ${st.github}.`);
+  } else if (mode === 'none') st.log.push('Nothing copies to GitHub.');
+  else if (why) st.log.push(why);
+}
+function macPush(who){
+  if (st.mac < st.gitlab) { st.log.push(`${who}: push refused. GitLab has commit ${st.gitlab}, which this Mac doesn't have yet. Pull first.`); return draw(); }
+  const c = st.next++; st.mac = c; st.gitlab = c;
+  st.log.push(`${who} makes commit ${c} and pushes. GitLab gets it.`);
+  if (mode === 'both') { st.github = c; st.log.push(`The same push also goes to GitHub. GitHub gets everything up to commit ${c}.`); }
+  else toGithub();
+  draw();
+}
+function elsewhere(where){
+  const c = st.next++; st.gitlab = c;
+  st.log.push(`${where} makes commit ${c} on GitLab. This Mac doesn't have it yet.`);
+  toGithub(mode === 'both' ? 'This Mac wasn\'t involved, so nothing pushed it to GitHub.' : '');
+  draw();
+}
+function draw(){
+  document.querySelectorAll('#mode [data-m]').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === mode));
+  $('#aToken').setAttribute('aria-pressed', st.expired); $('#aToken').disabled = mode !== 'mirror';
+  const top = Math.max(st.mac, st.gitlab, st.github);
+  const tile = (n, v) => `<div class="tile ${v === top ? 'new' : 'old'}"><small>${n}</small><b>Commit ${v}</b><span>${v === top ? 'up to date' : (top - v) + ' behind'}</span></div>`;
+  $('#tiles').innerHTML = tile('This Mac', st.mac) + tile('GitLab (main)', st.gitlab) + tile('GitHub (copy)', st.github);
+  const gap = st.gitlab - st.github;
+  $('#verdict').className = 'readout ' + (gap > 0 ? 'bad' : 'ok');
+  $('#verdict').textContent = gap > 0
+    ? `GitHub is ${gap} commit${gap > 1 ? 's' : ''} behind GitLab. ` + (mode === 'both' ? 'Pull on this Mac and push again: the push carries every missing commit to GitHub.' : mode === 'mirror' ? 'Make a new token and paste it into GitLab; the next mirror run catches up.' : 'With "Only GitLab", GitHub never updates.')
+    : 'GitHub matches GitLab.';
+  $('#log').innerHTML = st.log.slice().reverse().map(l => `<li>${esc(l)}</li>`).join('');
+}
+document.querySelectorAll('#mode [data-m]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.m; st.log.push('Switched to: ' + b.textContent + '.'); draw(); }));
+$('#aMac').addEventListener('click', () => macPush('You'));
+$('#aSession').addEventListener('click', () => macPush('Another Claude session'));
+$('#aWeb').addEventListener('click', () => elsewhere('An edit on GitLab\'s website'));
+$('#aOther').addEventListener('click', () => elsewhere('Another computer, which only knows GitLab,'));
+$('#aPull').addEventListener('click', () => { if (st.mac === st.gitlab) st.log.push('Pull: this Mac is already up to date.'); else { st.mac = st.gitlab; st.log.push(`Pull: this Mac now has commit ${st.mac}. Pulling never touches GitHub.`); } draw(); });
+$('#aToken').addEventListener('click', () => { st.expired = !st.expired; st.log.push(st.expired ? 'The GitHub token expired.' : 'A new token was pasted into GitLab.'); if (!st.expired && mode === 'mirror' && st.github < st.gitlab) { st.github = st.gitlab; st.log.push(`The next mirror run catches GitHub up to commit ${st.github}.`); } draw(); });
+$('#aReset').addEventListener('click', init);
+
+/* =============== 4. HUB =============== */
+const HUB = {
+  sites: { h: 'Each topic its own website', p: 'Every topic repo publishes its own GitLab Pages site at its own address. Simple to set up, but the hub becomes a page of links: it can no longer open topic pages inside itself, share the theme, or search them.',
+    addr: [['Hub', 'learn.prabidhis.com'], ['Oracle', 'oracle.prabidhis.com'], ['Korean', 'hangul.prabidhis.com']],
+    chk: [[0, 'Day/Twilight/Dark choice shared by every page'], [0, 'Hub opens topic pages inside its frame and hides their own theme switch'], [0, 'One search box finds pages in every topic'], [1, 'Each topic has its own repo, history and issues'], [1, 'A topic can go live without touching the hub']] },
+  one: { h: 'Topic repos, one website', p: 'Each big topic gets its own repo, but the hub\'s pipeline copies their pages in before it deploys. Visitors see one address, so everything that works today keeps working. Small topics stay as folders in the hub. Hangul Study stays a separate site and is simply linked.',
+    addr: [['Hub', 'learn.prabidhis.com'], ['Oracle', 'learn.prabidhis.com/oracle/…'], ['Korean grammar', 'learn.prabidhis.com/languages/…']],
+    chk: [[1, 'Day/Twilight/Dark choice shared by every page'], [1, 'Hub opens topic pages inside its frame and hides their own theme switch'], [1, 'One search box finds pages in every topic'], [1, 'Each topic has its own repo, history and issues'], [2, 'A topic goes live when the hub redeploys, which a topic push can trigger']] }
+};
+let hub = 'one';
+function drawHub(){
+  const h = HUB[hub];
+  document.querySelectorAll('#hubMode [data-h]').forEach(b => b.setAttribute('aria-pressed', b.dataset.h === hub));
+  $('#hubH').textContent = h.h; $('#hubP').textContent = h.p;
+  $('#hubAddr').innerHTML = h.addr.map(([n, a]) => `<div class="addr"><small>${esc(n)}</small><code>${esc(a)}</code></div>`).join('');
+  $('#hubChk').innerHTML = h.chk.map(([y, t]) => `<li class="${y === 1 ? 'y' : y === 2 ? 'w' : 'n'}"><b>${y === 1 ? '✓' : y === 2 ? '~' : '✗'}</b><span>${esc(t)}</span></li>`).join('');
+}
+document.querySelectorAll('#hubMode [data-h]').forEach(b => b.addEventListener('click', () => { hub = b.dataset.h; drawHub(); }));
+
+/* =============== 6. QUIZ =============== */
+const QUIZ = [
+  {q:'What is "origin"?', o:['The first commit in a project', 'A saved name for another copy of the project, with where to fetch from and push to', 'GitLab\'s name for the main branch'], a:1, w:'It is just a name in your project\'s settings. "origin" is the usual name for the main remote.'},
+  {q:'With "push to both from this Mac", you fix a typo on GitLab\'s website. What does GitHub have?', o:['The fix, straight away', 'The old version, until this Mac pulls and pushes again'], a:1, w:'Only pushes from this Mac reach GitHub. The next pull-and-push carries every missing commit across.'},
+  {q:'Why does a GitLab mirror need a GitHub token, but pushing from your Mac doesn\'t?', o:['Mirrors are a paid feature', 'Your Mac is already signed in to GitHub; GitLab isn\'t, so it needs its own key', 'Tokens make pushes faster'], a:1, w:'The token lets GitLab write to GitHub on its own, without your computer.'},
+  {q:'Why keep topic repos on one website instead of giving each its own address?', o:['Separate websites cost money', 'Browsers share saved settings and let pages work together only within one address', 'GitLab allows only one website per account'], a:1, w:'One address keeps the shared theme, the hub\'s frame and search working. Separate sites would each be their own locked drawer.'},
+  {q:'After adding two push addresses, where does "git pull" download from?', o:['Both, and it merges them', 'Only the fetch address, GitLab'], a:1, w:'Push addresses don\'t change fetching. GitLab stays the source of truth.'}
+];
+let qRight = 0, qDone = 0;
+function buildQuiz(){
+  qRight = qDone = 0; $('#qS').textContent = `Answer all ${QUIZ.length} questions to check your understanding.`;
+  $('#qB').innerHTML = QUIZ.map((q, i) => `<div class="q" data-i="${i}"><b>${i + 1}. ${esc(q.q)}</b><div class="opts">${q.o.map((t, k) => `<button data-k="${k}">${esc(t)}</button>`).join('')}</div><p class="why" hidden></p></div>`).join('');
+}
+$('#qB').addEventListener('click', e => {
+  const b = e.target.closest('.opts button'); if (!b || b.disabled) return;
+  const box = b.closest('.q'), q = QUIZ[+box.dataset.i], pick = +b.dataset.k, btns = box.querySelectorAll('.opts button');
+  btns.forEach((x, k) => { x.disabled = true; if (k === q.a) x.classList.add('right'); else if (k === pick) x.classList.add('wrong'); });
+  const why = box.querySelector('.why'); why.hidden = false; why.textContent = (pick === q.a ? 'Right. ' : 'Not quite. ') + q.w;
+  qDone++; if (pick === q.a) qRight++;
+  $('#qS').textContent = qDone === QUIZ.length ? `You got ${qRight} of ${QUIZ.length} right.` + (qRight === QUIZ.length ? ' Well done.' : ' Reset to try again.') : `${qDone} of ${QUIZ.length} answered.`;
+});
+$('#qR').addEventListener('click', buildQuiz);
+
+init(); drawHub(); buildQuiz();
+/* =============== THEME =============== */
+window.onThemeChange = () => {};
+(function(){
+  const ICONS={
+    day:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    twilight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v5M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4"/></svg>',
+    dark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'};
+  const LIST=[['day','Day'],['twilight','Twilight'],['dark','Dark']];
+  const root=document.documentElement, box=document.getElementById('themes');
+  const cur=()=>root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'day');
+  function paint(){ const c=cur(); box.innerHTML=LIST.map(([k,l])=>`<button data-k="${k}" aria-pressed="${k===c}" title="${l} mode">${ICONS[k]}<span>${l}</span></button>`).join('');
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>set(b.dataset.k)); }
+  function set(t){ root.dataset.theme=t; try{localStorage.setItem('lab-theme',t)}catch(e){} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(!root.dataset.theme){ paint(); window.onThemeChange(); } });
+  window.addEventListener('storage',e=>{ if(e.key==='lab-theme'&&e.newValue){ root.dataset.theme=e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>

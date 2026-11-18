@@ -193,6 +193,11 @@ table.dt{min-width:760px}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 footer{color:var(--muted);font-size:.8rem;text-align:center;margin-top:24px}
+.more{margin-top:24px;padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;background:var(--surface);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:space-between}
+.more p{margin:0;color:var(--muted);font-size:.9rem}
+.more b{color:var(--text)}
+.more a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+.more a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -264,6 +269,11 @@ footer{color:var(--muted);font-size:.8rem;text-align:center;margin-top:24px}
       <div class="table-wrap" style="margin-top:12px" id="dictWrap"></div>
     </details>
   </section>
+
+  <aside class="more" aria-label="Keep learning">
+    <p><b>Keep learning:</b> learn to read and write the Korean alphabet itself on Hangul Study, a separate site.</p>
+    <a href="https://hangul.prabidhis.com/" target="_blank" rel="noopener">hangul.prabidhis.com ↗<span class="sr"> (opens in a new tab)</span></a>
+  </aside>
 
   <footer>Runs entirely in your browser · no network requests · data stays in local storage on this device.<br>The parser is rule-based: treat its output as a strong first draft and correct it in the table.</footer>
 </div>
