@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-N5oTGrDFAjulXDefmNpXy7Uj0Y2M7QSwNSF0m+t1f2Q='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-TUBjppOh1V10wXHU20Yz58rwCYoFYo/90uD5GPiyBv0='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Interactive lab: how sound, speakers and amplifiers work, what ohms and sensitivity mean, series vs parallel wiring, and what a 200 W label really delivers.">
@@ -123,6 +123,24 @@ code{background:var(--panel2);padding:1px 6px;border-radius:6px;font-size:13.5px
 }
 @keyframes flow{to{stroke-dashoffset:-12}}
 @keyframes flow2{to{stroke-dashoffset:-14}}
+.chain{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.chain li{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 9px}
+.chain li+li::before{content:"→";margin:0 7px 0 -2px;color:var(--muted)}
+.chain li+li{display:flex;align-items:center}
+.inspect{border:1px solid var(--accent);background:var(--accbg);border-radius:12px;padding:12px 14px;margin:0 0 14px}
+.inspect .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:0}
+.inspect h3{margin:2px 0 4px;font-size:18px}
+.inspect p{margin:0 0 6px;font-size:14.5px}.inspect .s{color:var(--muted);margin:0}
+.hint2{color:var(--muted);font-size:13px!important;margin:0 0 8px!important}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:13.5px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.chips button:hover{border-color:var(--accent)}
+.chips button[aria-pressed="true"]{background:var(--accbg);border-color:var(--accent);color:var(--accent);font-weight:600}
+.ut{display:block;font-size:14.5px}.ut.hint{font-size:13px}
+button.ch{width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer}
+button.ch:hover{border-color:var(--accent)}
+tr.hl td{background:var(--goodbg)}
+td.unk{color:var(--muted);font-style:italic}
 footer{color:var(--muted);font-size:13px;margin-top:24px}
 </style>
 </head>
@@ -135,9 +153,9 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
     </div>
   </header>
   <h1>Speakers &amp; amps: <em>push, pipes and loudness</em></h1>
-  <p class="lede">How sound is made, what an amplifier really does, what ohms and sensitivity mean, how to wire four speakers to a two-channel amp, and why a "200 W" amp delivers about 30. Everything below is live: drag, tap and watch the numbers.</p>
+  <p class="lede">How sound is made, what an amplifier really does, what ohms and sensitivity mean, how to wire four speakers to a two-channel amp, why a "200 W" amp delivers about 30, and what changes when you move to a home-theater receiver. Everything below is live: drag, tap and watch the numbers.</p>
   <nav class="toc" aria-label="Sections">
-    <a href="#sound">1 Sound</a><a href="#pipe">2 Push and pipes</a><a href="#wiring">3 Wiring lab</a><a href="#label">4 The 200 W label</a><a href="#damage">5 What hurts speakers</a><a href="#challenges">6 Challenges</a><a href="#cheat">7 Cheat sheet</a>
+    <a href="#sound">1 Sound</a><a href="#pipe">2 Push and pipes</a><a href="#wiring">3 Wiring lab</a><a href="#label">4 The 200 W label</a><a href="#damage">5 What hurts speakers</a><a href="#receiver">6 To a receiver</a><a href="#formats">7 Ears or eyes</a><a href="#generations">8 Receiver generations</a><a href="#moving">9 Moving over</a><a href="#challenges">10 Challenges</a><a href="#cheat">11 Cheat sheet</a>
   </nav>
 
   <section class="card" id="sound">
@@ -289,17 +307,99 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
     <p class="note">Warning signs: fuzzy or crackling sound, popping from the woofer, a hot smell. Turn it down straight away.</p>
   </section>
 
+  <section class="card" id="receiver">
+    <h2>6 · From two channels to a receiver</h2>
+    <p class="sub">A two-channel amp can only make a left and a right. A home-theater receiver has a separate amp for every speaker, plus the decoders that split a movie's sound into those channels. Compare today's series setup with a 5-channel receiver for each kind of source.</p>
+    <div class="analogy"><b>Analogy:</b> a two-channel amp is a two-lane road. Wire four speakers to it and two cars share each lane, so the rear cars can only follow the front ones. A receiver gives every speaker its own lane and a traffic controller that sends each sound where it belongs.</div>
+    <div class="seg" id="rMode" role="group" aria-label="Amplifier"></div>
+    <div class="seg" id="rSrc" role="group" aria-label="Source" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"></div>
+    <div class="cols">
+      <div>
+        <div class="viz">
+          <svg viewBox="0 0 380 300" role="img" aria-labelledby="rAlt"><title id="rAlt">Top-down room: screen at the top, front left, center and front right speakers below it, seating in the middle, and two surround speakers at the back. Each speaker shows what it plays for the chosen setup.</title>
+            <rect x="110" y="8" width="160" height="8" rx="4" fill="var(--muted)"/>
+            <text class="lb" x="190" y="30" text-anchor="middle">Screen</text>
+            <g id="rRoom"></g>
+            <rect class="sh" x="130" y="140" width="120" height="30" rx="15"/>
+            <text class="lb" x="190" y="159" text-anchor="middle">Seats</text>
+          </svg>
+          <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>Its own channel</span><span><span class="sw" style="background:var(--warn)"></span>Shares a channel in series</span><span><span class="sw" style="background:var(--muted)"></span>Silent</span></div>
+        </div>
+        <ol class="chain" id="rChain" aria-label="Signal path"></ol>
+      </div>
+      <div>
+        <div class="stats">
+          <div class="stat"><p class="k">Load per channel</p><p class="v" id="rLoad"></p><p class="s" id="rLoadS"></p></div>
+          <div class="stat"><p class="k">Channel power</p><p class="v" id="rPow"></p><p class="s" id="rPowS"></p></div>
+          <div class="stat"><p class="k">Center speaker</p><p class="v" id="rCtr"></p><p class="s" id="rCtrS"></p></div>
+          <div class="stat"><p class="k">Surround effects</p><p class="v" id="rSur"></p><p class="s" id="rSurS"></p></div>
+        </div>
+        <p class="status" id="rSt"></p>
+        <p class="note">Speakers: Polk TS550T fronts and Polk CS1 center (8 Ω), Sony SS-CS5 surrounds (6 Ω). Today's amp is the Douk ST-01 Pro: a tube preamp stage feeding a two-channel Class-D power amp. The receiver is a 7.2-channel Denon AVR-S760H with five channels used.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="formats">
+    <h2>7 · For your ears or your eyes?</h2>
+    <p class="sub">Receiver boxes and TV menus mix sound formats, picture formats and the cables between them. Sorting them into three piles makes the labels make sense. Tap any name.</p>
+    <div class="analogy"><b>Quick rule:</b> <b>Dolby Atmos</b> is sound. <b>Dolby Vision</b> is picture. <b>HDMI eARC</b> is the road the sound travels from the TV to the receiver.</div>
+    <div class="inspect" id="fmtBox" aria-live="polite"></div>
+    <div class="grid3">
+      <div class="tile"><h3>For your ears: sound</h3><p class="hint2">Decoded by the receiver and sent to the speakers</p><div class="chips" id="fmtEar"></div></div>
+      <div class="tile"><h3>For your eyes: picture</h3><p class="hint2">Passed through the receiver to the TV untouched</p><div class="chips" id="fmtEye"></div></div>
+      <div class="tile"><h3>The roads between</h3><p class="hint2">Cables and handshakes, not formats</p><div class="chips" id="fmtRoad"></div></div>
+    </div>
+  </section>
+
+  <section class="card" id="generations">
+    <h2>8 · What each receiver generation added</h2>
+    <p class="sub">Older receivers can sound great but miss features that new TVs and streaming apps expect. The year roughly tells you which.</p>
+    <div style="overflow-x:auto">
+    <table>
+      <tr><th>Roughly</th><th>What arrived</th><th>What it means now</th></tr>
+      <tr><td>Before HDMI (up to ~2005)</td><td>Dolby Digital and DTS 5.1 over optical or coax</td><td>No HDMI at all, so no lossless movie sound and no TV return path</td></tr>
+      <tr><td>~2006–2013</td><td>HDMI with Dolby TrueHD and DTS-HD Master Audio; ARC from HDMI 1.4</td><td>Lossless discs work, but no 4K copy protection, so 4K streaming through it can fail or drop to HD</td></tr>
+      <tr><td>~2014–2018</td><td>4K HDR with HDCP 2.2; Dolby Atmos and DTS:X</td><td>4K and 3D sound work, but usually ARC only, so lossless sound from TV apps can't reach the receiver</td></tr>
+      <tr><td>~2019–2020</td><td>eARC and HDCP 2.3</td><td>Lossless and multichannel sound from the TV's own apps</td></tr>
+      <tr><td>2020 onward</td><td>HDMI 2.1: 8K/60, 4K/120, VRR and ALLM for consoles</td><td>Full-speed gaming passes through the receiver</td></tr>
+    </table>
+    </div>
+    <p class="sub" style="margin-top:16px">A higher series letter doesn't always mean more channels. Filter the Denon range:</p>
+    <div class="seg" id="dFlt" role="group" aria-label="Filter" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))"></div>
+    <div style="overflow-x:auto"><table id="dTbl"></table></div>
+    <p class="note">"Checked" says where each row was confirmed on 2026-11-18. Rows marked "not re-checked" come from general knowledge of the range; confirm them on Denon's spec sheet before buying.</p>
+  </section>
+
+  <section class="card" id="moving">
+    <h2>9 · Moving over: rewire, then check a used receiver</h2>
+    <p class="sub">Four steps take the speakers off the series chain and keep the tube sound for records.</p>
+    <div class="grid3">
+      <div class="tile"><h3>1 · Un-series</h3><p>Power everything off. Remove the jumper wires that chain each Sony behind a Polk, and disconnect all speaker wires from the Douk.</p></div>
+      <div class="tile"><h3>2 · One speaker per channel</h3><p>On the receiver: Polk towers on Front L/R, Polk CS1 on Center, Sonys on Surround L/R. Red to red, black to black.</p></div>
+      <div class="tile"><h3>3 · Keep the tubes for vinyl</h3><p>Turntable switched to LINE → Douk input → Douk's 3.5 mm line out → 3.5 mm-to-RCA cable → a receiver line input such as Media Player. Never the receiver's Phono input, and never the Douk's speaker terminals.</p></div>
+      <div class="tile"><h3>4 · Calibrate</h3><p>Run the receiver's Audyssey setup with its microphone at your seat. It sets each speaker's distance, level and crossover.</p></div>
+    </div>
+    <div class="row" style="margin-top:18px;justify-content:space-between;flex-wrap:wrap">
+      <p class="sub" style="margin:0">Buying used? Tap each check as you do it.</p>
+      <span><b id="uDone">0 of 8 checked</b> <button class="btn" id="uReset" style="min-height:34px;margin-left:8px">Reset</button></span>
+    </div>
+    <div id="uList"></div>
+  </section>
+
   <section class="card" id="challenges">
-    <h2>6 · Challenges</h2>
+    <h2>10 · Challenges</h2>
     <p class="sub">Each one ticks itself when you manage it in the sections above.</p>
     <div class="ch" id="c1"><span class="dot">✓</span><div><p><b>Chain reaction.</b> In the wiring lab, make each channel see exactly 14 Ω.</p><p class="hint">Hint: in a chain, ohms add.</p></div></div>
     <div class="ch" id="c2"><span class="dot">✓</span><div><p><b>Loud and clean.</b> In section 4, get the Polk alone to 100 dB or more without clipping.</p><p class="hint">Hint: how many watts did that take? Fewer than you'd think.</p></div></div>
     <div class="ch" id="c3"><span class="dot">✓</span><div><p><b>Too greedy.</b> In the wiring lab, build a load under 3 Ω that would put the amp at risk.</p><p class="hint">Hint: lower both speakers' ohms and lay the pipes side by side.</p></div></div>
+    <div class="ch" id="c5"><span class="dot">✓</span><div><p><b>Find the voice.</b> In section 6, give the center speaker something to say.</p><p class="hint">Hint: a two-channel amp has no center output.</p></div></div>
+    <div class="ch" id="c6"><span class="dot">✓</span><div><p><b>Keep the glow.</b> In section 6, play a record through the tubes and the receiver together.</p><p class="hint">Hint: the Douk becomes a preamp.</p></div></div>
     <div class="ch" id="c4"><span class="dot">✓</span><div><p><b>Fair fight.</b> Wire both in parallel and make speaker B exactly as loud as speaker A.</p><p class="hint">Hint: in parallel both get the same push, so only one number separates them.</p></div></div>
   </section>
 
   <section class="card" id="cheat">
-    <h2>7 · Cheat sheet</h2>
+    <h2>11 · Cheat sheet</h2>
     <div style="overflow-x:auto">
     <table>
       <tr><th>Thing</th><th>Who decides it</th><th>Analogy</th><th>Why it matters</th></tr>
@@ -307,6 +407,7 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
       <tr><td>Impedance (Ω)</td><td>The speaker, fixed; wiring combines them</td><td>Pipe narrowness</td><td>Sets how hard the amp works. Too low overheats it</td></tr>
       <tr><td>Sensitivity (dB)</td><td>The speaker, fixed</td><td>Miles per gallon</td><td>+3 dB is worth double the amp power</td></tr>
       <tr><td>Current, watts, loudness</td><td>Nobody: they are results</td><td>Flow and splash</td><td>What you actually hear and what heats the coil</td></tr>
+      <tr><td>Channels</td><td>The amp, fixed: one amp inside per channel</td><td>Lanes on a road</td><td>A 2-channel amp can't make a center or real surrounds</td></tr>
       <tr><td>Max push, minimum load</td><td>The amp and its power supply, fixed</td><td>The ceiling</td><td>Go past it and the signal clips</td></tr>
     </table>
     </div>
@@ -316,7 +417,7 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
       <div class="tile"><h3>Reading a label</h3><ul><li>Peak or "max" watts: a sprint</li><li>Continuous (RMS) watts: cruising speed</li><li>A speaker's watt rating is what it survives, not what it draws</li></ul></div>
     </div>
   </section>
-  <footer>Standalone page: no internet, no libraries. Numbers are a simplified model for learning, not a measurement of any product.</footer>
+  <footer>Standalone page: no internet, no libraries. Numbers are a simplified model for learning, not a measurement of any product. Receiver details in sections 6 to 8 were checked against Denon's pages and retail listings on 2026-11-18 where marked.</footer>
 </div>
 
 <script>
@@ -326,7 +427,7 @@ var $=function(id){return document.getElementById(id)};
 var AMP={vclean:15,minLoad:3,over:18.75};
 var S={A:{name:'Polk',r:8,s:91},B:{name:'Sony',r:6,s:87}};
 var st={pSpk:'A',pVol:40,wMode:'A',wVol:40,lLoad:'A',lVol:40};
-var done={c1:false,c2:false,c3:false,c4:false};
+var done={c1:false,c2:false,c3:false,c4:false,c5:false,c6:false};
 var still=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 function fmtW(p){return (p<10?p.toFixed(1):Math.round(p))+' W'}
@@ -464,6 +565,133 @@ function tone(){
 function setTone(){if(au&&au.on){au.osc.frequency.setTargetAtTime(sndHz(),au.ctx.currentTime,0.02);au.gain.gain.setTargetAtTime(0.12*snd.a/100,au.ctx.currentTime,0.03)}}
 function updSound(){$('sFreqO').textContent=sndHz()+' Hz';$('sAmpO').textContent=snd.a+'%';setTone();if(still)drawSound(0)}
 
+/* ---------- 6: receiver ---------- */
+var rx={mode:'douk',src:'stream'};
+var SRC=[{v:'stream',label:'TV streaming app'},{v:'disc',label:'4K Blu-ray or console'},{v:'stereo',label:'Stereo TV / YouTube'},{v:'vinyl',label:'Vinyl record'}];
+var CHAIN={
+  douk:{stream:['TV app','TV','Optical: stereo only','Douk ST-01 Pro','2 channels, 2 speakers each'],
+        disc:['Disc player or console','TV (HDMI)','Optical: stereo only','Douk ST-01 Pro','2 channels, 2 speakers each'],
+        stereo:['YouTube or live TV','TV','Optical: stereo','Douk ST-01 Pro','2 channels, 2 speakers each'],
+        vinyl:['Turntable (LINE)','Douk RCA input','Tube preamp + Class-D amp','2 channels, 2 speakers each']},
+  avr:{stream:['TV app','TV keeps the picture','HDMI eARC: Dolby Digital Plus, Atmos','Receiver decodes','5 speakers, 5 channels'],
+       disc:['Disc player or console','Receiver HDMI in: TrueHD, DTS-HD MA, Atmos','Receiver decodes','HDMI out: picture to TV','5 speakers, 5 channels'],
+       stereo:['YouTube or live TV','HDMI eARC: 2-channel','Receiver upmixer: Dolby Surround or Neural:X','5 speakers, 5 channels'],
+       vinyl:['Turntable (LINE)','Douk tube preamp','Douk 3.5 mm line out → RCA','Receiver line input (not Phono)','Front left and right']}
+};
+var NOTE={
+  douk:{stream:'The TV sends only two-channel stereo over optical. Each Douk channel drives a Polk and a Sony in series, so the rear Sonys play a quieter copy of the front, and the center has nowhere to connect: voices come from the towers.',
+        disc:'The Douk has no HDMI, so lossless TrueHD or DTS-HD tracks reach it as two-channel stereo. A footstep meant for behind you plays from the front and back at once.',
+        stereo:'A stereo show sounds the same as on the Douk alone, spread over four speakers. In series the higher-ohm Polk takes the bigger share of the push, and there is no way to turn the rears up or down on their own.',
+        vinyl:'Records sound full on all four speakers, but each channel sees 14 Ω, so the amp delivers only about 57% of the power it would into one 8 Ω speaker at the same setting.'},
+  avr:{stream:'The TV shows the picture and sends the soundtrack down one HDMI eARC cable. Streaming Atmos uses Dolby Digital Plus, which even plain ARC can carry; eARC matters for lossless formats.',
+       disc:'Plug the player into the receiver, not the TV. The receiver decodes lossless TrueHD or DTS-HD Master Audio into five channels and passes the 4K picture on to the TV.',
+       stereo:'An upmixer works out which sounds are shared by both channels, mostly voices, and puts them in the center. Room sound goes to the surrounds.',
+       vinyl:'The Douk becomes a tube preamp: its line output feeds a receiver line input, and the receiver drives the towers at their own 8 Ω. Set the Douk to a moderate level and use the receiver\'s volume. Never connect the Douk\'s speaker terminals to the receiver, and don\'t use the Phono input: the turntable is already at line level.'}
+};
+function spkBox(x,y,name,ohm,line2,state){
+  var stroke=state==='own'?'var(--accent)':state==='share'?'var(--warn)':'var(--muted)';
+  return '<g><rect x="'+x+'" y="'+y+'" width="116" height="58" rx="8" fill="var(--panel)" stroke="'+stroke+'" stroke-width="'+(state==='off'?1:2.2)+'"'+(state==='off'?' stroke-dasharray="4 4"':'')+'/>'+
+    '<text class="lh" x="'+(x+58)+'" y="'+(y+18)+'" text-anchor="middle" style="font-size:12.5px">'+name+'</text>'+
+    '<text class="lb" x="'+(x+58)+'" y="'+(y+33)+'" text-anchor="middle">'+ohm+'</text>'+
+    '<text class="lb" x="'+(x+58)+'" y="'+(y+49)+'" text-anchor="middle" style="fill:'+(state==='off'?'var(--muted)':stroke)+'">'+line2+'</text></g>';
+}
+function updRx(){
+  seg($('rMode'),[{v:'douk',label:'Today: 2-channel amp, speakers in series'},{v:'avr',label:'Next: 5-channel receiver'}],rx.mode,function(v){rx.mode=v;updRx()});
+  seg($('rSrc'),SRC,rx.src,function(v){rx.src=v;updRx()});
+  var d=rx.mode==='douk',s=rx.src,movie=s==='stream'||s==='disc',g='';
+  if(d){
+    g+=spkBox(4,44,'Polk TS550T L','8 Ω','57% of the push','share')+spkBox(132,44,'Polk CS1','8 Ω','not connected','off')+spkBox(260,44,'Polk TS550T R','8 Ω','57% of the push','share');
+    g+='<path d="M62 102 V222" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="6 5"/><path d="M318 102 V222" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="6 5"/>';
+    g+='<text class="lb" x="68" y="190">in series</text><text class="lb" x="312" y="190" text-anchor="end">in series</text>';
+    g+=spkBox(4,222,'Sony SS-CS5 L','6 Ω','copy of front L','share')+spkBox(260,222,'Sony SS-CS5 R','6 Ω','copy of front R','share');
+  } else {
+    var v=s==='vinyl';
+    g+=spkBox(4,44,'Polk TS550T L','8 Ω',v?'record, left':'front channel','own')+spkBox(132,44,'Polk CS1','8 Ω',v?'off for stereo':s==='stereo'?'upmixed voices':'most dialogue',v?'off':'own')+spkBox(260,44,'Polk TS550T R','8 Ω',v?'record, right':'front channel','own');
+    g+=spkBox(4,222,'Sony SS-CS5 L','6 Ω',v?'off for stereo':s==='stereo'?'room ambience':'surround effects',v?'off':'own')+spkBox(260,222,'Sony SS-CS5 R','6 Ω',v?'off for stereo':s==='stereo'?'room ambience':'surround effects',v?'off':'own');
+  }
+  $('rRoom').innerHTML=g;
+  $('rChain').innerHTML=CHAIN[rx.mode][s].map(function(t){return '<li>'+t+'</li>'}).join('');
+  if(d){
+    $('rLoad').textContent='14 Ω';$('rLoadS').textContent='8 Ω Polk + 6 Ω Sony in series';
+    $('rPow').textContent='57%';$('rPowS').textContent='of what one 8 Ω speaker would get (8 ÷ 14)';
+    $('rCtr').textContent='Silent';$('rCtrS').textContent='A 2-channel amp has no center output';
+    $('rSur').textContent='No';$('rSurS').textContent='The rears copy the fronts';
+  } else {
+    var vv=s==='vinyl';
+    $('rLoad').textContent='8 Ω / 6 Ω';$('rLoadS').textContent='Each speaker on its own channel';
+    $('rPow').textContent='100%';$('rPowS').textContent='Each channel drives one speaker at its own rating';
+    $('rCtr').textContent=vv?'Off':s==='stereo'?'Upmixed':'Dialogue';$('rCtrS').textContent=vv?'Plain stereo for records':s==='stereo'?'Voices pulled out of stereo':'Most speech is mixed to the center';
+    $('rSur').textContent=vv?'Off':s==='stereo'?'Ambience':'Yes';$('rSurS').textContent=vv?'Optional: an upmixer can add them':s==='stereo'?'Created by the upmixer':'Their own sounds, not copies';
+  }
+  $('rSt').className='status '+(d?'warn':s==='vinyl'?'warn':'ok');
+  $('rSt').textContent=NOTE[rx.mode][s];
+  if(!d&&(movie||s==='stereo'))done.c5=true;
+  if(!d&&s==='vinyl')done.c6=true;
+  check();
+}
+
+/* ---------- 7: formats ---------- */
+var FMT={
+  ear:[['atmos','Dolby Atmos','3D sound: effects are placed as objects around and above you instead of being fixed to channels.','With five ear-level speakers, many recent receivers can simulate height. Streaming Atmos arrives inside Dolby Digital Plus; disc Atmos inside TrueHD.'],
+       ['dtsx','DTS:X','DTS\'s 3D object-based format, common on 4K Blu-ray.','Decoded by current receivers such as the AVR-S760H. A two-channel amp can only ever get a stereo version.'],
+       ['truehd','Dolby TrueHD','Lossless, studio-master surround from Blu-ray and 4K discs.','Needs HDMI or eARC. Plain ARC and optical can\'t carry it.'],
+       ['dtshd','DTS-HD Master Audio','DTS\'s lossless surround format, used on many Blu-rays and concert discs.','Same roads as TrueHD: HDMI or eARC only.'],
+       ['lpcm','Multichannel PCM','Uncompressed surround sent straight from consoles and streaming boxes.','Optical carries only two channels of PCM; HDMI or eARC carries 5.1 or 7.1.'],
+       ['ddplus','Dolby Digital Plus','The surround format of most streaming apps, and the carrier for streaming Atmos.','Small enough to travel over plain ARC as well as eARC.'],
+       ['upmix','Upmixers','Dolby Surround and DTS Neural:X turn stereo into surround: shared sounds such as voices go to the center, ambience to the surrounds.','Useful for YouTube, sports and older shows. Most current receivers include one or both.'],
+       ['files','Lossless music files','FLAC, ALAC and WAV music played from USB or over the network.','Handled by the receiver itself, separate from the analog record chain.']],
+  eye:[['dv','Dolby Vision','Picture, not sound: HDR that adjusts brightness and colour scene by scene.','If a player or console plugs into the receiver, the receiver must pass Dolby Vision through to the TV.'],
+       ['hdr','HDR10, HDR10+, HLG','Other HDR picture formats used by discs, apps and live broadcasts.','Also passed through untouched; the receiver never changes the picture.']],
+  road:[['earc','HDMI eARC vs ARC','The return road that carries sound from the TV\'s own apps down to the receiver.','ARC: compressed surround (Dolby Digital, DTS, Dolby Digital Plus with Atmos) and stereo PCM. eARC adds lossless TrueHD, DTS-HD MA and multichannel PCM.'],
+        ['hdcp','HDCP 2.2 / 2.3','The copy-protection handshake that 4K sources require.','A receiver without it in the chain can make 4K apps and discs fail or drop to HD.'],
+        ['hdmi21','HDMI 2.1','Faster HDMI: 4K/120 and 8K/60, plus VRR and ALLM for smoother, low-lag gaming.','Matters for consoles plugged into the receiver. Check which inputs support it; not all do.']]
+};
+var fmtSel='atmos';
+function updFmt(){
+  var all=FMT.ear.concat(FMT.eye,FMT.road),f=all.filter(function(x){return x[0]===fmtSel})[0];
+  var kind=FMT.ear.indexOf(f)>=0?'For your ears: sound':FMT.eye.indexOf(f)>=0?'For your eyes: picture':'The road between';
+  $('fmtBox').innerHTML='<p class="k">'+kind+'</p><h3>'+f[1]+'</h3><p>'+f[2]+'</p><p class="s"><b>In this setup:</b> '+f[3]+'</p>';
+  [['fmtEar',FMT.ear],['fmtEye',FMT.eye],['fmtRoad',FMT.road]].forEach(function(p){
+    $(p[0]).innerHTML=p[1].map(function(x){return '<button data-f="'+x[0]+'" aria-pressed="'+(x[0]===fmtSel)+'">'+x[1]+'</button>'}).join('');
+  });
+}
+document.querySelectorAll('#fmtEar,#fmtEye,#fmtRoad').forEach(function(el){el.addEventListener('click',function(e){var b=e.target.closest('[data-f]');if(!b)return;fmtSel=b.dataset.f;updFmt()})});
+
+/* ---------- 8: Denon range ---------- */
+var DEN=[
+  {m:'AVR-S670H',t:'s',h21:true,ch:'5.2',w:'75 W',eq:'Audyssey MultEQ',hd:'not re-checked',at:'not re-checked',ph:'Yes (MM)',ok:'Denon page, comparison site'},
+  {m:'AVR-S750H (2019)',t:'s',h21:false,ch:'7.2',w:'75 W',eq:'Audyssey MultEQ',hd:'4K HDR, HDCP 2.3, eARC',at:'Atmos, DTS:X',ph:'not re-checked',ok:'Denon page, listings'},
+  {m:'AVR-S760H',t:'s',h21:true,ch:'7.2',w:'75 W',eq:'Audyssey MultEQ',hd:'8K/60, 4K/120 on some inputs, eARC',at:'Atmos, DTS:X',ph:'not confirmed',ok:'Denon page, listings',hl:true},
+  {m:'AVR-X1700H',t:'x',h21:true,ch:'7.2',w:'80 W',eq:'Audyssey MultEQ XT',hd:'8K HDMI, eARC',at:'Atmos, DTS:X',ph:'not re-checked',ok:'not re-checked'},
+  {m:'AVR-X3800H',t:'x',h21:true,ch:'9.4',w:'105 W',eq:'Audyssey MultEQ XT32',hd:'8K HDMI, eARC, pre-outs',at:'Atmos, DTS:X, IMAX Enhanced',ph:'not re-checked',ok:'not re-checked'}
+];
+var dFlt='all';
+function updDen(){
+  seg($('dFlt'),[{v:'all',label:'All'},{v:'s',label:'S series'},{v:'x',label:'X series'},{v:'h21',label:'8K / 4K120'}],dFlt,function(v){dFlt=v;updDen()});
+  var rows=DEN.filter(function(d){return dFlt==='all'||(dFlt==='h21'?d.h21:d.t===dFlt)});
+  $('dTbl').innerHTML='<tr><th>Model</th><th>Channels</th><th>Power (8 Ω, 2 ch)</th><th>Room calibration</th><th>HDMI</th><th>3D sound</th><th>Phono</th><th>Checked</th></tr>'+
+    rows.map(function(d){return '<tr'+(d.hl?' class="hl"':'')+'><td><b>'+d.m+'</b>'+(d.hl?'<br><span class="badge b-you">the receiver in section 6</span>':'')+'</td><td>'+d.ch+'</td><td>'+d.w+'</td><td>'+d.eq+'</td><td>'+d.hd+'</td><td>'+d.at+'</td><td>'+d.ph+'</td><td class="'+(d.ok==='not re-checked'?'unk':'')+'">'+d.ok+'</td></tr>'}).join('');
+}
+
+/* ---------- 9: used checklist ---------- */
+var USED=[
+  ['Model label','The sticker on the back shows the exact model you expect, and the serial matches the box if there is one.'],
+  ['Calibration microphone','The small Audyssey setup mic is included. Room calibration needs it.'],
+  ['Remote','It works, and the battery compartment has no corrosion.'],
+  ['Clean power-on','It switches on with a click from inside, the display lights normally, and nothing blinks red (a protection warning).'],
+  ['Menu on a TV','Connect the HDMI output to a TV and open Setup: proof that the HDMI output board works.'],
+  ['Test tone on every channel','Run the speaker test tone and hear each connected speaker, one at a time.'],
+  ['Back panel','No snapped speaker terminals, and the HDMI sockets aren\'t bent or loose.'],
+  ['Vents','No heavy dust, liquid marks or burnt smell through the top vents.']
+];
+var used=USED.map(function(){return false});
+function updUsed(){
+  $('uList').innerHTML=USED.map(function(u,i){return '<button class="ch'+(used[i]?' done':'')+'" data-u="'+i+'" aria-pressed="'+used[i]+'"><span class="dot">✓</span><span><span class="ut"><b>'+(i+1)+'. '+u[0]+'</b></span><span class="ut hint">'+u[1]+'</span></span></button>'}).join('');
+  var n=used.filter(Boolean).length;$('uDone').textContent=n+' of '+USED.length+' checked';
+}
+$('uList').addEventListener('click',function(e){var b=e.target.closest('[data-u]');if(!b)return;used[+b.dataset.u]=!used[+b.dataset.u];updUsed()});
+$('uReset').addEventListener('click',function(){used=used.map(function(){return false});updUsed()});
+
 /* ---------- challenges ---------- */
 function check(){
   var w=calc(st.wMode,AMP.vclean*st.wVol/100),l=st._l;
@@ -493,7 +721,7 @@ bind('bR',function(v){S.B.r=v;specs()});bind('bS',function(v){S.B.s=v;specs()});
 $('wReset').addEventListener('click',function(){S.A.r=8;S.A.s=91;S.B.r=6;S.B.s=87;$('aR').value=8;$('aS').value=91;$('bR').value=6;$('bS').value=87;specs()});
 window.addEventListener('resize',function(){if(still){drawSound(0);drawClip(0)}});
 
-updSound();updPipe();updLabel();updWire();paintTheme();
+updSound();updPipe();updLabel();updWire();updRx();updFmt();updDen();updUsed();paintTheme();
 if(still){drawSound(0);drawClip(0)}else requestAnimationFrame(loop);
 window.__lab={S:S,st:st,AMP:AMP,calc:calc,done:done,refresh:specs};
 })();
