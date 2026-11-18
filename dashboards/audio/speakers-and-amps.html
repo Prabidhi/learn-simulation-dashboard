@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-pM1HEmaEYSGWqRbFCG3JsPFfe5iqqwf1kD5DWr0nHaA='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-DUmBciwwMXaqdU7TGRIrnYRtVXl9kskLiUDTPpqBBvo='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Interactive lab: how sound, speakers and amplifiers work, what ohms and sensitivity mean, series vs parallel wiring, and what a 200 W label really delivers.">
@@ -314,8 +314,9 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
     <div class="seg" id="rMode" role="group" aria-label="Amplifier"></div>
     <div class="seg" id="rSrc" role="group" aria-label="Source" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"></div>
     <div id="rScrBox" hidden><p class="note" style="margin:0 0 6px">What shows the picture?</p><div class="seg" id="rScr" role="group" aria-label="Screen"></div>
-      <div id="rHookBox" hidden><p class="note" style="margin:0 0 6px">Where does the player or console plug in?</p><div class="seg" id="rHook" role="group" aria-label="Hookup"></div></div></div>
-    <div id="rSndBox" hidden><p class="note" style="margin:0 0 6px">A record or stereo show has only two channels. Choose how the receiver uses the other speakers:</p><div class="seg" id="rSnd" role="group" aria-label="Receiver sound mode"></div></div>
+      <p class="note" style="margin:-6px 0 12px">Every projector has HDMI for the picture. ARC is an extra feature on one HDMI port that sends sound <i>back</i> down the cable. To check, look for an HDMI port labelled ARC or eARC on the back.</p>
+      <div id="rHookBox" hidden><p class="note" style="margin:0 0 6px">Where does the video box plug in?</p><div class="seg" id="rHook" role="group" aria-label="Hookup"></div></div></div>
+    <div id="rSndBox" hidden><p class="note" style="margin:0 0 6px">This sound arrives as two channels. Choose how the receiver uses the other speakers:</p><div class="seg" id="rSnd" role="group" aria-label="Receiver sound mode"></div></div>
     <div class="cols">
       <div>
         <div class="viz">
@@ -353,6 +354,35 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
       <div class="tile"><h3>For your ears: sound</h3><p class="hint2">Decoded by the receiver and sent to the speakers</p><div class="chips" id="fmtEar"></div></div>
       <div class="tile"><h3>For your eyes: picture</h3><p class="hint2">Passed through the receiver to the TV untouched</p><div class="chips" id="fmtEye"></div></div>
       <div class="tile"><h3>The roads between</h3><p class="hint2">Cables and handshakes, not formats</p><div class="chips" id="fmtRoad"></div></div>
+    </div>
+
+    <h3 style="margin:22px 0 4px;font-size:17px">Which way does the sound flow? HDMI, ARC and eARC</h3>
+    <p class="sub">Sound flows <b>forward</b> from a source over any HDMI cable. It needs ARC or eARC only when it has to flow <b>backward</b>, from the screen to the receiver.</p>
+    <div class="analogy"><b>Analogy:</b> plain HDMI is a one-way road into the screen. ARC turns one HDMI port into a two-way road, so sound can drive back to the receiver. eARC is the same road with more lanes, wide enough for lossless sound.</div>
+    <div class="grid3">
+      <div class="tile"><h3>Roles, not boxes</h3><ul>
+        <li><b>Source</b> makes picture and sound: Apple TV, PlayStation, Xbox, Blu-ray, and a TV's own apps</li>
+        <li><b>Screen</b> shows the picture: TV or projector</li>
+        <li><b>Sound system</b> plays it: the receiver</li></ul>
+        <p class="hint2" style="margin-top:8px!important">A smart TV is both a source and a screen. A video box is only ever a source, so it never needs ARC.</p></div>
+      <div class="tile"><h3>Three kinds of HDMI port</h3><ul>
+        <li><b>HDMI</b>: picture and sound in only, nothing back</li>
+        <li><b>HDMI ARC</b>: sends back compressed surround, including streaming Atmos (Dolby Digital Plus), and stereo</li>
+        <li><b>HDMI eARC</b>: also sends back lossless TrueHD, DTS-HD Master Audio and multichannel PCM</li></ul>
+        <p class="hint2" style="margin-top:8px!important">Screens usually have one ARC or eARC port, labelled. On a receiver it's the HDMI output.</p></div>
+      <div class="tile"><h3>Both ends must agree</h3><ul>
+        <li>eARC screen + eARC receiver → eARC</li>
+        <li>eARC on one end, ARC on the other → ARC: surround, but no lossless</li>
+        <li>No ARC on either end → nothing comes back over HDMI; use optical</li></ul>
+        <p class="hint2" style="margin-top:8px!important">The AVR-S760H has eARC on its HDMI output.</p></div>
+    </div>
+    <div style="overflow-x:auto;margin-top:14px">
+    <table>
+      <tr><th>Roughly</th><th>HDMI version</th><th>Sound back from the screen</th></tr>
+      <tr><td>2002 to ~2009</td><td>HDMI 1.0 to 1.3</td><td>None over HDMI: only optical or the headphone jack</td></tr>
+      <tr><td>TVs from ~2010</td><td>HDMI 1.4 (2009) added ARC</td><td>One ARC port on nearly every TV; many budget TVs still stop here</td></tr>
+      <tr><td>TVs from ~2019</td><td>HDMI 2.1 (2017) added eARC</td><td>Common on mid-range TVs and up; still rarer on projectors</td></tr>
+    </table>
     </div>
   </section>
 
@@ -570,19 +600,18 @@ function setTone(){if(au&&au.on){au.osc.frequency.setTargetAtTime(sndHz(),au.ctx
 function updSound(){$('sFreqO').textContent=sndHz()+' Hz';$('sAmpO').textContent=snd.a+'%';setTone();if(still)drawSound(0)}
 
 /* ---------- 6: receiver ---------- */
-var rx={mode:'douk',src:'stream',snd:{stereo:'upmix',vinyl:'stereo'},scr:'tv',hook:'tv'};
-var PROJ=' Most projectors have no ARC or eARC, so they can\'t send sound back: everything plugs into the Denon, which keeps the sound and sends only the picture to the projector.';
-var SRC=[{v:'stream',label:'TV streaming app'},{v:'disc',label:'4K Blu-ray or console'},{v:'stereo',label:'Stereo TV / YouTube'},{v:'vinyl',label:'Vinyl record'}];
+var rx={mode:'douk',src:'stream',snd:{stereo:'upmix',vinyl:'stereo'},scr:'tv',hook:{tv:'screen',sproj:'screen',proj:'avr'}};
+var SRC=[{v:'stream',label:'Screen\'s own apps (Netflix on the TV)'},{v:'disc',label:'Video box: Apple TV, PlayStation, Xbox, Blu-ray'},{v:'stereo',label:'Stereo show / YouTube'},{v:'vinyl',label:'Vinyl record'}];
 var SND=[{v:'stereo',label:'Stereo: front two only'},{v:'upmix',label:'Upmix: Dolby Surround / Neural:X'},{v:'multi',label:'Multi Ch Stereo: same music everywhere',wide:true}];
+/* screens: name, how they send sound back to the Denon, button label */
+var SCR={tv:{n:'Hisense TV',w:'TV',link:'HDMI eARC',back:'eARC',label:'TV with eARC (like the Hisense)'},
+         sproj:{n:'Projector',w:'projector',link:'HDMI ARC/eARC',back:'ARC/eARC',label:'Projector with HDMI ARC/eARC'},
+         proj:{n:'Projector',w:'projector',link:'optical: stereo',back:'optical',label:'Projector without ARC'}};
 var SAFE=' The Douk is the tube preamp here: its 3.5 mm line out feeds a receiver line input. Never connect the Douk\'s speaker terminals to the receiver, and don\'t use the Phono input: the turntable is already at line level.';
-var NOTE={
-  douk:{stream:'The TV sends only two-channel stereo over optical. Each Douk channel drives a Polk and a Sony in series, so the rear Sonys play a quieter copy of the front, and the center has nowhere to connect: voices come from the towers.',
-        disc:'The Douk has no HDMI, so lossless TrueHD or DTS-HD tracks reach it as two-channel stereo. A footstep meant for behind you plays from the front and back at once.',
+var NOTE={douk:{stream:'The TV sends only two-channel stereo over optical. Each Douk channel drives a Polk and a Sony in series, so the rear Sonys play a quieter copy of the front, and the center has nowhere to connect: voices come from the towers.',
+        disc:'The Douk has no HDMI, so a video box\'s sound reaches it through the TV\'s optical output as two-channel stereo, even when the film has lossless surround. A footstep meant for behind you plays from the front and back at once.',
         stereo:'A stereo show sounds the same as on the Douk alone, spread over four speakers. In series the higher-ohm Polk takes the bigger share of the push, and there is no way to turn the rears up or down on their own.',
-        vinyl:'Records sound full on all four speakers, but each channel sees 14 Ω, so the amp delivers only about 57% of the power it would into one 8 Ω speaker at the same setting.'},
-  avr:{stream:'The TV shows the picture and sends the soundtrack down one HDMI eARC cable. Streaming Atmos uses Dolby Digital Plus, which even plain ARC can carry; eARC matters for lossless formats.',
-       disc:'Plug the player into the receiver, not the TV. The receiver decodes lossless TrueHD or DTS-HD Master Audio into five channels and passes the 4K picture on to the TV.'}
-};
+        vinyl:'Records sound full on all four speakers, but each channel sees 14 Ω, so the amp delivers only about 57% of the power it would into one 8 Ω speaker at the same setting.'}};
 var TWO={
   stereo:{stereo:'A stereo show has only two channels, so in Stereo mode only the two towers play, just like a stereo amp.',
           upmix:'An upmixer works out which sounds are shared by both channels, mostly voices, and puts them in the center. Room sound goes to the surrounds.',
@@ -591,6 +620,11 @@ var TWO={
          upmix:'Dolby Surround or Neural:X builds a center and surrounds from the record\'s two channels: sounds common to both go to the center, room sound to the surrounds. It fills the room, though many prefer plain Stereo for records.'+SAFE,
          multi:'Multi Ch Stereo, on many Denon receivers, plays the same record from all five speakers, like music in a shop. Everywhere at once, but not a real surround picture.'+SAFE}
 };
+/* where the sound comes from in receiver mode */
+function hookNow(){return rx.hook[rx.scr]}
+function viaOptical(){return rx.mode==='avr'&&rx.src!=='vinyl'&&rx.scr==='proj'&&(rx.src!=='disc'||hookNow()==='screen')}
+function twoCh(){return rx.src==='stereo'||rx.src==='vinyl'||viaOptical()}
+function sndKey(){return rx.src==='vinyl'?'vinyl':'stereo'}
 function spkBox(x,y,name,ohm,line2,state){
   var stroke=state==='own'?'var(--accent)':state==='share'?'var(--warn)':'var(--muted)';
   return '<g><rect x="'+x+'" y="'+y+'" width="116" height="58" rx="8" fill="var(--panel)" stroke="'+stroke+'" stroke-width="'+(state==='off'?1:2.2)+'"'+(state==='off'?' stroke-dasharray="4 4"':'')+'/>'+
@@ -600,37 +634,35 @@ function spkBox(x,y,name,ohm,line2,state){
 }
 /* what each receiver speaker plays: [front L, center, front R, surround L, surround R], null = silent */
 function roles(){
-  var s=rx.src,rec=s==='vinyl'?'record, ':'';
-  if(s==='stream'||s==='disc')return ['front channel','most dialogue','front channel','surround effects','surround effects'];
-  var m=rx.snd[s];
+  var rec=rx.src==='vinyl'?'record, ':'';
+  if(!twoCh())return ['front channel','most dialogue','front channel','surround effects','surround effects'];
+  var m=rx.snd[sndKey()];
   if(m==='stereo')return [rec+'left',null,rec+'right',null,null];
-  if(m==='upmix')return [rec+'left',s==='vinyl'?'center image':'voices',rec+'right','ambience','ambience'];
+  if(m==='upmix')return [rec+'left',rx.src==='vinyl'?'center image':'voices',rec+'right','ambience','ambience'];
   return ['left','left + right','right','copy of left','copy of right'];
 }
 /* signal path diagram: gear across the top, speakers across the bottom, one speaker-wire bus between */
 function box(x,w,a,b,c,dash){return '<rect x="'+x+'" y="8" width="'+w+'" height="46" rx="8" fill="var(--panel)" stroke="'+c+'" stroke-width="'+(dash?1:2)+'"'+(dash?' stroke-dasharray="4 4"':'')+'/>'+
   '<text class="lh" x="'+(x+w/2)+'" y="27" text-anchor="middle" style="font-size:12px">'+a+'</text><text class="lb" x="'+(x+w/2)+'" y="44" text-anchor="middle">'+b+'</text>'}
-function arrow(x1,x2,lab){return '<path d="M'+x1+' 31 H'+(x2-3)+'" stroke="var(--fg)" stroke-width="1.6" fill="none"/><path d="M'+(x2-8)+' 26 L'+(x2-2)+' 31 L'+(x2-8)+' 36" stroke="var(--fg)" stroke-width="1.6" fill="none"/>'+
-  '<text class="lb" x="'+((x1+x2)/2)+'" y="'+(x2-x1<60?70:23)+'" text-anchor="middle" style="font-size:10px">'+lab+'</text>'}
+function arrow(x1,x2,lab,warn){return '<path d="M'+x1+' 31 H'+(x2-3)+'" stroke="'+(warn?'var(--warn)':'var(--fg)')+'" stroke-width="1.6" fill="none"'+(warn?' stroke-dasharray="4 3"':'')+'/><path d="M'+(x2-8)+' 26 L'+(x2-2)+' 31 L'+(x2-8)+' 36" stroke="'+(warn?'var(--warn)':'var(--fg)')+'" stroke-width="1.6" fill="none"/>'+
+  '<text class="lb" x="'+((x1+x2)/2)+'" y="'+(x2-x1<60?70:23)+'" text-anchor="middle" style="font-size:10px'+(warn?';fill:var(--warn)':'')+'">'+lab+'</text>'}
 function chip(x,w,a,b,on,c){return '<rect x="'+x+'" y="104" width="'+w+'" height="46" rx="8" fill="var(--panel)" stroke="'+(on?c:'var(--muted)')+'" stroke-width="'+(on?2:1)+'"'+(on?'':' stroke-dasharray="4 4"')+'/>'+
   '<text class="lh" x="'+(x+w/2)+'" y="123" text-anchor="middle" style="font-size:11.5px'+(on?'':';fill:var(--muted)')+'">'+a+'</text><text class="lb" x="'+(x+w/2)+'" y="140" text-anchor="middle">'+b+'</text>'}
+var BOXV=['Video box','Apple TV, PS5'];
 function drawFlow(){
-  var d=rx.mode==='douk',s=rx.src,g='',c=d?'var(--warn)':'var(--accent)',amp;
-  var SRC1={stream:['TV app','on the TV'],disc:['Player','or console'],stereo:['TV','YouTube, live TV'],vinyl:['Turntable','LINE out']}[s];
-  if(!d&&s==='vinyl'){
-    g+=box(4,96,SRC1[0],SRC1[1],'var(--fg)')+arrow(100,140,'RCA')+box(140,100,'Douk ST-01 Pro','tube preamp','var(--fg)')+arrow(240,280,'3.5 mm → RCA')+box(280,96,'Denon receiver','line input','var(--accent)');amp=328;
-  } else if(d||(rx.scr==='tv'&&s!=='disc')){
-    var cable=d?(s==='vinyl'?'RCA':'optical'):'HDMI eARC';
-    var src0=!d?(s==='stream'?['Hisense TV','app + picture']:['Hisense TV','YouTube + picture']):SRC1;
-    g+=box(4,110,src0[0],src0[1],'var(--fg)')+arrow(114,184,cable)+(d?box(184,124,'Douk ST-01 Pro','2-channel amp',c):box(184,124,'Denon AVR-S760H','5 channels used',c));amp=246;
-    if(!d)g+='<text class="lb" x="376" y="35" text-anchor="end" style="font-size:10px">Douk: vinyl only</text>';
+  var d=rx.mode==='douk',s=rx.src,g='',c=d?'var(--warn)':'var(--accent)',amp,S=SCR[rx.scr],opt=viaOptical();
+  if(d){
+    var SRC1={stream:['TV app','on the TV'],disc:['Video box','via the TV'],stereo:['TV','YouTube, live TV'],vinyl:['Turntable','LINE out']}[s];
+    g+=box(4,110,SRC1[0],SRC1[1],'var(--fg)')+arrow(114,184,s==='vinyl'?'RCA':'optical')+box(184,124,'Douk ST-01 Pro','2-channel amp',c);amp=246;
+  } else if(s==='vinyl'){
+    g+=box(4,96,'Turntable','LINE out','var(--fg)')+arrow(100,140,'RCA')+box(140,100,'Douk ST-01 Pro','tube preamp','var(--fg)')+arrow(240,280,'3.5 mm → RCA')+box(280,96,'Denon receiver','line input','var(--accent)');amp=328;
+  } else if(s!=='disc'){
+    g+=box(4,110,S.n,s==='stream'?'apps + picture':'YouTube + picture','var(--fg)')+arrow(114,184,S.link,opt)+box(184,124,'Denon AVR-S760H','5 channels used',c);amp=246;
+    g+='<text class="lb" x="376" y="70" text-anchor="end" style="font-size:10px">Douk: vinyl only</text>';
+  } else if(hookNow()==='avr'){
+    g+=box(4,96,BOXV[0],BOXV[1],'var(--fg)')+arrow(100,142,'HDMI')+box(142,96,'Denon','5 ch used',c)+arrow(238,280,'HDMI out: picture')+box(280,96,S.n,'picture','var(--fg)');amp=190;
   } else {
-    var pj=rx.scr==='proj',scr=pj?['Projector','picture only']:['Hisense TV','picture'],src2=s==='disc'?['Player','or console']:['Streaming stick','Fire TV, Apple TV'];
-    if(!pj&&rx.hook==='tv'){
-      g+=box(4,96,src2[0],src2[1],'var(--fg)')+arrow(100,142,'HDMI')+box(142,96,scr[0],scr[1],'var(--fg)')+arrow(238,280,'eARC: sound')+box(280,96,'Denon','5 ch used',c);amp=328;
-    } else {
-      g+=box(4,96,src2[0],src2[1],'var(--fg)')+arrow(100,142,'HDMI')+box(142,96,'Denon','5 ch used',c)+arrow(238,280,'HDMI out: picture')+box(280,96,scr[0],scr[1],'var(--fg)');amp=190;
-    }
+    g+=box(4,96,BOXV[0],BOXV[1],'var(--fg)')+arrow(100,142,'HDMI')+box(142,96,S.n,'picture','var(--fg)')+arrow(238,280,opt?'optical: stereo':S.back+': sound',opt)+box(280,96,'Denon','5 ch used',c);amp=328;
   }
   var drops=[],bus=88;
   if(d){
@@ -646,20 +678,34 @@ function drawFlow(){
     '<text class="lb" x="'+(Math.min.apply(null,xs)+6)+'" y="'+(bus-6)+'" style="font-size:10px">speaker wire</text>'+g;
   $('rFlow').innerHTML=g;
 }
+/* the explanation for the receiver, by source, screen and hookup */
+function avrNote(){
+  var s=rx.src,k=rx.scr,S=SCR[k],m=rx.snd.stereo,up=m==='stereo'?' In Stereo mode only the towers play; pick Upmix to use all five.':m==='upmix'?' The Denon\'s upmixer then pulls voices into the center and ambience into the surrounds.':' Multi Ch Stereo then plays it from every speaker.';
+  var OPT=' Without ARC, a projector can only pass sound on through an optical or 3.5 mm jack: usually stereo, at best basic Dolby Digital 5.1.';
+  if(s==='vinyl')return TWO.vinyl[rx.snd.vinyl];
+  if(s!=='disc'){
+    if(k==='proj')return 'The projector\'s own apps can\'t send sound over HDMI.'+OPT+up+' For real surround, plug a video box into the Denon instead.';
+    var lead=k==='tv'?'The Hisense shows the picture and sends the sound down one HDMI eARC cable.':'The projector\'s own apps send the sound to the Denon over HDMI ARC or eARC, just like a TV. Check that its apps output surround: some send only stereo.';
+    return lead+(s==='stream'?' Streaming Atmos uses Dolby Digital Plus, which even plain ARC can carry; eARC matters for lossless formats.':' '+TWO.stereo[m]);
+  }
+  if(hookNow()==='avr')return 'The video box plugs into the Denon, which gets the full soundtrack (lossless TrueHD, DTS-HD Master Audio, Atmos) and sends the picture on to the '+S.w+'. Any screen works this way, even one without ARC. For 4K/120 from a console, use one of the Denon\'s 8K inputs.';
+  if(k==='tv')return 'The video box plugs into the Hisense, which shows the picture and sends the sound to the Denon over eARC. Gaming features like VRR and 4K/120 stay on the TV. Lossless TrueHD and DTS-HD reach the Denon only if the TV\'s eARC passes them through, so check that setting.';
+  if(k==='sproj')return 'The video box plugs into the projector, which sends the sound to the Denon over ARC or eARC. With eARC you keep lossless sound; with plain ARC you still get Dolby Digital Plus, including Atmos, but not lossless TrueHD or DTS-HD.';
+  return 'The picture works fine, but the sound has to leave through the projector\'s optical or 3.5 mm jack.'+OPT+up+' That is why the Denon is the better place to plug in when the projector has no ARC.';
+}
 function updRx(){
   seg($('rMode'),[{v:'douk',label:'Today: 2-channel amp, speakers in series'},{v:'avr',label:'Next: 5-channel receiver'}],rx.mode,function(v){rx.mode=v;updRx()});
   seg($('rSrc'),SRC,rx.src,function(v){rx.src=v;updRx()});
-  var d=rx.mode==='douk',s=rx.src,two=s==='stereo'||s==='vinyl',g='';
-  $('rSndBox').hidden=d||!two;
+  var d=rx.mode==='douk',s=rx.src,two=!d&&twoCh(),g='';
   $('rScrBox').hidden=d||s==='vinyl';
   if(!d&&s!=='vinyl'){
-    seg($('rScr'),[{v:'tv',label:'TV with eARC (like the Hisense)'},{v:'proj',label:'Projector (no eARC)'}],rx.scr,function(v){rx.scr=v;updRx()});
-    var showHook=s==='disc'&&rx.scr==='tv';
-    $('rHookBox').hidden=!showHook;
-    if(showHook)seg($('rHook'),[{v:'tv',label:'Plug into the TV'},{v:'avr',label:'Plug into the Denon'}],rx.hook,function(v){rx.hook=v;updRx()});
+    seg($('rScr'),Object.keys(SCR).map(function(k){return {v:k,label:SCR[k].label,wide:k==='proj'}}),rx.scr,function(v){rx.scr=v;updRx()});
+    $('rHookBox').hidden=s!=='disc';
+    if(s==='disc')seg($('rHook'),[{v:'screen',label:'Plug into the '+SCR[rx.scr].w},{v:'avr',label:'Plug into the Denon'}],hookNow(),function(v){rx.hook[rx.scr]=v;updRx()});
   }
-  $('rScrLbl').textContent=!d&&rx.scr==='proj'&&s!=='vinyl'?'Projection screen':'Screen';
-  if(!d&&two)seg($('rSnd'),SND,rx.snd[s],function(v){rx.snd[s]=v;updRx()});
+  $('rSndBox').hidden=!two;
+  if(two)seg($('rSnd'),SND,rx.snd[sndKey()],function(v){rx.snd[sndKey()]=v;updRx()});
+  $('rScrLbl').textContent=!d&&rx.scr!=='tv'&&s!=='vinyl'?'Projection screen':'Screen';
   if(d){
     g+=spkBox(4,44,'Polk TS550T L','8 Ω','57% of the push','share')+spkBox(132,44,'Polk CS1','8 Ω','not connected','off')+spkBox(260,44,'Polk TS550T R','8 Ω','57% of the push','share');
     g+='<path d="M62 102 V222" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="6 5"/><path d="M318 102 V222" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="6 5"/>';
@@ -678,7 +724,7 @@ function updRx(){
     $('rCtr').textContent='Silent';$('rCtrS').textContent='A 2-channel amp has no center output';
     $('rSur').textContent='No';$('rSurS').textContent='The rears copy the fronts';
   } else {
-    var m=two?rx.snd[s]:'movie';
+    var m=two?rx.snd[sndKey()]:'movie';
     $('rLoad').textContent='8 Ω / 6 Ω';$('rLoadS').textContent='Each speaker on its own channel';
     $('rPow').textContent='100%';$('rPowS').textContent='Each channel drives one speaker at its own rating';
     $('rCtr').textContent={movie:'Dialogue',stereo:'Off',upmix:'Upmixed',multi:'L + R mixed'}[m];
@@ -686,13 +732,8 @@ function updRx(){
     $('rSur').textContent={movie:'Yes',stereo:'Off',upmix:'Ambience',multi:'Copies'}[m];
     $('rSurS').textContent={movie:'Their own sounds, not copies',stereo:'Pick Upmix or Multi Ch Stereo to use them',upmix:'Room sound pulled out of the stereo',multi:'The same left and right as the fronts'}[m];
   }
-  $('rSt').className='status '+(d||s==='vinyl'?'warn':'ok');
-  var txt=d||!two?NOTE[rx.mode][s]:TWO[s][rx.snd[s]];
-  if(!d&&s!=='vinyl'){
-    if(rx.scr==='proj')txt=(s==='disc'?'The player plugs into the Denon. It decodes lossless TrueHD or DTS-HD Master Audio and sends the 4K picture on to the projector. For 4K/120 from a console, use one of the Denon\'s 8K inputs.':s==='stream'?'A streaming stick plugs into the Denon instead of using TV apps. Streaming Atmos arrives as Dolby Digital Plus and plays on all five speakers.':'A streaming stick plugs into the Denon.'+(rx.snd.stereo==='stereo'?' In Stereo mode only the towers play.':rx.snd.stereo==='upmix'?' The upmixer pulls voices into the center and ambience into the surrounds.':' Multi Ch Stereo plays the same stereo from every speaker.'))+PROJ;
-    else if(s==='disc')txt=rx.hook==='tv'?'The player plugs into the Hisense, which shows the picture and sends the sound to the Denon over eARC. Gaming features like VRR and 4K/120 stay on the TV. Lossless TrueHD and DTS-HD reach the Denon only if the TV\'s eARC passes them through, so check that setting.':'The player plugs into the Denon, which decodes lossless TrueHD or DTS-HD Master Audio itself and passes the 4K picture on to the TV. Any TV works, even one with plain ARC. For 4K/120 from a console, use one of the Denon\'s 8K inputs.';
-  }
-  $('rSt').textContent=txt;
+  $('rSt').className='status '+(d||s==='vinyl'||viaOptical()?'warn':'ok');
+  $('rSt').textContent=d?NOTE.douk[s]:avrNote();
   if(!d&&roles()[1]!==null)done.c5=true;
   if(!d&&s==='vinyl')done.c6=true;
   check();
@@ -707,7 +748,7 @@ var FMT={
        ['ddplus','Dolby Digital Plus','The surround format of most streaming apps, and the carrier for streaming Atmos.','Small enough to travel over plain ARC as well as eARC.'],
        ['upmix','Upmixers','Dolby Surround and DTS Neural:X turn stereo into surround: shared sounds such as voices go to the center, ambience to the surrounds.','Useful for YouTube, sports and older shows. Most current receivers include one or both.'],
        ['files','Lossless music files','FLAC, ALAC and WAV music played from USB or over the network.','Handled by the receiver itself, separate from the analog record chain.']],
-  eye:[['dv','Dolby Vision','Picture, not sound: HDR that adjusts brightness and colour scene by scene.','If a player or console plugs into the receiver, the receiver must pass Dolby Vision through to the TV.'],
+  eye:[['dv','Dolby Vision','Picture, not sound: HDR that adjusts brightness and colour scene by scene.','If a video box such as an Apple TV or PlayStation plugs into the receiver, the receiver must pass Dolby Vision through to the screen.'],
        ['hdr','HDR10, HDR10+, HLG','Other HDR picture formats used by discs, apps and live broadcasts.','Also passed through untouched; the receiver never changes the picture.']],
   road:[['earc','HDMI eARC vs ARC','The return road that carries sound from the TV\'s own apps down to the receiver.','ARC: compressed surround (Dolby Digital, DTS, Dolby Digital Plus with Atmos) and stereo PCM. eARC adds lossless TrueHD, DTS-HD MA and multichannel PCM.'],
         ['hdcp','HDCP 2.2 / 2.3','The copy-protection handshake that 4K sources require.','A receiver without it in the chain can make 4K apps and discs fail or drop to HD.'],
