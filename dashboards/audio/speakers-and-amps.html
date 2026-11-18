@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-TUBjppOh1V10wXHU20Yz58rwCYoFYo/90uD5GPiyBv0='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-yS/xjfQe4DN5P85JXwwmlAbJ9/LwIAJuBDL6jUWiMEE='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Interactive lab: how sound, speakers and amplifiers work, what ohms and sensitivity mean, series vs parallel wiring, and what a 200 W label really delivers.">
@@ -316,12 +316,14 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
     <div class="cols">
       <div>
         <div class="viz">
-          <svg viewBox="0 0 380 300" role="img" aria-labelledby="rAlt"><title id="rAlt">Top-down room: screen at the top, front left, center and front right speakers below it, seating in the middle, and two surround speakers at the back. Each speaker shows what it plays for the chosen setup.</title>
+          <svg viewBox="0 0 380 362" role="img" id="rSvg" aria-label="Top-down room: screen at the top, front left, center and front right speakers below it, seating in the middle, two surround speakers at the back, and the equipment along the bottom with its speaker wires. Each speaker shows what it plays for the chosen setup.">
             <rect x="110" y="8" width="160" height="8" rx="4" fill="var(--muted)"/>
             <text class="lb" x="190" y="30" text-anchor="middle">Screen</text>
+            <g id="rWires"></g>
             <g id="rRoom"></g>
             <rect class="sh" x="130" y="140" width="120" height="30" rx="15"/>
             <text class="lb" x="190" y="159" text-anchor="middle">Seats</text>
+            <g id="rGear"></g>
           </svg>
           <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>Its own channel</span><span><span class="sw" style="background:var(--warn)"></span>Shares a channel in series</span><span><span class="sw" style="background:var(--muted)"></span>Silent</span></div>
         </div>
@@ -610,6 +612,23 @@ function updRx(){
     g+=spkBox(4,222,'Sony SS-CS5 L','6 Ω',v?'off for stereo':s==='stereo'?'room ambience':'surround effects',v?'off':'own')+spkBox(260,222,'Sony SS-CS5 R','6 Ω',v?'off for stereo':s==='stereo'?'room ambience':'surround effects',v?'off':'own');
   }
   $('rRoom').innerHTML=g;
+  // equipment row along the bottom, and the speaker wires from the amp
+  var SRC1={douk:{stream:['TV','optical out'],disc:['Player → TV','optical out'],stereo:['TV','optical out'],vinyl:['Turntable','LINE out']},
+            avr:{stream:['TV','HDMI eARC'],disc:['Player','HDMI'],stereo:['TV','HDMI eARC'],vinyl:['Turntable','LINE out']}}[rx.mode][s];
+  var gear=function(x,a,b,state){var c=state==='on'?(d?'var(--warn)':'var(--accent)'):state==='src'?'var(--fg)':'var(--muted)';
+    return '<rect x="'+x+'" y="300" width="112" height="44" rx="7" fill="var(--panel2)" stroke="'+c+'" stroke-width="'+(state==='off'?1:2)+'"'+(state==='off'?' stroke-dasharray="4 4"':'')+'/>'+
+      '<text class="lh" x="'+(x+56)+'" y="318" text-anchor="middle" style="font-size:11px'+(state==='off'?';fill:var(--muted)':'')+'">'+a+'</text><text class="lb" x="'+(x+56)+'" y="335" text-anchor="middle">'+b+'</text>'};
+  var G=gear(4,SRC1[0],SRC1[1],'src')+'<path d="M117 322 H130" stroke="var(--fg)" stroke-width="1.6" fill="none"/><path d="M126 318 L131 322 L126 326" stroke="var(--fg)" stroke-width="1.6" fill="none"/>';
+  G+=d?gear(134,'Douk ST-01 Pro','2-channel amp','on'):gear(134,'Denon AVR-S760H','receiver, 5 ch used','on');
+  if(!d)G+=s==='vinyl'?gear(264,'Douk ST-01 Pro','tube preamp only','src'):gear(264,'Douk ST-01 Pro','unused: vinyl only','off');
+  if(!d&&s==='vinyl')G+='<path d="M264 322 H250" stroke="var(--fg)" stroke-width="1.6" fill="none"/><path d="M254 318 L249 322 L254 326" stroke="var(--fg)" stroke-width="1.6" fill="none"/><text class="lb" x="190" y="296" text-anchor="middle" style="font-size:10px;paint-order:stroke;stroke:var(--panel2);stroke-width:4px">Douk line out → receiver line in</text>'+
+    '<path d="M60 344 V355 H320 V349" fill="none" stroke="var(--fg)" stroke-width="1.6"/><path d="M316 352 L320 346 L324 352" fill="none" stroke="var(--fg)" stroke-width="1.6"/><text class="lb" x="190" y="353" text-anchor="middle" style="font-size:10px;paint-order:stroke;stroke:var(--panel2);stroke-width:4px">turntable RCA → Douk input</text>';
+  $('rGear').innerHTML=G;
+  var wc=d?'var(--warn)':'var(--accent)',off=!d&&s==='vinyl';
+  var wire=function(pts,on){return '<polyline points="'+pts+'" fill="none" stroke="'+(on?wc:'var(--muted)')+'" stroke-width="'+(on?2:1.2)+'"'+(on?'':' stroke-dasharray="3 4"')+' stroke-linejoin="round"/>'};
+  var W=wire('134,308 124,308 124,73 120,73',true)+wire('246,308 256,308 256,73 260,73',true);
+  if(!d){W+=wire('134,330 128,330 128,251 120,251',!off)+wire('246,330 252,330 252,251 260,251',!off)+wire('190,300 190,102',!off)}
+  $('rWires').innerHTML=W;
   $('rChain').innerHTML=CHAIN[rx.mode][s].map(function(t){return '<li>'+t+'</li>'}).join('');
   if(d){
     $('rLoad').textContent='14 Ω';$('rLoadS').textContent='8 Ω Polk + 6 Ω Sony in series';
