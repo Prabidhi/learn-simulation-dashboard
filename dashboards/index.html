@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-9dtO77j433oD86heL5z8Z7a7OOrDLWAP7hNOzqiAnig='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-AwlAckeNHlRQLycMwJm7D/TRyZ2GChI7sRGIsQfymCg='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self'">
 <script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learning Lab</title>
@@ -270,6 +270,17 @@ const DASHBOARDS = [
     desc: 'How sound is made, what an amp really does, what ohms and sensitivity mean, how to wire four speakers to a two-channel amp, and why a "200 W" amp delivers about 30.',
     points: ['Play a live tone and watch air pressure wiggle', 'Wire speakers in series or parallel and read the load', 'Push an amp into clipping and see watts vs the label'],
     tags: ['speakers', 'amplifier', 'ohms', 'impedance', 'watts', 'clipping', 'sensitivity']
+  },
+  {
+    title: 'APEX: Daily API Loads and Email',
+    href: 'oracle/apex/apex-api-automation-lab.html',
+    section: 'Oracle',
+    topic: 'apex',
+    art: 'apex',
+    added: '2026-11-18',
+    desc: 'What it takes to call an outside API from APEX every day, load a staging table and send an email: the network gate, the privileges you really need, four ways to run it without CREATE JOB, and why email needs a mail server.',
+    points: ['Toggle privileges and see what breaks', 'Step a call through the network gate', 'Pick a post office and follow an email'],
+    tags: ['apex', 'automation', 'rest data source', 'create job', 'privileges', 'acl', 'email', 'smtp', 'oracle']
   },
   {
     title: 'APEX Lab Tour',

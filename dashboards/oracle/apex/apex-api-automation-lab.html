@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u2iqwRidgfknidHiKSgEfNzaupriyZ42+O1L9rNABNs=' 'sha256-dTH7FiNYSTbBz0t+adQKCnPx0DgyM51eEHU2P/STvIs='; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* Learning Lab: apply the saved Day/Twilight/Dark mode before the page paints */try{var t=localStorage.getItem("lab-theme");if(t==="light")t="day";if(t==="day"||t==="twilight"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APEX: Daily API Loads and Email</title>
+<meta name="description" content="What it takes to call an outside API from Oracle APEX every day, load the rows into a staging table and send an email, with the fewest database privileges.">
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--fg:#1c2530;--muted:#5d6876;--line:#d6dce3;--chip:#eef1f4;--a:#0b6a85;--a-soft:#e1eff4;--hot:#c46f00;--hot-soft:#fff0d9;--ok:#23804f;--ok-soft:#e3f5e8;--bad:#b42318;--bad-soft:#fde8e8;--on-a:#fff;
+  --you:#0b6a85;--dba:#c46f00;--adm:#7a4fb5;--out:#6a7584;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+:root[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;--a:#56b7d2;--a-soft:#122f39;--hot:#ffb547;--hot-soft:#3a2a12;--ok:#5cc48b;--ok-soft:#10301b;--bad:#ff7b72;--bad-soft:#3d1518;--on-a:#0d1117;
+  --you:#56b7d2;--dba:#ffb547;--adm:#c39bff;--out:#8b949e}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){--bg:#0d1117;--panel:#161b22;--fg:#e6edf3;--muted:#8b949e;--line:#30363d;--chip:#21262d;--a:#56b7d2;--a-soft:#122f39;--hot:#ffb547;--hot-soft:#3a2a12;--ok:#5cc48b;--ok-soft:#10301b;--bad:#ff7b72;--bad-soft:#3d1518;--on-a:#0d1117;
+  --you:#56b7d2;--dba:#ffb547;--adm:#c39bff;--out:#8b949e}}
+:root[data-theme="twilight"]{--bg:#231f38;--panel:#2b2544;--fg:#f6ebe6;--muted:#b9aac4;--line:#433a63;--chip:#352e52;--a:#7ee2c0;--a-soft:#24404a;--hot:#ffc76b;--hot-soft:#4a3a2a;--ok:#8ee6b0;--ok-soft:#24394a;--bad:#ff9a9a;--bad-soft:#4a2b3f;--on-a:#211b33;
+  --you:#7ee2c0;--dba:#ffc76b;--adm:#d2a8ff;--out:#b9aac4}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--sans)}
+header,main,footer{max-width:1180px;margin:0 auto;padding:20px}
+header h1{margin:0 0 6px;font-size:1.65rem}
+header p{margin:0;color:var(--muted)}
+.idea{margin-top:12px;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.banner{margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--hot-soft);font-size:.88rem}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+nav>div{max-width:1180px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+nav a{font-size:.82rem;text-decoration:none;color:var(--fg);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.themes{display:flex;gap:2px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.themes button{font:inherit;font-size:.78rem;border:0;background:none;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer}
+.themes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+section{margin:30px 0;scroll-margin-top:70px}
+section>h2{margin:0 0 4px;font-size:1.28rem}
+.lead{margin:0 0 12px;color:var(--muted);max-width:78ch}
+.analogy{border-left:3px solid var(--a);background:var(--a-soft);padding:8px 12px;margin:0 0 14px;max-width:90ch}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+code{font-family:var(--mono);font-size:.86em;background:var(--chip);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.tag{display:inline-block;font:600 .66rem var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;vertical-align:middle}
+.tag.tested{background:var(--ok-soft);color:var(--ok)}
+.tag.unchecked{background:var(--hot-soft);color:var(--hot)}
+.stack{display:grid;gap:12px}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.two{grid-template-columns:minmax(0,1fr)}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{font:inherit;font-size:.86rem;font-weight:600;color:var(--fg);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--a);border-color:var(--a);color:var(--on-a)}
+.btn{font:inherit;font-weight:600;font-size:.9rem;border-radius:7px;padding:7px 15px;cursor:pointer;border:1px solid var(--a);background:var(--a);color:var(--on-a)}
+.btn.ghost{background:transparent;color:var(--a)}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+.small{font-size:.85rem;color:var(--muted)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,.node:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+
+/* map */
+.map{padding:8px;overflow-x:auto}
+.map svg{display:block;width:100%;min-width:700px;height:auto}
+.edge{fill:none;stroke:var(--line);stroke-width:2}
+.node{cursor:pointer}
+.node:focus{outline:none}
+.node rect{fill:var(--panel);stroke-width:2}
+.node .t{font:700 13.5px var(--sans);fill:var(--fg)}
+.node .s{font:11px var(--mono);fill:var(--muted)}
+.node.picked rect{stroke-width:3.5}
+.o-you rect{stroke:var(--you)}.o-dba rect{stroke:var(--dba)}.o-adm rect{stroke:var(--adm)}.o-out rect{stroke:var(--out);stroke-dasharray:5 4}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.84rem;margin:8px 0 0}
+.legend span::before{content:"";display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:6px;border:2px solid currentColor;vertical-align:-1px}
+.lg-you{color:var(--you)}.lg-dba{color:var(--dba)}.lg-adm{color:var(--adm)}.lg-out{color:var(--out)}
+.legend b{color:var(--fg);font-weight:600}
+.detail h3{margin:0 0 6px;font-size:1.05rem}
+.detail ul{margin:6px 0 0;padding-left:18px;display:grid;gap:5px}
+.owner{font:600 .74rem var(--mono);text-transform:uppercase;letter-spacing:.06em}
+
+/* steps */
+ol.steps{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;counter-reset:s}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;padding:8px 10px;border-radius:8px;color:var(--muted);border:1px solid transparent}
+ol.steps li::before{content:counter(s);font:600 .78rem/26px var(--mono);text-align:center;width:26px;height:26px;border-radius:50%;border:1px solid var(--line)}
+ol.steps li.done{color:var(--fg)}
+ol.steps li.done::before{background:var(--a-soft);border-color:var(--a);color:var(--a)}
+ol.steps li.now{color:var(--fg);background:var(--hot-soft);border-color:var(--hot)}
+ol.steps li.now::before{background:var(--hot);border-color:var(--hot);color:var(--panel)}
+ol.steps li.fail{color:var(--fg);background:var(--bad-soft);border-color:var(--bad)}
+ol.steps li.fail::before{content:"✗";background:var(--bad);border-color:var(--bad);color:var(--panel)}
+.result{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--chip);min-height:44px}
+.result.good{background:var(--ok-soft)}
+.result.badr{background:var(--bad-soft)}
+
+/* privileges */
+.toggles{display:flex;flex-wrap:wrap;gap:8px}
+.tgl{font:600 .84rem var(--mono);border-radius:8px;padding:8px 12px;cursor:pointer;border:1px dashed var(--line);background:transparent;color:var(--muted)}
+.tgl[aria-pressed="true"]{border:1px solid var(--a);background:var(--a-soft);color:var(--fg)}
+.tgl[aria-pressed="true"]::before{content:"✓ "}
+.tgl[aria-pressed="false"]::before{content:"✗ "}
+.tasks{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.tasks li{display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel)}
+.tasks .st{font:700 .78rem var(--mono);text-transform:uppercase;padding-top:2px}
+.tasks li.ok .st{color:var(--ok)}
+.tasks li.no .st{color:var(--bad)}
+.tasks li.no{background:var(--bad-soft)}
+.tasks p{margin:2px 0 0;color:var(--muted);font-size:.88rem}
+@media (max-width:560px){.tasks li{grid-template-columns:minmax(0,1fr);gap:2px}}
+
+/* compare */
+.ways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:700px){.ways{grid-template-columns:minmax(0,1fr)}}
+.way{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel)}
+.way h3{margin:0 0 4px;font-size:1rem}
+.way .verdict{font:700 .8rem var(--mono);text-transform:uppercase}
+.way.ok .verdict{color:var(--ok)}
+.way.no{background:var(--bad-soft)}
+.way.no .verdict{color:var(--bad)}
+.way ul{margin:6px 0 0;padding-left:18px;font-size:.88rem;display:grid;gap:3px}
+
+/* automation */
+details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-bottom:8px}
+summary{cursor:pointer;padding:10px 14px;font-weight:600}
+details>div{padding:0 14px 12px;color:var(--fg)}
+details>div p{margin:4px 0}
+.runs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.runs span{font:600 .78rem var(--mono);padding:4px 9px;border-radius:6px;background:var(--a-soft);color:var(--fg)}
+label.param{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.9rem;flex-wrap:wrap}
+select,input[type=text]{font:inherit;font-size:.9rem;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+input[type=range]{accent-color:var(--a);width:180px}
+input[type=checkbox]{accent-color:var(--a)}
+
+/* request */
+.form{display:grid;gap:10px}
+.form label{display:grid;gap:3px;font-size:.88rem;font-weight:600}
+.form .cb{display:flex;gap:8px;align-items:center;font-weight:400}
+pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12.5px/1.5 var(--mono);background:var(--chip);border-radius:8px;padding:12px}
+
+/* quiz */
+.q{padding:10px 0;border-top:1px solid var(--line)}
+.q:first-child{border-top:none}
+.q button{display:block;width:100%;text-align:left;font:inherit;margin:6px 0;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--fg);cursor:pointer}
+.q button.right{background:var(--ok-soft);border-color:var(--ok)}
+.q button.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.q .why{margin:6px 0 0;color:var(--muted)}
+footer{color:var(--muted);font-size:.82rem}
+footer ul{padding-left:18px}
+@media (max-width:560px){nav{position:static}header,main,footer,nav>div{padding-left:14px;padding-right:14px}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>APEX: Daily API Loads and Email</h1>
+  <p>What it takes to call an outside API from Oracle APEX every day, keep the rows in a staging table, and email when it's done.</p>
+  <div class="idea"><b>Key idea:</b> you can write all the code yourself, but three things usually belong to someone else: the <b>gate</b> to the internet (a network rule), the <b>timer</b> (the <code>CREATE JOB</code> privilege) and the <b>post office</b> (a mail server).</div>
+  <div class="banner">Built from a hands-on lab on a laptop: Oracle Database 23ai Free, APEX 24.1, ORDS 25.3. The API was <b>JSONPlaceholder</b>, a public fake-data test API. Results marked <span class="tag tested">tested</span> were seen in that lab; <span class="tag unchecked">not checked</span> means expected but not tried there. Names are generic.</div>
+</header>
+<nav><div>
+  <a href="#map">1. The map</a>
+  <a href="#gate">2. The gate</a>
+  <a href="#privs">3. Privileges</a>
+  <a href="#timer">4. The timer</a>
+  <a href="#auto">5. Automations</a>
+  <a href="#mail">6. Email</a>
+  <a href="#ask">7. Ask your DBA</a>
+  <a href="#quiz">8. Quiz</a>
+  <div class="themes" id="themes" role="group" aria-label="Colour theme"></div>
+</div></nav>
+<main>
+
+<section id="map">
+  <h2>1. The map: who owns each part</h2>
+  <p class="lead">Every box is something the daily load touches. The border shows who controls it, and the box says it in words too. Click or tab to a box.</p>
+  <div class="analogy"><b>Analogy:</b> you're an office worker. You can write any report you like at your own desk (your schema). But leaving the building needs the security desk's list (network rule), a recurring calendar slot needs the facilities team (the timer), and posting letters needs the post office (mail server).</div>
+  <div class="stack">
+    <div class="card map" id="mapBox"></div>
+    <div class="card detail" id="mapDetail" aria-live="polite"></div>
+  </div>
+  <div class="legend" aria-label="Legend: who owns each box">
+    <span class="lg-you"><b>You (developer)</b></span>
+    <span class="lg-dba"><b>DBA</b></span>
+    <span class="lg-adm"><b>APEX or mail admin</b></span>
+    <span class="lg-out"><b>Someone else's service</b> (dashed)</span>
+  </div>
+</section>
+
+<section id="gate">
+  <h2>2. The gate: why an API call can fail before it leaves</h2>
+  <p class="lead">When an APEX page or job calls an API, the <b>database</b> makes the call, not your browser. Before any data leaves, Oracle checks its network access list: "may this account connect to this host on this port?" Only a DBA can add entries.</p>
+  <div class="analogy"><b>Analogy:</b> the building's security desk keeps a guest list of outside addresses. If the address isn't on the list, your courier is stopped in the lobby, however good the parcel is.</div>
+  <div class="two">
+    <div class="card">
+      <div class="chips" role="group" aria-label="Network rule">
+        <button class="chip" data-acl="on" aria-pressed="true">Rule for the API host: on</button>
+        <button class="chip" data-acl="off" aria-pressed="false">Rule: missing</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="gNext">Next step</button>
+        <button class="btn ghost" id="gReset">Start again</button>
+      </div>
+      <ol class="steps" id="gSteps"></ol>
+      <div class="result" id="gOut" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 6px;font-size:1rem">What the error looks like <span class="tag tested">tested</span></h3>
+      <p class="small" style="margin:0 0 8px">APEX shows the top line. The real reason is further down the stack:</p>
+      <pre>ORA-29273: HTTP request failed
+  ...
+ORA-24247: network access denied by
+           access control list (ACL)</pre>
+      <p class="small">If you see <code>ORA-29273</code>, look for <code>ORA-24247</code> underneath. That means: ask the DBA for a network rule for that host and port.</p>
+      <p class="small">The rule names the account that makes the call. With <code>apex_web_service</code> or a REST Data Source that's APEX's own schema (for example <code>APEX_240100</code>), not yours.</p>
+      <p class="small"><b>Older databases (such as 19c)</b> also need a <b>wallet</b>: a file of trusted certificates for HTTPS. The 23ai lab didn't need one, because it trusts the operating system's certificates. <span class="tag unchecked">not checked</span> on 19c.</p>
+    </div>
+  </div>
+</section>
+
+<section id="privs">
+  <h2>3. Privileges, one at a time</h2>
+  <p class="lead">In the lab, the app's schema had <b>every</b> privilege removed, and each one was added back only when an error proved it was needed. Switch them on and off to see what each one unlocks. Every result below was <span class="tag tested">tested</span>.</p>
+  <div class="analogy"><b>Analogy:</b> privileges are keys on a key ring. Owning a room (your tables) needs no key; you can always go in. Keys are for <i>making</i> new things: a new room, a new machine, a new calendar slot.</div>
+  <div class="card">
+    <div class="row">
+      <span class="small">Presets:</span>
+      <button class="chip" data-preset="none" aria-pressed="false">Zero privileges</button>
+      <button class="chip" data-preset="dev" aria-pressed="false">Typical developer (no CREATE JOB)</button>
+      <button class="chip" data-preset="all" aria-pressed="false">APEX wizard default</button>
+    </div>
+    <div class="toggles" id="privToggles" role="group" aria-label="Privileges held by the schema"></div>
+    <ul class="tasks" id="privTasks" aria-live="polite"></ul>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 6px;font-size:1rem">Direct grant or role? It matters.</h3>
+    <p style="margin:0 0 6px">Look at two views: <code>USER_SYS_PRIVS</code> lists privileges granted <b>to you directly</b>; <code>SESSION_PRIVS</code> also includes those that come <b>through roles</b> (such as Oracle's standard <code>RESOURCE</code> role).</p>
+    <p style="margin:0">Oracle switches roles off inside stored PL/SQL, and APEX runs your code without them. So privileges you only have through a role can work in SQL Developer and still fail inside APEX or your own procedures. Ask for what APEX needs as a <b>direct grant</b>. <span class="tag unchecked">not checked</span> in the lab for APEX; the PL/SQL rule is standard Oracle behaviour.</p>
+  </div>
+</section>
+
+<section id="timer">
+  <h2>4. The timer: four ways to run it every day</h2>
+  <p class="lead">"Run this every night at 2 am" needs a scheduler job, and creating one needs <code>CREATE JOB</code>. Answer two questions and see which ways work for you.</p>
+  <div class="analogy"><b>Analogy:</b> you can write the task list, but booking a recurring slot in the shared calendar is done by whoever holds the calendar key. Either you get the key, or someone who has it books the slot for you.</div>
+  <div class="card">
+    <div class="row">
+      <span class="small" id="q1l">Does the app's schema have <code>CREATE JOB</code> directly?</span>
+      <div class="chips" role="group" aria-labelledby="q1l" style="margin:0">
+        <button class="chip" data-job="yes" aria-pressed="false">Yes</button>
+        <button class="chip" data-job="no" aria-pressed="true">No</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="small" id="q2l">Who starts the load?</span>
+      <div class="chips" role="group" aria-labelledby="q2l" style="margin:0">
+        <button class="chip" data-start="timer" aria-pressed="true">A timer, every day</button>
+        <button class="chip" data-start="person" aria-pressed="false">A person, with a button</button>
+      </div>
+    </div>
+    <div class="ways" id="ways" aria-live="polite"></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 6px;font-size:1rem">The silent failure <span class="tag tested">tested</span></h3>
+    <ol class="steps" style="margin-top:4px">
+      <li class="done"><span>A scheduled REST synchronization ran while the schema had no <code>CREATE JOB</code>.</span></li>
+      <li class="done"><span>Oracle's scheduler log said <b>SUCCEEDED</b>.</span></li>
+      <li class="fail"><span>APEX's own sync log said <b>Failure: ORA-01031 insufficient privileges</b>, 0 rows.</span></li>
+      <li class="fail"><span>APEX then quietly switched the sync off ("Job is Active" unticked), so nothing ran at the next tick.</span></li>
+    </ol>
+    <p class="small">Lesson: check APEX's own logs (<code>APEX_REST_SOURCE_SYNC_LOG</code>, <code>APEX_AUTOMATION_LOG</code>), not just the scheduler's.</p>
+  </div>
+</section>
+
+<section id="auto">
+  <h2>5. Inside an APEX automation</h2>
+  <p class="lead">An automation is APEX's built-in "do this on a schedule, or when asked". Its edit page has a few sections. Open one at a time.</p>
+  <details open><summary>Name</summary><div>
+    <p><b>Name</b> is a label for people. <b>Static ID</b> is a fixed code name that code uses, for example <code>apex_automation.execute(p_static_id =&gt; 'refresh-todos')</code>. Renaming doesn't change the Static ID. <b>Currently Executing</b> says Yes while a run is in progress; APEX won't start a second one on top.</p>
+  </div></details>
+  <details><summary>Settings: when it runs</summary><div>
+    <p><b>Type</b>: <i>Scheduled</i> (APEX's timer runs it) or <i>On Demand</i> (only the play button, a page button or code start it).</p>
+    <p><b>Schedule Expression</b>: the timetable as a short code. Every night at 2 am is <code>FREQ=DAILY;BYHOUR=2;BYMINUTE=0</code>. The wrench icon builds it for you.</p>
+    <p><b>Schedule Status</b>: <i>Active</i> (timer on), <i>Disabled</i> (off). Switching to Active failed with <code>ORA-01031</code> without <code>CREATE JOB</code>. <span class="tag tested">tested</span></p>
+    <p><b>Actions Initiated On</b>: run the actions <i>Always</i>, or base it on a <i>Query</i>, or on a yes/no function. Try it below.</p>
+  </div></details>
+  <details><summary>Source: what rows to look at (only with Query)</summary><div>
+    <p>A table or SQL query in your schema, a remote database, or a REST Data Source. With "Rows returned", each row's columns can be used in the actions, for example <code>:INVOICE_NO</code>.</p>
+  </div></details>
+  <details><summary>Actions: the actual work</summary><div>
+    <p>Each action has a <b>Name</b>, an <b>Execution Sequence</b> (10 runs before 20), a <b>Type</b> (<i>Execute Code</i>, <i>Send E-Mail</i>, <i>Send Push Notification</i>) and a <b>Location</b> (this database or a remote one).</p>
+    <p>A good habit: keep the real logic in your own procedure and make the action just call it, for example <code>begin todos_refresh; end;</code>. Then the same code runs from the automation, a button or a DBA's job.</p>
+    <p><b>Stop Execution On Error</b>: if action 10 (the load) fails, action 20 (the "load finished" email) is skipped.</p>
+  </div></details>
+  <details><summary>Action Execution: what happens on errors</summary><div>
+    <p><b>Commit</b> once at the end, or after each row. <b>Maximum Rows to Process</b> is a safety cap. <b>Action Error Handling</b>: <i>Ignore</i> (log and carry on), <i>Terminate</i> (stop this run) or <i>Disable</i> (stop and switch the schedule off until someone fixes it).</p>
+  </div></details>
+  <details><summary>Additional Code Execution</summary><div>
+    <p>A small block of PL/SQL for helper procedures, plus three hooks: run something <b>once at the start</b> (for example read the last successful load time), <b>before each row</b>, and <b>once at the end</b> (for example write a load log row). Many teams just call a package here, such as <code>begin load_pkg.init; end;</code>.</p>
+  </div></details>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 8px;font-size:1rem">Try it: how many times do the actions run?</h3>
+    <div class="row">
+      <label class="param" for="aiOn">Actions Initiated On
+        <select id="aiOn">
+          <option value="always">Always</option>
+          <option value="rows">Query: rows returned</option>
+          <option value="norows">Query: no rows returned</option>
+        </select>
+      </label>
+      <label class="param" for="aiRows">Rows the query finds: <b id="aiRowsV">3</b>
+        <input type="range" id="aiRows" min="0" max="6" value="3">
+      </label>
+    </div>
+    <div class="result" id="aiOut" aria-live="polite"></div>
+    <div class="runs" id="aiRuns"></div>
+  </div>
+</section>
+
+<section id="mail">
+  <h2>6. Email: APEX writes it, a mail server delivers it</h2>
+  <p class="lead">APEX's <i>Send E-Mail</i> action (and Oracle's <code>APEX_MAIL</code>, <code>UTL_MAIL</code>, <code>UTL_SMTP</code>) only <b>write</b> the email and <b>hand it over</b>. A mail server does the delivery. Pick a post office and step through.</p>
+  <div class="analogy"><b>Analogy:</b> writing an address on an envelope doesn't deliver it. You hand it to a post office, which carries it to the right house. Some post offices want to know who you are first, and that's <b>your own</b> account, never the recipient's.</div>
+  <div class="two">
+    <div class="card">
+      <div class="chips" role="group" aria-label="Post office" id="mailChips"></div>
+      <div class="row">
+        <button class="btn" id="mNext">Next step</button>
+        <button class="btn ghost" id="mReset">Start again</button>
+      </div>
+      <ol class="steps" id="mSteps"></ol>
+      <div class="result" id="mOut" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 6px;font-size:1rem">Questions people ask</h3>
+      <p><b>"I have the email address. Why isn't that enough?"</b><br>The address says <i>where</i> the email goes, not <i>how</i> it gets there. In the lab, sending straight to Gmail's own mail server on port 25 was blocked by the internet provider, which is common to stop spam. <span class="tag tested">tested</span></p>
+      <p><b>"Why would Gmail need a password? I'm not logging in as the person I'm emailing."</b><br>Right. The password is the <b>sender's</b>: APEX signs in to a Gmail account it sends <i>from</i>, like you sign in to Gmail before writing to anyone. The recipient's password is never involved.</p>
+      <p><b>"Does Oracle have its own mail server?"</b><br>Not inside the database. Oracle's cloud has an email delivery service, but that's another account to set up. At work, the company's mail server is usually set in APEX once by an admin.</p>
+      <p><b>"When does a queued email go out?"</b><br>APEX's background job sends queued email every 5 minutes. <code>apex_mail.push_queue</code> sends straight away, but only inside an APEX session. <span class="tag tested">tested</span></p>
+    </div>
+  </div>
+</section>
+
+<section id="ask">
+  <h2>7. What to ask your DBA</h2>
+  <p class="lead">One clear request, with the exact error and the account, gets sorted far faster than "the API doesn't work". Fill this in; the text updates as you type.</p>
+  <div class="two">
+    <div class="card form">
+      <label for="rSchema">App's schema (parsing schema)<input type="text" id="rSchema" value="APP_SCHEMA" maxlength="40" autocomplete="off"></label>
+      <label for="rHost">API host<input type="text" id="rHost" value="api.example.com" maxlength="80" autocomplete="off"></label>
+      <label for="rHour">Run every day at
+        <select id="rHour"></select>
+      </label>
+      <label class="cb"><input type="checkbox" id="rSelf" checked> I'll schedule it myself (ask for <code>CREATE JOB</code>)</label>
+      <label class="cb"><input type="checkbox" id="rWallet" checked> Older database: needs a certificate wallet for HTTPS</label>
+      <label class="cb"><input type="checkbox" id="rMail"> The job sends an email when done</label>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <b>Your request</b>
+        <button class="btn ghost" id="rCopy">Copy text</button>
+      </div>
+      <pre id="rOut" aria-live="polite"></pre>
+      <p class="small" id="rCopied" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section id="quiz">
+  <h2>8. Quiz</h2>
+  <p class="lead" id="score"></p>
+  <div class="card" id="quizBox"></div>
+  <div class="row" style="margin-top:10px"><button class="btn ghost" id="qReset">Reset quiz</button></div>
+</section>
+</main>
+<footer>
+  <p>One file, no network calls. The step players and toggles are simulations of what happened in a local lab; error codes and results marked "tested" were seen there. Row counts and timings are illustrative.</p>
+  <details><summary>Sources (checked 2026-11-18)</summary><div>
+    <ul>
+      <li><a href="https://github.com/typicode/jsonplaceholder" target="_blank" rel="noopener noreferrer">JSONPlaceholder</a>: a free fake REST API for testing and prototyping, MIT licence.</li>
+      <li><a href="https://github.com/axllent/mailpit" target="_blank" rel="noopener noreferrer">Mailpit</a>: a local test mail server that catches email instead of delivering it, MIT licence.</li>
+    </ul>
+  </div></details>
+</footer>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- 1. map ---------- */
+const OWN = {you:'You (developer)', dba:'DBA', adm:'APEX or mail admin', out:"Someone else's service"};
+const NODES = [
+  {id:'browser', x:20,  y:30,  t:'Browser',          s:'you open a page',   o:'you', d:['Shows the page. Never talks to the API itself.', 'For scheduled loads there is no browser at all: the timer starts the work.']},
+  {id:'ords',    x:200, y:30,  t:'ORDS',             s:'web server',        o:'adm', d:['Receives web requests and passes them to the database.', 'Signs in as its own pool account, not as your schema.']},
+  {id:'apex',    x:380, y:30,  t:'APEX engine',      s:'runs your app',     o:'adm', d:['Runs page SQL, REST Data Sources and automations under your app\'s schema name.', 'Makes outside web calls as APEX\'s own schema (for example APEX_240100).']},
+  {id:'schema',  x:560, y:30,  t:'Your schema',      s:'tables, your code', o:'you', d:['Staging table, load log and your refresh procedure live here.', 'Reading and writing your own tables needs no privilege. Creating new objects does (section 3).']},
+  {id:'timer',   x:200, y:170, t:'Timer',            s:'scheduler job',     o:'dba', d:['Runs the load every day at a set time.', 'Creating a job needs CREATE JOB. Without it, a DBA can own the job and call your procedure (section 4).']},
+  {id:'gate',    x:560, y:170, t:'Network gate',     s:'access list (ACL)', o:'dba', d:['Oracle\'s list of which account may connect to which host and port.', 'Missing entry: ORA-24247 under ORA-29273 (section 2).']},
+  {id:'api',     x:740, y:170, t:'Outside API',      s:'test data',         o:'out', d:['Returns the data, here 5 fake to-dos.', 'Its terms decide what you may store; check them before loading anything.']},
+  {id:'queue',   x:380, y:300, t:'Mail queue',       s:'APEX outbox',       o:'adm', d:['Send E-Mail actions put emails here first.', 'A background job tries to send them every 5 minutes.']},
+  {id:'smtp',    x:560, y:300, t:'Mail server',      s:'the post office',   o:'adm', d:['Takes the email from APEX and delivers it.', 'Without one, emails wait in the queue and never leave (section 6).']},
+  {id:'inbox',   x:740, y:300, t:'Inbox',            s:'recipient',         o:'out', d:['Where the email ends up, once a mail server delivers it.']}
+];
+const EDGES = [['browser','ords'],['ords','apex'],['apex','schema'],['timer','apex'],['schema','gate'],['gate','api'],['apex','queue'],['queue','smtp'],['smtp','inbox']];
+function nodeById(id){ return NODES.find(n => n.id === id); }
+function edgePath(a, b){
+  const A = nodeById(a), B = nodeById(b), w = 150, h = 56;
+  const ax = A.x + w/2, ay = A.y + h/2, bx = B.x + w/2, by = B.y + h/2;
+  let x1, y1, x2, y2;
+  if (Math.abs(ay - by) < 5) { x1 = ax < bx ? A.x + w : A.x; x2 = ax < bx ? B.x : B.x + w; y1 = y2 = ay; }
+  else { x1 = ax; y1 = ay < by ? A.y + h : A.y; x2 = bx; y2 = ay < by ? B.y : B.y + h; }
+  const my = (y1 + y2) / 2;
+  return Math.abs(ay - by) < 5 ? `M${x1},${y1} L${x2},${y2}` : `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+}
+let picked = 'gate';
+function drawMap(){
+  const svg = `<svg viewBox="0 0 910 370" role="group" aria-label="Map of the parts involved">
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g style="color:var(--muted)">${EDGES.map(([a,b]) => `<path class="edge" d="${edgePath(a,b)}" marker-end="url(#arr)"/>`).join('')}</g>
+    ${NODES.map(n => `<g class="node o-${n.o}${n.id===picked?' picked':''}" data-id="${n.id}" tabindex="0" role="button" aria-pressed="${n.id===picked}" aria-label="${esc(n.t)}, owned by ${esc(OWN[n.o])}">
+      <rect x="${n.x}" y="${n.y}" width="150" height="56" rx="10"/>
+      <text class="t" x="${n.x+12}" y="${n.y+24}">${esc(n.t)}</text>
+      <text class="s" x="${n.x+12}" y="${n.y+43}">${esc(n.s)}</text></g>`).join('')}
+  </svg>`;
+  $('#mapBox').innerHTML = svg;
+  $$('#mapBox .node').forEach(g => {
+    g.addEventListener('click', () => pick(g.dataset.id));
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(g.dataset.id); } });
+  });
+  const n = nodeById(picked);
+  $('#mapDetail').innerHTML = `<div class="owner" style="color:var(--${n.o})">Owner: ${esc(OWN[n.o])}</div><h3>${esc(n.t)}</h3><ul>${n.d.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+}
+function pick(id){ picked = id; drawMap(); const g = $(`#mapBox .node[data-id="${id}"]`); if (g) g.focus(); }
+drawMap();
+
+/* ---------- 2. gate player ---------- */
+let acl = 'on', gStep = 0;
+const G_COMMON = ['You open the page, or the daily timer fires.', 'APEX runs the REST Data Source or your procedure for the app.', 'The database checks its network access list: may APEX\'s schema connect to the API host on port 443?'];
+const G_ON  = ['Yes. The connection opens and the API answers HTTP 200 with 5 to-dos.', 'The rows land in your staging table, and a log row records the load.'];
+const G_OFF = ['No entry. Oracle stops the call inside the database: ORA-24247, shown as ORA-29273.', 'Nothing is loaded. The outside API never even saw a request.'];
+function gList(){ return G_COMMON.concat(acl === 'on' ? G_ON : G_OFF); }
+function drawGate(){
+  const L = gList();
+  $('#gSteps').innerHTML = L.map((t, i) => {
+    let c = i < gStep ? 'done' : (i === gStep ? 'now' : '');
+    if (acl === 'off' && i >= 3 && i < gStep) c = 'fail';
+    if (acl === 'off' && i >= 3 && i === gStep) c = 'fail';
+    return `<li class="${c}"><span>${esc(t)}</span></li>`;
+  }).join('');
+  const out = $('#gOut');
+  out.className = 'result';
+  if (gStep >= L.length) {
+    out.classList.add(acl === 'on' ? 'good' : 'badr');
+    out.textContent = acl === 'on' ? 'Loaded. Same code, same page: the only difference was one line on the access list.' : 'Stopped at the gate. Fix: ask the DBA for a network rule for that host, port 443, for APEX\'s schema.';
+  } else out.textContent = `Step ${Math.min(gStep + 1, L.length)} of ${L.length}. Press "Next step".`;
+  $('#gNext').disabled = gStep >= L.length;
+}
+$('#gNext').onclick = () => { gStep++; drawGate(); };
+$('#gReset').onclick = () => { gStep = 0; drawGate(); };
+$$('[data-acl]').forEach(b => b.onclick = () => { acl = b.dataset.acl; $$('[data-acl]').forEach(x => x.setAttribute('aria-pressed', x === b)); gStep = 0; drawGate(); });
+drawGate();
+
+/* ---------- 3. privileges ---------- */
+const PRIVS = ['CREATE SESSION', 'CREATE TABLE', 'CREATE PROCEDURE', 'CREATE JOB'];
+const held = new Set(['CREATE SESSION', 'CREATE TABLE', 'CREATE PROCEDURE']);
+const TASKS = [
+  {t:'Run the APEX app\'s pages (reports, forms, inserts into your tables)', need:[], err:'', why:'ORDS signs in as its own account and APEX runs your SQL under your schema\'s name. Using your own tables needs no privilege.'},
+  {t:'Log in directly with SQL Developer or sqlplus', need:['CREATE SESSION'], err:'ORA-01045: user lacks CREATE SESSION privilege', why:'Only needed for direct logins. The app itself never logs in as your schema.'},
+  {t:'Let APEX create the sync table for a REST Data Source', need:['CREATE TABLE'], err:'ORA-01031: insufficient privileges', why:'APEX runs the CREATE TABLE as your schema.'},
+  {t:'Store your own refresh procedure', need:['CREATE PROCEDURE'], err:'ORA-01031: insufficient privileges', why:'Any stored PL/SQL (procedure, package, function) needs it.'},
+  {t:'Scheduled REST synchronization runs by itself', need:['CREATE TABLE', 'CREATE JOB'], err:'ORA-01031 in APEX_REST_SOURCE_SYNC_LOG (scheduler said SUCCEEDED)', why:'A manual run works without CREATE JOB; the scheduled run does not.'},
+  {t:'Switch a scheduled automation to Active', need:['CREATE JOB'], err:'ORA-01031: insufficient privileges (when saving)', why:'Activating a schedule makes APEX create scheduler work under your schema.'},
+  {t:'Run an On Demand automation with the play button', need:['CREATE PROCEDURE'], err:'(nothing to call: the procedure couldn\'t be stored)', why:'No schedule, so no job is created. It ran fine without CREATE JOB.'},
+  {t:'A DBA-owned daily job calls your procedure', need:['CREATE PROCEDURE'], err:'(nothing to call: the procedure couldn\'t be stored)', why:'The DBA\'s schema holds CREATE JOB. You only grant EXECUTE on your procedure. A job a DBA creates inside your schema also ran.'}
+];
+function drawPrivs(){
+  $('#privToggles').innerHTML = PRIVS.map(p => `<button class="tgl" data-p="${p}" aria-pressed="${held.has(p)}">${p}</button>`).join('');
+  $$('#privToggles .tgl').forEach(b => b.onclick = () => { const p = b.dataset.p; held.has(p) ? held.delete(p) : held.add(p); $$('[data-preset]').forEach(x => x.setAttribute('aria-pressed', 'false')); drawPrivs(); const nb = $(`#privToggles [data-p="${p}"]`); if (nb) nb.focus(); });
+  $('#privTasks').innerHTML = TASKS.map(k => {
+    const missing = k.need.filter(p => !held.has(p)), ok = missing.length === 0;
+    const needTxt = k.need.length ? 'Needs: ' + k.need.join(' + ') : 'Needs: nothing';
+    return `<li class="${ok ? 'ok' : 'no'}"><span class="st">${ok ? '✓ works' : '✗ fails'}</span><div><b>${esc(k.t)}</b><p>${esc(needTxt)}. ${ok ? esc(k.why) : 'Error: ' + esc(k.err) + '. Missing: ' + esc(missing.join(', ')) + '.'}</p></div></li>`;
+  }).join('');
+}
+const PRESETS = {none:[], dev:['CREATE SESSION','CREATE TABLE','CREATE PROCEDURE'], all:PRIVS.slice()};
+$$('[data-preset]').forEach(b => b.onclick = () => { held.clear(); PRESETS[b.dataset.preset].forEach(p => held.add(p)); $$('[data-preset]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawPrivs(); });
+drawPrivs();
+
+/* ---------- 4. timer chooser ---------- */
+let hasJob = 'no', starter = 'timer';
+const WAYS = [
+  {t:'APEX REST Synchronization', ok:(j,s) => j === 'yes' || s === 'person', facts:['Copies API rows into a table APEX creates for you.', 'Scheduled runs need CREATE JOB; "Save and Run" by hand works without it.', 'APEX\'s sync dispatcher wakes every 10 minutes, so a 2-minute schedule really runs every 10.', 'Turn on the region\'s "Use Local Sync Table", or pages still call the API live.']},
+  {t:'APEX Automation, Scheduled', ok:(j,s) => j === 'yes', facts:['Runs any PL/SQL or email on a timetable, managed in the Builder.', 'Can\'t be switched to Active without CREATE JOB.', 'Its dispatcher wakes every 2 minutes.']},
+  {t:'APEX Automation, On Demand', ok:(j,s) => s === 'person', facts:['No timer: the play button, a page button or apex_automation.execute starts it.', 'Needs no CREATE JOB.', 'History in the Execution Log tab.']},
+  {t:'Your procedure + a DBA-owned job', ok:(j,s) => s === 'timer', facts:['A DBA (or a central batch schema) owns the job and calls your procedure.', 'You need no CREATE JOB. Any interval works, even every 2 minutes.', 'You can\'t see the DBA\'s job history, so log each load in your own table.']}
+];
+function drawWays(){
+  $('#ways').innerHTML = WAYS.map(w => {
+    const ok = w.ok(hasJob, starter);
+    return `<div class="way ${ok ? 'ok' : 'no'}"><span class="verdict">${ok ? '✓ works for you' : '✗ not in this situation'}</span><h3>${esc(w.t)}</h3><ul>${w.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul></div>`;
+  }).join('');
+}
+$$('[data-job]').forEach(b => b.onclick = () => { hasJob = b.dataset.job; $$('[data-job]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawWays(); });
+$$('[data-start]').forEach(b => b.onclick = () => { starter = b.dataset.start; $$('[data-start]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawWays(); });
+drawWays();
+
+/* ---------- 5. actions initiated on ---------- */
+function drawAI(){
+  const mode = $('#aiOn').value, rows = +$('#aiRows').value;
+  $('#aiRowsV').textContent = rows;
+  $('#aiRows').disabled = mode === 'always';
+  let runs, text;
+  if (mode === 'always') { runs = 1; text = 'No query: the actions run once, every time. A daily API load usually looks like this.'; }
+  else if (mode === 'rows') { runs = rows; text = rows ? `The query found ${rows} row${rows > 1 ? 's' : ''}, so the actions run ${rows} time${rows > 1 ? 's' : ''}, once per row. Each run can use that row\'s columns, such as :INVOICE_NO.` : 'The query found nothing, so the actions don\'t run at all.'; }
+  else { runs = rows === 0 ? 1 : 0; text = rows === 0 ? 'The query found nothing, so the actions run once. Example: "alert me if no new orders arrived today".' : `The query found ${rows} row${rows > 1 ? 's' : ''}, so nothing happens.`; }
+  $('#aiOut').textContent = text;
+  $('#aiRuns').innerHTML = runs ? Array.from({length:runs}, (_, i) => `<span>run ${i + 1}: action 10, then 20</span>`).join('') : '<span>no runs</span>';
+}
+$('#aiOn').addEventListener('change', drawAI);
+$('#aiRows').addEventListener('input', drawAI);
+drawAI();
+
+/* ---------- 6. email player ---------- */
+const POST = {
+  none:  {l:'No mail server', tag:'tested', steps:['The automation\'s Send E-Mail action writes the email.', 'APEX puts it in its mail queue (the outbox).', 'Every 5 minutes, APEX\'s mail job looks at the queue.', 'APEX is set to hand mail to a server on the database machine, port 25, but nothing is listening there.'], fail:3, out:'The email waits in the queue and never leaves. No error is recorded either: the queue just shows 0 send attempts.'},
+  mailpit:{l:'Local test mail server', tag:'tested', steps:['The automation\'s Send E-Mail action writes the email.', 'APEX puts it in its mail queue (the outbox).', 'The mail job (or apex_mail.push_queue) hands it to the test mail server. A network rule allows that host and port.', 'The test server keeps it and shows it on a local web page.'], fail:-1, out:'Caught locally. Great for testing: nothing ever reaches a real inbox, and no password is needed.'},
+  gmail: {l:'Gmail\'s mail server', tag:'unchecked', steps:['The automation\'s Send E-Mail action writes the email.', 'APEX puts it in its mail queue (the outbox).', 'APEX signs in to the sending Gmail account with an app password (set by the account owner in APEX\'s instance email settings) on port 587 with TLS.', 'Gmail accepts it from its own account holder and delivers it to the recipient\'s inbox.'], fail:-1, out:'Delivered to a real inbox. Needs a network rule for the mail host and port 587. The lab confirmed port 587 is reachable but didn\'t send this way.'},
+  work:  {l:'Company mail server', tag:'unchecked', steps:['The automation\'s Send E-Mail action writes the email.', 'APEX puts it in its mail queue (the outbox).', 'The mail job hands it to the company mail server an admin set up once in APEX.', 'The company server trusts its own database servers and delivers to Outlook or any other inbox.'], fail:-1, out:'The usual setup at work. Developers just use Send E-Mail; no password on their side.'}
+};
+let post = 'none', mStep = 0;
+function drawMailChips(){
+  $('#mailChips').innerHTML = Object.entries(POST).map(([k, v]) => `<button class="chip" data-post="${k}" aria-pressed="${k === post}">${esc(v.l)}</button>`).join('');
+  $$('#mailChips .chip').forEach(b => b.onclick = () => { post = b.dataset.post; mStep = 0; drawMailChips(); drawMail(); });
+}
+function drawMail(){
+  const P = POST[post];
+  $('#mSteps').innerHTML = P.steps.map((t, i) => {
+    let c = i < mStep ? 'done' : (i === mStep ? 'now' : '');
+    if (P.fail === i && i <= mStep) c = 'fail';
+    return `<li class="${c}"><span>${esc(t)}</span></li>`;
+  }).join('');
+  const out = $('#mOut');
+  out.className = 'result';
+  if (mStep >= P.steps.length) {
+    out.classList.add(P.fail >= 0 ? 'badr' : 'good');
+    out.innerHTML = `${esc(P.out)} <span class="tag ${P.tag}">${P.tag === 'tested' ? 'tested' : 'not checked'}</span>`;
+  } else out.textContent = `Step ${mStep + 1} of ${P.steps.length}. Press "Next step".`;
+  $('#mNext').disabled = mStep >= P.steps.length;
+}
+$('#mNext').onclick = () => { mStep++; drawMail(); };
+$('#mReset').onclick = () => { mStep = 0; drawMail(); };
+drawMailChips(); drawMail();
+
+/* ---------- 7. DBA request ---------- */
+(function(){
+  const sel = $('#rHour');
+  for (let h = 0; h < 24; h++) { const o = document.createElement('option'); o.value = h; o.textContent = String(h).padStart(2, '0') + ':00'; if (h === 2) o.selected = true; sel.appendChild(o); }
+})();
+function clean(v, d){ v = (v || '').trim(); return v ? v : d; }
+function drawReq(){
+  const schema = clean($('#rSchema').value, 'APP_SCHEMA').toUpperCase(), host = clean($('#rHost').value, 'api.example.com');
+  const hh = String($('#rHour').value).padStart(2, '0'), self = $('#rSelf').checked, wallet = $('#rWallet').checked, mail = $('#rMail').checked;
+  const L = [];
+  L.push(`Hello, our APEX app (parsing schema ${schema}) needs to load data from ${host} once a day at ${hh}:00. Could you please set up:`);
+  L.push('');
+  let n = 1;
+  L.push(`${n++}. A network rule (DBMS_NETWORK_ACL_ADMIN.APPEND_HOST_ACE): host ${host}, port 443, CONNECT, for APEX's schema (the APEX_xxxxxx account), since the call is made through APEX_WEB_SERVICE. Without it the call fails with ORA-24247.`);
+  if (wallet) L.push(`${n++}. A wallet with the certificate authority for ${host}, and its path in APEX's instance settings, so HTTPS calls can be verified.`);
+  if (self) L.push(`${n++}. A direct grant: GRANT CREATE JOB TO ${schema}; (not through a role). Without it, activating the APEX schedule fails with ORA-01031.`);
+  else L.push(`${n++}. A scheduler job you own that runs daily at ${hh}:00: begin ${schema}.load_pkg.run_daily; end;  We will grant EXECUTE on the package to your scheduling schema, and each run writes a row to our own load log table.`);
+  if (mail) L.push(`${n++}. Confirmation that APEX's mail settings point at the company mail server, plus a network rule for that host and port if it isn't there yet.`);
+  L.push('');
+  L.push('Failures will show in our load log table' + (self ? ' and in APEX_AUTOMATION_LOG.' : '.') + ' Thank you!');
+  $('#rOut').textContent = L.join('\n');
+  $('#rCopied').textContent = '';
+}
+['#rSchema', '#rHost'].forEach(s => $(s).addEventListener('input', drawReq));
+['#rHour', '#rSelf', '#rWallet', '#rMail'].forEach(s => $(s).addEventListener('change', drawReq));
+$('#rCopy').onclick = async () => {
+  const text = $('#rOut').textContent;
+  try { await navigator.clipboard.writeText(text); $('#rCopied').textContent = 'Copied.'; }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($('#rOut')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('#rCopied').textContent = 'Selected: press Ctrl+C or Cmd+C to copy.'; }
+};
+drawReq();
+
+/* ---------- 8. quiz ---------- */
+const QUIZ = [
+  {q:'An APEX page that calls an API shows ORA-29273. What do you look for next?', o:['ORA-24247 further down the error stack', 'A typo in the page title', 'Whether the browser has internet access'], a:0, w:'ORA-29273 just says the HTTP request failed. ORA-24247 underneath means the database\'s network access list has no rule for that host: a DBA fix. The browser never makes the call.'},
+  {q:'Your schema has zero system privileges. Do the APEX app\'s pages still work?', o:['No, nothing works', 'Yes: reading and writing your own tables needs no privilege', 'Only if CREATE SESSION is granted'], a:1, w:'In the lab, pages kept working with zero privileges. ORDS signs in as its own account; CREATE SESSION only matters for direct logins.'},
+  {q:'Which privilege did the scheduled REST synchronization need beyond CREATE TABLE?', o:['CREATE VIEW', 'CREATE JOB', 'CREATE DATABASE LINK'], a:1, w:'The manual run worked, the scheduled one failed with ORA-01031 until CREATE JOB was granted.'},
+  {q:'The scheduler says SUCCEEDED. Did the APEX sync work?', o:['Yes, always', 'Not necessarily: check APEX\'s own sync log', 'Only if the page shows data'], a:1, w:'In the lab the scheduler said SUCCEEDED while APEX_REST_SOURCE_SYNC_LOG said Failure, and APEX then switched the sync off.'},
+  {q:'You have no CREATE JOB. How can the load still run every night?', o:['It can\'t', 'A DBA-owned job calls your procedure', 'Set the automation to Scheduled and hope'], a:1, w:'CREATE JOB is checked when a job is created, not when it runs. A DBA\'s job calling your procedure ran every 2 minutes without CREATE JOB on your schema.'},
+  {q:'"Actions Initiated On" is "Query: rows returned" and the query finds 4 rows. How often do the actions run?', o:['Once', '4 times, once per row', 'Never'], a:1, w:'With "rows returned", each row gets its own run of the actions, and can use that row\'s columns.'},
+  {q:'Why does sending through Gmail need a password?', o:['It\'s the recipient\'s password', 'It\'s the sender\'s: APEX signs in to the account it sends from', 'Email always needs the recipient\'s consent code'], a:1, w:'Gmail only posts mail for its own account holders, so APEX signs in as the sending account. The recipient is never involved.'},
+  {q:'APEX\'s mail server setting points to a host where nothing is listening. What happens to a Send E-Mail action?', o:['It fails the automation immediately', 'The email waits in APEX\'s mail queue and never leaves', 'It goes straight to the recipient anyway'], a:1, w:'APEX only writes and queues the email. Without a mail server to hand it to, it stays in the queue; in the lab it showed 0 send attempts.'}
+];
+let right = 0, done = 0;
+function drawQuiz(){
+  right = 0; done = 0;
+  $('#quizBox').innerHTML = QUIZ.map((q, i) => `<div class="q" data-i="${i}"><b>${i + 1}. ${esc(q.q)}</b>${q.o.map((o, k) => `<button data-k="${k}">${esc(o)}</button>`).join('')}<p class="why" hidden></p></div>`).join('');
+  $('#score').textContent = `Answer all ${QUIZ.length} questions.`;
+}
+$('#quizBox').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const d = b.closest('.q'), q = QUIZ[+d.dataset.i], pick = +b.dataset.k, all = d.querySelectorAll('button');
+  all.forEach(x => x.disabled = true); all[q.a].classList.add('right');
+  if (pick !== q.a) b.classList.add('wrong'); else right++;
+  done++;
+  const why = d.querySelector('.why'); why.hidden = false; why.textContent = (pick === q.a ? 'Correct. ' : 'Not quite. ') + q.w;
+  $('#score').textContent = done === QUIZ.length ? `${right} of ${QUIZ.length} right. ${right === QUIZ.length ? 'All correct.' : 'Read the explanations, then Reset to try again.'}` : `${right} of ${done} right so far.`;
+});
+$('#qReset').onclick = drawQuiz;
+drawQuiz();
+
+/* ---------- theme: shared with the Learning Lab through localStorage "lab-theme" ---------- */
+window.onThemeChange = () => {};
+(function(){
+  const LIST = [['day', 'Day'], ['twilight', 'Twilight'], ['dark', 'Dark']];
+  const root = document.documentElement, box = document.getElementById('themes');
+  const cur = () => root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'day');
+  function paint(){ const c = cur(); box.innerHTML = LIST.map(([k, l]) => `<button data-k="${k}" aria-pressed="${k === c}">${l}</button>`).join('');
+    box.querySelectorAll('button').forEach(b => b.onclick = () => set(b.dataset.k)); }
+  function set(t){ root.dataset.theme = t; try { localStorage.setItem('lab-theme', t); } catch (e) {} paint(); window.onThemeChange(); }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!root.dataset.theme) { paint(); window.onThemeChange(); } });
+  window.addEventListener('storage', e => { if (e.key === 'lab-theme' && e.newValue) { root.dataset.theme = e.newValue; paint(); window.onThemeChange(); } });
+  paint();
+})();
+</script>
+</body>
+</html>
